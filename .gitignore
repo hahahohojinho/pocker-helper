@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local solver binaries and generated output (download separately)
+/tools/texassolver/v0.2.0/
+/tools/texassolver/*.zip
+/artifacts/*.png
