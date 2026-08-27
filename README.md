@@ -8,11 +8,11 @@
 | --- | --- | --- |
 | 프리플랍 순서/유효성 | 구현 | 자동 폴드, 림프·오픈·콜·3/4/5-bet, 최소 레이즈, 숏 올인 재오픈 포함 |
 | 팟/스택 | 구현 | 블라인드, 누적 기여금, 올인 메인·사이드 팟 포함 |
-| 169 핸드 전략 | 기초 구현 | 포지션·스택·액션 상황별 `baseline-v1`; 솔버 GTO 데이터 아님 |
+| 169 핸드 전략 | 기초 구현 | v2 데이터는 opener·callers·sizing별 조회, v1 wildcard 호환; 미적재 spot은 `baseline-v1` |
 | 포스트플랍 | 구현 | 플랍·턴·리버 순서와 스트리트 간 상태 유지 |
 | Equity | 구현 | 7-card hand ranking + Monte Carlo, 다중 상대 가중 레인지 지원 |
 | 상대 레인지 | 기초 구현 | 프리플랍 액션·사이징 및 포스트플랍 made hand·draw·blocker 휴리스틱으로 자동 갱신; 직접 편집 가능 |
-| Solver | 부분 구현 | TexasSolver v0.2.0 플랍·턴·리버 heads-up OOP root 빠른 preview 및 외부 counterfactual EV backend. EV 미제공 시 Model EV로 구분 |
+| Solver | 부분 구현 | TexasSolver heads-up OOP/IP root·중간 노드 preview 및 외부 counterfactual EV/multiway backend 계약. EV 미제공 시 Model EV로 구분 |
 
 현재 추천과 자동 레인지는 휴리스틱 baseline입니다. 화면의 `NOT GTO`, `ACTION BASELINE`, `MODEL EV` 표시는 솔버 결과와 추정값을 구분하는 의도적인 표기입니다.
 
@@ -42,6 +42,8 @@ npm run lint
 npm run build
 ```
 
+프리플랍 solve 데이터의 CSV 템플릿 생성, 정규 JSON 변환 및 검증은 `npm run strategy:data -- ...`로 수행합니다. 자세한 사용법은 [프리플랍 데이터 파이프라인 문서](docs/PREFLOP_DATA.md)를 참고하세요.
+
 실행 중인 production 서버의 브라우저 smoke test는 `node scripts/e2e-smoke.mjs`로 수행합니다.
 
 ## 로컬 TexasSolver
@@ -59,7 +61,7 @@ npm run dev
 ## 현재 남은 GTO 정확도 작업
 
 - `baseline-v1`을 자체 solve 또는 정식 라이선스의 6-max 프리플랍 데이터로 교체
-- IP 중간 액션 노드와 multiway solver 지원
+- 실제 multiway counterfactual solver 서비스 배포 및 운영 설정
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createSolverNode } from "../solver-adapter";
+import { createSolverNode, parseTexasSolverNodeAtHistory } from "../solver-adapter";
 import type { TexasSolverJob } from "../texas-solver-config";
 import { runTexasSolver } from "./run-texas-solver-core";
 import { afterEach, vi } from "vitest";
@@ -37,6 +37,18 @@ describe("Counterfactual EV backend",()=>{
     await expect(runCounterfactualBackend({...job,iterations:0})).rejects.toThrow("Iterations");
     expect(fetchMock).not.toHaveBeenCalled();
   });
+  it("forwards validated multiway player ranges to the remote backend",async()=>{
+    process.env.COUNTERFACTUAL_EV_BACKEND_URL="https://solver.example/v1/solve";
+    const raw=JSON.stringify({source:"openspiel",strategy:[{action:"check",frequency:1,ev:2.1}],best_action:"check"});
+    const fetchMock=vi.spyOn(globalThis,"fetch").mockResolvedValue(new Response(raw,{status:200}));
+    const node=createSolverNode({street:"flop",heroHole:["As","Qh"],board:["Js","7d","2c"],pot:12,toCall:0,effectiveStack:80,candidateActions:["check","bet"]});
+    const players=[{seat:0,range:"AQo",stack:80},{seat:1,range:"JJ",stack:75},{seat:2,range:"77",stack:60}];
+    const job:TexasSolverJob={node,ranges:{oop:"AQo",ip:"JJ"},tree:{betPercent:[50],raisePercent:[60],includeAllIn:false},accuracy:10,iterations:10,threads:1,players,actorSeat:0};
+    await runCounterfactualBackend(job);
+    const body=JSON.parse(String((fetchMock.mock.calls[0][1] as RequestInit).body)) as TexasSolverJob;
+    expect(body.players).toEqual(players);
+    expect(body.actorSeat).toBe(0);
+  });
 });
 
 describe("TexasSolver local integration",()=>{
@@ -49,6 +61,8 @@ describe("TexasSolver local integration",()=>{
       const result=JSON.parse(raw) as {strategy?:{actions?:string[]}};
       expect(result.strategy?.actions?.[0]).toBe("CHECK");
       expect(result.strategy?.actions?.[1]).toMatch(/^BET /);
+      const ipResult=parseTexasSolverNodeAtHistory(raw,"Ts9s",[{action:"check"}]);
+      expect(ipResult.actions.map(action=>action.action)).toEqual(["check","bet"]);
     }
   },35_000);
 });

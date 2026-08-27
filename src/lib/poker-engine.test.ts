@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { calculateEquity } from "./equity";
 import type { PlayerAction } from "./game-state";
-import { recommendFromHistory } from "./game-state";
+import { derivePreflopSpotContext, recommendFromHistory } from "./game-state";
 import { deriveBettingState, validatePreflopAction } from "./preflop-machine";
 import { availableActions } from "./preflop-machine";
 import type { Position } from "./preflop";
 import { allStartingHands, buildStrategyMatrix, clearStrategyDataset, installStrategyDataset, lookupStrategy, normalizeStartingHand, parseStrategyDatasetJson } from "./strategy-data";
-import { createSolverNode, parseSolverResult, parseTexasSolverNode } from "./solver-adapter";
+import { createSolverNode, parseSolverResult, parseTexasSolverNode, parseTexasSolverNodeAtHistory } from "./solver-adapter";
 import { calculatePokerPots, calculatePotLayers, totalPot } from "./pots";
 import { buildTexasSolverCommands } from "./texas-solver-config";
 import { buildPostflopContext, nextPostflopActor } from "./postflop-hand-state";
@@ -89,6 +89,14 @@ describe("postflop state persistence",()=>{
 });
 
 describe("169 hand strategy",()=>{
+  it("derives v2 opener, caller positions, and latest sizing from action history",()=>{
+    const actions:PlayerAction[]=[
+      {id:"1",street:"preflop",seat:0,position:"CO",type:"open",amount:2.5},
+      {id:"2",street:"preflop",seat:1,position:"BTN",type:"call",amount:2.5},
+      {id:"3",street:"preflop",seat:2,position:"SB",type:"3bet",amount:10},
+    ];
+    expect(derivePreflopSpotContext(actions)).toEqual({openerPosition:"CO",callerPositions:["BTN"],actionSize:10});
+  });
   it("contains 169 unique normalized starting hands",()=>{
     expect(allStartingHands).toHaveLength(169);
     expect(new Set(allStartingHands).size).toBe(169);
@@ -107,6 +115,14 @@ describe("169 hand strategy",()=>{
     expect(parsed.rows).toHaveLength(169);
     clearStrategyDataset();
     expect(()=>parseStrategyDatasetJson(JSON.stringify({id:"bad",license:"MIT",generatedAt:"2026-08-26",rows:[{hand:"AA"}]}))).toThrow("missing or invalid fields");
+  });
+  it("prefers an exact v2 opener, callers, and nearest sizing spot over a v1-compatible wildcard",()=>{
+    const wildcard=allStartingHands.map(hand=>({hand,position:"BTN" as const,stack:100 as const,scenario:"open-with-callers" as const,fold:100,passive:0,aggressive:0}));
+    const exact=(actionSize:number,aggressive:number)=>allStartingHands.map(hand=>({hand,position:"BTN" as const,stack:100 as const,scenario:"open-with-callers" as const,openerPosition:"CO" as const,callerPositions:["SB" as const],actionSize,fold:100-aggressive,passive:0,aggressive}));
+    installStrategyDataset({contract:"rangelab.preflop_strategy.v2",id:"context-v2",license:"MIT",generatedAt:"2026-08-27",rows:[...wildcard,...exact(2.5,70),...exact(4,90)]});
+    expect(lookupStrategy({hand:"AQs",position:"BTN",stack:100,scenario:"open-with-callers",openerPosition:"CO",callerPositions:["SB"],actionSize:3.8})).toMatchObject({aggressive:90,source:"dataset:context-v2"});
+    expect(lookupStrategy({hand:"AQs",position:"BTN",stack:100,scenario:"open-with-callers",openerPosition:"HJ",callerPositions:["SB"],actionSize:3.8})).toMatchObject({fold:100});
+    clearStrategyDataset();
   });
 });
 
@@ -222,6 +238,13 @@ describe("solver adapter",()=>{
     const node=createSolverNode({street:"flop",heroHole:["As","Qh"],board:["2c","7d","Jh"],pot:10,toCall:5,effectiveStack:95,candidateActions:["fold","call","raise"]});
     expect(node.contract).toBe("rangelab.solver_node.v1");
     expect(()=>createSolverNode({...node,heroHole:["As","As"]})).toThrow();
+  });
+  it("selects an IP strategy from a native intermediate action node",()=>{
+    const raw=JSON.stringify({childrens:{CHECK:{strategy:{actions:["CHECK","BET 5.000000"],strategy:{AsQh:[0.25,0.75]}}},"BET 3.000000":{childrens:{CALL:{strategy:{actions:["CHECK","BET 8.000000"],strategy:{AsQh:[0.6,0.4]}}}}}}});
+    const afterCheck=parseTexasSolverNodeAtHistory(raw,"AsQh",[{action:"check"}]);
+    expect(afterCheck.actions).toEqual([{action:"check",frequency:25},{action:"bet",frequency:75}]);
+    const afterBetCall=parseTexasSolverNodeAtHistory(raw,"AsQh",[{action:"bet",amount:3},{action:"call",amount:3}]);
+    expect(afterBetCall.bestAction).toBe("check");
   });
   it("preserves solver EV and labels model fallback EV",()=>{
     const strategy=attachActionEvs([{action:"call",frequency:70,ev:3.2},{action:"fold",frequency:30}],[{action:"fold",ev:0,assumption:"baseline"}]);

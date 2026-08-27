@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { PlayerAction, Street } from "@/lib/game-state";
 import type { Position } from "@/lib/preflop";
 import { deriveBettingState } from "@/lib/preflop-machine";
@@ -8,7 +8,7 @@ import { postflopOrder, PostflopAction, PostflopActionType } from "@/lib/postflo
 import { availablePostflopActions, buildPostflopContext, nextPostflopActor, validatePostflopActionV2 } from "@/lib/postflop-hand-state";
 import { calculateEquity, EquityResult } from "@/lib/equity";
 import { attachActionEvs, estimateActionEvs } from "@/lib/decision-ev";
-import { createSolverNode, parseSolverResult, parseTexasSolverNode, SolverResult } from "@/lib/solver-adapter";
+import { createSolverNode, parseSolverResult, parseTexasSolverNode, parseTexasSolverNodeAtHistory, SolverResult } from "@/lib/solver-adapter";
 import { calculateRangeEquity } from "@/lib/range-equity";
 import { conditionRangeOnPostflop, inferRangeFromPreflop, toTexasSolverRange } from "@/lib/range-model";
 
@@ -33,6 +33,8 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat}
   const [solverResult,setSolverResult]=useState<SolverResult|null>(null);
   const [solving,setSolving]=useState(false);
   const [rangeBySeat,setRangeBySeat]=useState<Record<number,string>>({});
+  const [solverCapability,setSolverCapability]=useState<{backend:"texassolver"|"counterfactual";maxPlayers:number}>({backend:"texassolver",maxPlayers:2});
+  useEffect(()=>{const controller=new AbortController();fetch("/api/solver",{signal:controller.signal,cache:"no-store"}).then(response=>response.ok?response.json():Promise.reject()).then(value=>{if(value&&(value.backend==="texassolver"||value.backend==="counterfactual")&&Number.isInteger(value.maxPlayers))setSolverCapability(value);}).catch(()=>{});return()=>controller.abort();},[]);
   const inferredRanges=Object.fromEntries(activeSeats.filter(seat=>seat!==heroSeat).map(seat=>[seat,inferRangeFromPreflop({actions:preflopActions,seat,position:positions[seat],stack:stacks[seat]})]));
   const heroInferredRange=inferRangeFromPreflop({actions:preflopActions,seat:heroSeat,position:positions[heroSeat],stack:stacks[heroSeat]});
   const rangeFor=(seat:number)=>rangeBySeat[seat]??conditionRangeOnPostflop({rangeText:inferredRanges[seat]?.text??baselineRange,boardCodes:board.slice(0,boardCount).filter(card=>card.length===2),actions:actions.filter(action=>action.seat===seat).map(action=>action.type)});
@@ -67,18 +69,23 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat}
   const solverActions=solverResult?attachActionEvs(solverResult.actions,estimatedEvs):[];
   let solverNode:ReturnType<typeof createSolverNode>|null=null;
   try{solverNode=createSolverNode({street,heroHole:holeCards,board:board.slice(0,boardCount).filter(Boolean),pot,toCall,effectiveStack,candidateActions:allowed});}catch{solverNode=null;}
-  const localSolverReady=Boolean(solverNode)&&board.slice(0,boardCount).every(card=>card.length===2)&&liveSeats.length===2&&actor===heroSeat&&streetActions.length===0;
+  let localRootNode:ReturnType<typeof createSolverNode>|null=null;
+  try{localRootNode=createSolverNode({street,heroHole:holeCards,board:board.slice(0,boardCount).filter(Boolean),pot:context.potBefore,toCall:0,effectiveStack:Math.min(...liveSeats.map(seat=>context.remainingAtStart[seat]??0)),candidateActions:["check","bet"]});}catch{localRootNode=null;}
+  const solverReady=Boolean(solverCapability.backend==="counterfactual"?solverNode:localRootNode)&&board.slice(0,boardCount).every(card=>card.length===2)&&liveSeats.length>=2&&liveSeats.length<=solverCapability.maxPlayers&&actor===heroSeat;
   async function runLocalSolver(){
-    if(!solverNode||!localSolverReady)return;
+    const requestNode=solverCapability.backend==="counterfactual"?solverNode:localRootNode;
+    if(!requestNode||!solverReady||actor===null)return;
     runEquity();
     setSolving(true);setMessage("");
-    const opponentSeat=liveSeats.find(seat=>seat!==heroSeat);
-    const heroRange=toTexasSolverRange(conditionRangeOnPostflop({rangeText:heroInferredRange.text,boardCodes:board.slice(0,boardCount).filter(card=>card.length===2),actions:actions.filter(action=>action.seat===heroSeat).map(action=>action.type)}),holeCards,0.01,8);
+    const oopSeat=order.find(seat=>liveSeats.includes(seat))!;const ipSeat=liveSeats.find(seat=>seat!==oopSeat)!;
+    const seatRange=(seat:number)=>toTexasSolverRange(seat===heroSeat?heroInferredRange.text:inferredRanges[seat]?.text??baselineRange,seat===heroSeat?holeCards:undefined,0.01,8);
+    const actionHistory=streetActions.map(action=>({action:action.type,amount:action.amount}));
+    const players=liveSeats.map(seat=>({seat,range:seatRange(seat),stack:context.remainingAtStart[seat]??0}));
     try{
-      const response=await fetch("/api/solver",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({node:solverNode,ranges:{oop:heroRange,ip:opponentSeat===undefined?baselineRange:toTexasSolverRange(rangeFor(opponentSeat),undefined,0.01,8)},tree:{betPercent:[50],raisePercent:[60],includeAllIn:false},accuracy:10,iterations:10,threads:1})});
+      const response=await fetch("/api/solver",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({node:requestNode,ranges:{oop:seatRange(oopSeat),ip:seatRange(ipSeat)},tree:{betPercent:[50],raisePercent:[60],includeAllIn:false},accuracy:10,iterations:10,threads:1,actionHistory,players,actorSeat:actor})});
       const raw=await response.text();
       if(!response.ok){let reason="Solver API request failed.";try{reason=(JSON.parse(raw) as {error?:string}).error??reason;}catch{}throw new Error(reason);}
-      let parsed:SolverResult;try{parsed=parseSolverResult(raw);}catch{parsed=parseTexasSolverNode(raw,holeCards.join(""));}
+      let parsed:SolverResult;try{parsed=parseSolverResult(raw);}catch{parsed=actionHistory.length?parseTexasSolverNodeAtHistory(raw,holeCards.join(""),actionHistory):parseTexasSolverNode(raw,holeCards.join(""));}
       setSolverText(raw);setSolverResult(parsed);
     }catch(error){setMessage(error instanceof Error?error.message:"로컬 Solver 실행에 실패했습니다.");}finally{setSolving(false);}
   }
@@ -95,7 +102,7 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat}
     {actor===null&&street==="river"&&<p className="hand-complete">HAND ACTION COMPLETE</p>}
     <div className="equity-calculator"><div><span><small>HERO CARDS</small><span className="hole-inputs">{holeCards.map((card,index)=><input key={index} value={card} maxLength={2} onChange={event=>setHoleCards(current=>current.map((value,i)=>i===index?event.target.value:value))}/>)}</span></span><button onClick={runEquity}>EQUITY 계산</button></div><details className="opponent-ranges"><summary>상대 가중 레인지 <span>{liveSeats.filter(seat=>seat!==heroSeat).length}명</span></summary>{liveSeats.filter(seat=>seat!==heroSeat).map(seat=><label key={seat}>{positions[seat]} RANGE · ACTION BASELINE ({inferredRanges[seat]?.handCount??169}/169)<textarea value={rangeFor(seat)} onChange={event=>setRangeBySeat(current=>({...current,[seat]:event.target.value}))}/><button type="button" onClick={()=>setRangeBySeat(current=>{const next={...current};delete next[seat];return next;})}>RESET TO INFERRED</button></label>)}</details>{equity&&<div className="equity-result"><strong>{equity.equity}%<small>EQUITY ±{equity.marginOfError}%</small></strong><span><b>{equity.win}%</b><small>WIN</small></span><span><b>{equity.tie}%</b><small>TIE</small></span><span><b>{equity.loss}%</b><small>LOSS</small></span><em>{equity.iterations.toLocaleString()} weighted simulations · seed {equity.seed}{"availableCombos" in equity?` · ${(equity as {availableCombos:number[]}).availableCombos.join("/")} combos`:""}</em></div>}</div>
     {equity&&<div className="ev-panel"><div className="ev-head"><b>{solverResult?"SOLVER STRATEGY":"ESTIMATED EV"}</b><span className={solverResult?"solver-source":"estimate-source"}>{solverResult?(solverResult.evSource==="solver"?"SOLVER EV":"SOLVER FREQ · MODEL EV"):"NOT GTO"}</span></div>{solverResult?solverActions.map(item=><div className="ev-row" key={item.action}><span>{item.action}</span><i><b style={{width:`${item.frequency}%`}}/></i><strong>{item.frequency.toFixed(1)}% · {item.ev>=0?"+":""}{item.ev.toFixed(2)}BB<small>{item.evSource.toUpperCase()} EV</small></strong></div>):estimatedEvs.map(item=><div className="ev-row" key={item.action}><span>{item.action}</span><small>{item.assumption}</small><strong className={item.ev>=0?"positive":"negative"}>{item.ev>=0?"+":""}{item.ev.toFixed(2)} BB</strong></div>)}</div>}
-    <button className="local-solver-button" disabled={!localSolverReady||solving} onClick={runLocalSolver}>{solving?"SOLVING…":"LOCAL TEXASSOLVER 실행"}</button><small className="local-solver-help">FAST PREVIEW · Heads-up · 현재 street root · Hero OOP · 상위 8개 weighted class.</small>
+    <button className="local-solver-button" disabled={!solverReady||solving} onClick={runLocalSolver}>{solving?"SOLVING…":solverCapability.backend==="counterfactual"?"COUNTERFACTUAL SOLVER 실행":"LOCAL TEXASSOLVER 실행"}</button><small className="local-solver-help">FAST PREVIEW · {solverCapability.backend==="counterfactual"?`외부 backend · 최대 ${solverCapability.maxPlayers}명`:`Heads-up · street root 및 중간 액션 노드 · Hero OOP/IP`} · 상위 8개 weighted class.</small>
     <details className="solver-import"><summary>Solver 노드 내보내기 / 결과 가져오기</summary>{solverNode&&<textarea readOnly value={JSON.stringify(solverNode,null,2)}/>}<textarea value={solverText} onChange={event=>setSolverText(event.target.value)} placeholder={'정규화 결과 또는 TexasSolver native strategy node'}/><button onClick={importSolver}>전략 적용</button><small>TexasSolver native 콤보 전략과 RangeLab/OpenSpiel 정규화 JSON을 지원합니다.</small></details>
   </section>;
 }

@@ -1,8 +1,9 @@
-import type { SolverNodeV1 } from "./solver-adapter";
+import type { SolverHistoryAction, SolverNodeV1 } from "./solver-adapter";
 
 export interface TexasSolverRanges { oop:string; ip:string; }
 export interface TexasSolverTree { betPercent:number[]; raisePercent:number[]; includeAllIn:boolean; }
-export interface TexasSolverJob { node:SolverNodeV1; ranges:TexasSolverRanges; tree:TexasSolverTree; accuracy:number; iterations:number; threads:number; }
+export interface SolverPlayerRange { seat:number;range:string;stack:number; }
+export interface TexasSolverJob { node:SolverNodeV1; ranges:TexasSolverRanges; tree:TexasSolverTree; accuracy:number; iterations:number; threads:number; actionHistory?:SolverHistoryAction[]; players?:SolverPlayerRange[];actorSeat?:number; }
 
 const safeRange=/^[A0-9TJQKOsocdhs,:.\s]+$/i;
 const finitePositive=(value:number)=>Number.isFinite(value)&&value>0;
@@ -16,6 +17,17 @@ export function validateTexasSolverJob(job:TexasSolverJob){
   if(!Number.isInteger(job.iterations)||job.iterations<1||job.iterations>5000)throw new Error("Iterations는 1~5000 범위여야 합니다.");
   if(!Number.isInteger(job.threads)||job.threads<1||job.threads>32)throw new Error("Threads는 1~32 범위여야 합니다.");
   for(const size of [...job.tree.betPercent,...job.tree.raisePercent])if(!finitePositive(size)||size>500)throw new Error("Bet/Raise size는 0 초과 500 이하의 팟 비율이어야 합니다.");
+  if(job.actionHistory){
+    if(job.actionHistory.length>20)throw new Error("Solver action history exceeds 20 actions.");
+    const validActions=new Set(["fold","check","bet","call","raise"]);
+    for(const step of job.actionHistory)if(!validActions.has(step.action)||(step.amount!==undefined&&(!Number.isFinite(step.amount)||step.amount<0)))throw new Error("Solver action history is invalid.");
+  }
+  if(job.players){
+    if(job.players.length<2||job.players.length>8)throw new Error("Solver players must contain 2 to 8 seats.");
+    if(new Set(job.players.map(player=>player.seat)).size!==job.players.length)throw new Error("Solver player seats must be unique.");
+    for(const player of job.players)if(!Number.isInteger(player.seat)||player.seat<0||!Number.isFinite(player.stack)||player.stack<0||!safeRange.test(player.range)||player.range.includes("\n"))throw new Error("Solver player range is invalid.");
+    if(job.actorSeat===undefined||!job.players.some(player=>player.seat===job.actorSeat))throw new Error("Solver actorSeat must identify a player.");
+  }
 }
 
 export function buildTexasSolverCommands(job:TexasSolverJob,outputFile="output_result.json"){

@@ -3,6 +3,7 @@ import type { PostflopActionType } from "./postflop-machine";
 export interface SolverNodeV1 { contract:"rangelab.solver_node.v1";street:"flop"|"turn"|"river";heroHole:string[];board:string[];pot:number;toCall:number;effectiveStack:number;candidateActions:PostflopActionType[]; }
 export interface SolverActionResult { action:PostflopActionType;frequency:number;ev?:number; }
 export interface SolverResult { source:"texassolver"|"openspiel"|"imported";actions:SolverActionResult[];bestAction:PostflopActionType;exploitability?:number;evSource:"solver"|"unavailable"; }
+export interface SolverHistoryAction { action:PostflopActionType;amount?:number; }
 
 const validActions=new Set<PostflopActionType>(["fold","check","bet","call","raise"]);
 const normalizeAction=(raw:string):PostflopActionType|null=>{
@@ -39,6 +40,22 @@ export function parseTexasSolverNode(raw:string,heroCombo:string):SolverResult{
   rawActions.forEach((action,index)=>{if(typeof action!=="string"||typeof frequencies[index]!=="number")return;const normalized=normalizeAction(action);if(normalized)merged.set(normalized,(merged.get(normalized)??0)+Number(frequencies[index]));});
   if(!merged.size)throw new Error("TexasSolver action names could not be normalized.");
   return parseSolverResult(JSON.stringify({source:"texassolver",actions:Object.fromEntries(merged)}));
+}
+
+export function parseTexasSolverNodeAtHistory(raw:string,heroCombo:string,history:SolverHistoryAction[]):SolverResult{
+  let node:unknown=JSON.parse(raw);
+  for(const step of history){
+    if(!node||typeof node!=="object")throw new Error("TexasSolver history path reached an invalid node.");
+    const children=(node as Record<string,unknown>).childrens;
+    if(!children||typeof children!=="object"||Array.isArray(children))throw new Error(`TexasSolver node has no child for ${step.action}.`);
+    const candidates=Object.entries(children as Record<string,unknown>).filter(([key])=>normalizeAction(key)===step.action);
+    if(!candidates.length)throw new Error(`TexasSolver node has no child for ${step.action}.`);
+    const selected=typeof step.amount==="number"&&["bet","raise"].includes(step.action)
+      ?candidates.toSorted(([left],[right])=>Math.abs((Number(left.match(/[\d.]+/)?.[0])||0)-step.amount!)-Math.abs((Number(right.match(/[\d.]+/)?.[0])||0)-step.amount!))[0]
+      :candidates[0];
+    node=selected[1];
+  }
+  return parseTexasSolverNode(JSON.stringify(node),heroCombo);
 }
 export function parseSolverResult(raw:string):SolverResult{
   const value:unknown=JSON.parse(raw);

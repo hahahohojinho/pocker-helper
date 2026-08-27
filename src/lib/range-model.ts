@@ -1,5 +1,5 @@
 import type { PlayerAction, PreflopScenario } from "./game-state";
-import { classifyPreflop } from "./game-state";
+import { classifyPreflop, derivePreflopSpotContext } from "./game-state";
 import type { Position } from "./preflop";
 import { allStartingHands, lookupStrategy } from "./strategy-data";
 import { normalizeStartingHand } from "./strategy-data";
@@ -36,7 +36,8 @@ export function inferRangeFromPreflop(input: { actions: PlayerAction[]; seat: nu
   const scores = allStartingHands.map(hand => {
     let score = 1;
     for (const { action, index } of observations) {
-      const mix = lookupStrategy({ hand, position: input.position, stack: input.stack, scenario: scenarioBefore(input.actions, index) });
+      const priorActions=input.actions.slice(0,index);
+      const mix = lookupStrategy({ hand, position: input.position, stack: input.stack, scenario: scenarioBefore(input.actions, index),...derivePreflopSpotContext(priorActions) });
       score *= actionProbability(action.type, action.amount, scenarioBefore(input.actions, index), mix) / 100;
     }
     return { hand, score };

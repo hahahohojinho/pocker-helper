@@ -38,7 +38,7 @@ export default function TableHelperV2(){
   const bettingState=deriveBettingState(actions,positions,stacks);
   const potLayers=calculatePokerPots(bettingState.contributions,bettingState.foldedSeats,bettingState.allInSeats);
   const visibleActions=actions.filter(action=>!action.implicit);
-  const strategyMatrix=buildStrategyMatrix(positions[heroSeat],heroStack,result.scenario);
+  const strategyMatrix=buildStrategyMatrix(positions[heroSeat],heroStack,result.scenario,result.spotContext);
   const datasetInfo=activeStrategyDataset();
 
   async function importDataset(file:File|undefined){
