@@ -1,0 +1,3 @@
+[submodule "tools/dcfr-solver"]
+	path = tools/dcfr-solver
+	url = https://github.com/exinori/DCFR-SOLVER.git

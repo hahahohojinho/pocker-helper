@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ALL_HANDS, CONTRACT, LEGACY_CONTRACT, createTemplate, main, normalizeRows, parseCsv, validateDataset } from "./preflop-data.mjs";
+import { ALL_HANDS, CONTRACT, LEGACY_CONTRACT, convertDcfrCharts, createTemplate, main, normalizeRows, parseCsv, validateDataset } from "./preflop-data.mjs";
 
 const metadata={contract:CONTRACT,id:"test-6max-v1",license:"Proprietary - self solved",generatedAt:"2026-08-27"};
 
@@ -30,6 +30,13 @@ describe("preflop data pipeline",()=>{
   it("continues to validate legacy v1 datasets",()=>{
     const report=validateDataset({...metadata,contract:LEGACY_CONTRACT,rows:ALL_HANDS.map(hand=>({hand,position:"BTN",stack:100,scenario:"unopened",fold:10,passive:20,aggressive:70}))});
     expect(report.dataset.contract).toBe(LEGACY_CONTRACT);
+  });
+  it("converts DCFR RFI actions into RangeLab frequencies",()=>{
+    const charts=[{spot_name:"CO RFI",hands:ALL_HANDS.map(hand=>({hand,actions:[{action:"fold",prob:0.2},{action:"call",prob:0.1},{action:"raise 5",prob:0.6},{action:"allin",prob:0.1}]}))}];
+    const rows=convertDcfrCharts(charts,{stack:100});
+    expect(rows).toHaveLength(169);
+    expect(normalizeRows(rows)[0]).toMatchObject({position:"CO",scenario:"unopened",fold:20,passive:10,aggressive:70});
+    expect(validateDataset({...metadata,provenance:{generator:"exinori/DCFR-SOLVER",revision:"4ade6a9",iterations:1000,seed:42,model:"smoke"},rows}).spots).toBe(1);
   });
   it("reports incomplete and duplicate spots",()=>{
     const rows=ALL_HANDS.slice(1).map(hand=>({hand,position:"BTN",stack:100,scenario:"unopened",fold:10,passive:20,aggressive:70}));

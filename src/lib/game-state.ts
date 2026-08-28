@@ -53,7 +53,7 @@ export function recommendFromHistory(input: {
   hand: string;
   effectiveStack: number;
   actions: PlayerAction[];
-}): Recommendation & { scenario: PreflopScenario; spotContext:PreflopSpotContext;scenarioLabel: string; primaryDisplay:string; displayFrequencies:{action:string;frequency:number}[] } {
+}): Recommendation & { scenario: PreflopScenario; spotContext:PreflopSpotContext;strategySource:string;scenarioLabel: string; primaryDisplay:string; displayFrequencies:{action:string;frequency:number}[] } {
   const scenario = classifyPreflop(input.actions);
   const spotContext=derivePreflopSpotContext(input.actions);
   const aggressor = [...input.actions].reverse().find(action => ["open", "3bet", "4bet"].includes(action.type));
@@ -75,6 +75,7 @@ export function recommendFromHistory(input: {
     frequencies,
     scenario,
     spotContext,
+    strategySource:mix.source,
     scenarioLabel: scenarioLabels[scenario],
     primaryDisplay,
     displayFrequencies:(Object.keys(frequencies) as RecommendationAction[]).map(action=>({action:labels[action],frequency:frequencies[action]})),

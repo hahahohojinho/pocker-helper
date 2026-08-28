@@ -45,3 +45,4 @@ next-env.d.ts
 /tools/texassolver/v0.2.0/
 /tools/texassolver/*.zip
 /artifacts/*.png
+/artifacts/dcfr-preflop/

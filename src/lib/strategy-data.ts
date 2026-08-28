@@ -5,7 +5,8 @@ export type StackBucket = 20 | 40 | 60 | 100 | 150;
 export interface StrategyMix { fold: number; passive: number; aggressive: number; source: "baseline-v1"|`dataset:${string}`; }
 export interface PreflopSpotContext { openerPosition?:Position;callerPositions?:Position[];actionSize?:number; }
 export interface StrategyDatasetRow extends PreflopSpotContext { hand:string;position:Position;stack:StackBucket;scenario:PreflopScenario;fold:number;passive:number;aggressive:number; }
-export interface StrategyDataset { contract?:"rangelab.preflop_strategy.v1"|"rangelab.preflop_strategy.v2";id:string;license:string;generatedAt:string;rows:StrategyDatasetRow[]; }
+export interface StrategyDatasetProvenance { generator:string;revision:string;iterations:number;seed:number;model:string;config?:Record<string,unknown>; }
+export interface StrategyDataset { contract?:"rangelab.preflop_strategy.v1"|"rangelab.preflop_strategy.v2";id:string;license:string;generatedAt:string;provenance?:StrategyDatasetProvenance;rows:StrategyDatasetRow[]; }
 const validPositions=new Set<Position>(["UTG","UTG+1","MP","HJ","CO","BTN","SB","BB"]);
 const validStacks=new Set<StackBucket>([20,40,60,100,150]);
 const validScenarios=new Set<PreflopScenario>(["unopened","single-open","open-with-callers","facing-3bet","facing-4bet"]);
@@ -22,6 +23,7 @@ export function installStrategyDataset(dataset:StrategyDataset){
   if(!/^[a-z0-9][a-z0-9._-]+$/i.test(dataset.id))throw new Error("Strategy dataset id is invalid.");
   if(!dataset.license.trim())throw new Error("Strategy dataset license is required.");
   if(!/^\d{4}-\d{2}-\d{2}(?:T.*)?$/.test(dataset.generatedAt)||Number.isNaN(Date.parse(dataset.generatedAt)))throw new Error("Strategy dataset generatedAt must be a valid ISO date.");
+  if(dataset.provenance!==undefined&&(!dataset.provenance.generator.trim()||!dataset.provenance.revision.trim()||!Number.isInteger(dataset.provenance.iterations)||dataset.provenance.iterations<1||!Number.isInteger(dataset.provenance.seed)||!dataset.provenance.model.trim()))throw new Error("Strategy dataset provenance is invalid.");
   const groups=new Map<string,Set<string>>();
   for(const row of dataset.rows){
     if(!validPositions.has(row.position))throw new Error(`Invalid position: ${row.position}`);
@@ -56,13 +58,14 @@ export function parseStrategyDatasetJson(text:string):StrategyDataset{
     return row as unknown as StrategyDatasetRow;
   });
   const contract=data.contract;if(contract!==undefined&&contract!=="rangelab.preflop_strategy.v1"&&contract!=="rangelab.preflop_strategy.v2")throw new Error("Strategy dataset contract is not supported.");
-  const dataset={contract:contract as StrategyDataset["contract"],id:data.id,license:data.license,generatedAt:data.generatedAt,rows};
+  let provenance:StrategyDatasetProvenance|undefined;if(data.provenance!==undefined){if(!data.provenance||typeof data.provenance!=="object"||Array.isArray(data.provenance))throw new Error("Strategy dataset provenance is invalid.");const item=data.provenance as Record<string,unknown>;if(typeof item.generator!=="string"||typeof item.revision!=="string"||typeof item.iterations!=="number"||typeof item.seed!=="number"||typeof item.model!=="string"||(item.config!==undefined&&(!item.config||typeof item.config!=="object"||Array.isArray(item.config))))throw new Error("Strategy dataset provenance is invalid.");provenance=item as unknown as StrategyDatasetProvenance;}
+  const dataset={contract:contract as StrategyDataset["contract"],id:data.id,license:data.license,generatedAt:data.generatedAt,provenance,rows};
   installStrategyDataset(dataset);
   return dataset;
 }
 
 export function clearStrategyDataset(){activeDataset=null;activeIndex=new Map();}
-export function activeStrategyDataset(){return activeDataset&&{id:activeDataset.id,contract:activeDataset.contract??"rangelab.preflop_strategy.v1",license:activeDataset.license,generatedAt:activeDataset.generatedAt,spots:new Set(activeDataset.rows.map(spotKey)).size};}
+export function activeStrategyDataset(){return activeDataset&&{id:activeDataset.id,contract:activeDataset.contract??"rangelab.preflop_strategy.v1",license:activeDataset.license,generatedAt:activeDataset.generatedAt,provenance:activeDataset.provenance,spots:new Set(activeDataset.rows.map(spotKey)).size};}
 
 const ranks = "AKQJT98765432";
 const positionWidth: Record<Position, number> = { UTG:0,"UTG+1":2,MP:4,HJ:6,CO:10,BTN:15,SB:12,BB:14 };

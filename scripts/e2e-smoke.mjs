@@ -16,6 +16,10 @@ try{
   await page.locator('.strategy-import input[type="file"]').setInputFiles({name:"e2e-strategy.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(dataset))});
   await page.getByText(/e2e-v1 · 1 spots · MIT/).waitFor({state:"attached"});
   if(!(await page.locator(".strategy-import summary").innerText()).includes("e2e-v1"))throw new Error("Imported strategy dataset source was not displayed.");
+  await page.reload({waitUntil:"networkidle"});
+  await page.getByRole("button",{name:/6-MAX/}).click();
+  await page.getByText(/e2e-v1 자동 복원/).waitFor({state:"attached"});
+  if(!(await page.locator(".strategy-import summary").innerText()).includes("e2e-v1"))throw new Error("Imported strategy dataset did not persist after reload.");
   await page.locator(".strategy-import summary").click();
   await page.getByRole("button",{name:"BASELINE으로 복원"}).click();
   if(!(await page.locator(".strategy-import summary").innerText()).includes("baseline-v1"))throw new Error("Strategy dataset did not reset to baseline.");

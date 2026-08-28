@@ -32,4 +32,4 @@ The output contract is `rangelab.preflop_strategy.v2`. Every distinct position/s
 npm run strategy:data -- validate data\6max-100bb-rfi-v1.json
 ```
 
-Validation checks the contract, dataset id, license, ISO generation date, supported spot values, non-negative finite frequencies, sums within 0.01 of 100, duplicates, and missing hands. A successful JSON file can be loaded through the app's `STRATEGY DATA` panel.
+Validation checks the contract, dataset id, license, ISO generation date, supported spot values, non-negative finite frequencies, sums within 0.01 of 100, duplicates, and missing hands. A successful JSON file can be loaded through the app's `STRATEGY DATA` panel. The validated source JSON is stored only in that browser and restored after reload; `BASELINE으로 복원` removes the saved copy.

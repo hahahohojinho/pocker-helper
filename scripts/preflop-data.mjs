@@ -9,6 +9,20 @@ export const SCENARIOS=["unopened","single-open","open-with-callers","facing-3be
 const ranks="AKQJT98765432";
 export const ALL_HANDS=[...ranks].flatMap((high,row)=>[...ranks].map((low,column)=>row===column?`${high}${low}`:row<column?`${high}${low}s`:`${low}${high}o`));
 
+export function convertDcfrCharts(charts,{stack=100}={}){
+  if(!Array.isArray(charts)||!charts.length)throw new Error("DCFR chart input must be a non-empty array.");
+  return charts.flatMap((spot,index)=>{
+    const match=typeof spot?.spot_name==="string"?spot.spot_name.match(/^(UTG|HJ|CO|BTN|SB) RFI$/):null;
+    if(!match||!Array.isArray(spot.hands))throw new Error(`DCFR spot ${index+1} is not a supported RFI chart.`);
+    return spot.hands.map((entry,handIndex)=>{
+      if(!entry||typeof entry.hand!=="string"||!Array.isArray(entry.actions))throw new Error(`${spot.spot_name} hand ${handIndex+1} is invalid.`);
+      let fold=0,passive=0,aggressive=0;
+      for(const item of entry.actions){if(!item||typeof item.action!=="string"||typeof item.prob!=="number"||!Number.isFinite(item.prob)||item.prob<0)throw new Error(`${spot.spot_name} ${entry.hand} contains an invalid action.`);const action=item.action.toLowerCase();if(action==="fold")fold+=item.prob;else if(action==="call"||action==="check")passive+=item.prob;else if(action.startsWith("raise")||action==="allin")aggressive+=item.prob;else throw new Error(`${spot.spot_name} ${entry.hand} contains unsupported action ${item.action}.`);}
+      return {hand:entry.hand,position:match[1],stack,scenario:"unopened",fold,passive,aggressive};
+    });
+  });
+}
+
 export function normalizeHand(raw){
   const text=String(raw??"").toUpperCase().replace(/[^AKQJT2-9SO]/g,"");
   if(text.length<2||!ranks.includes(text[0])||!ranks.includes(text[1]))return null;
@@ -76,6 +90,7 @@ export function validateDataset(dataset){
   if(typeof dataset.id!=="string"||!/^[a-z0-9][a-z0-9._-]+$/i.test(dataset.id))throw new Error("Dataset id is invalid.");
   if(typeof dataset.license!=="string"||!dataset.license.trim())throw new Error("Dataset license is required.");
   if(typeof dataset.generatedAt!=="string"||!/^\d{4}-\d{2}-\d{2}(?:T.*)?$/.test(dataset.generatedAt)||Number.isNaN(Date.parse(dataset.generatedAt)))throw new Error("Dataset generatedAt must be a valid ISO date.");
+  if(dataset.provenance!==undefined&&(!dataset.provenance||typeof dataset.provenance!=="object"||typeof dataset.provenance.generator!=="string"||!dataset.provenance.generator.trim()||typeof dataset.provenance.revision!=="string"||!dataset.provenance.revision.trim()||!Number.isInteger(dataset.provenance.iterations)||dataset.provenance.iterations<1||!Number.isInteger(dataset.provenance.seed)||typeof dataset.provenance.model!=="string"||!dataset.provenance.model.trim()))throw new Error("Dataset provenance is invalid.");
   const rows=normalizeRows(dataset.rows);
   const groups=new Map();
   for(const row of rows){
@@ -87,7 +102,7 @@ export function validateDataset(dataset){
     if(hands.has(row.hand))throw new Error(`${key} contains duplicate hand ${row.hand}.`);hands.add(row.hand);groups.set(key,hands);
   }
   for(const [key,hands] of groups){const missing=ALL_HANDS.filter(hand=>!hands.has(hand));if(missing.length)throw new Error(`${key} has ${hands.size}/169 hands; missing ${missing.slice(0,12).join(",")}${missing.length>12?"…":""}.`);}
-  return {dataset:{contract:dataset.contract??LEGACY_CONTRACT,id:dataset.id,license:dataset.license.trim(),generatedAt:dataset.generatedAt,rows},spots:groups.size,rows:rows.length};
+  return {dataset:{contract:dataset.contract??LEGACY_CONTRACT,id:dataset.id,license:dataset.license.trim(),generatedAt:dataset.generatedAt,...(dataset.provenance===undefined?{}:{provenance:dataset.provenance}),rows},spots:groups.size,rows:rows.length};
 }
 
 export function createTemplate({positions,stacks,scenarios,openerPosition,callerPositions=[],actionSizes=[]}){
@@ -108,6 +123,7 @@ const list=(value,fallback)=>value?value.split(",").map(item=>item.trim()).filte
 const usage=`Usage:
   npm run strategy:data -- template <output.csv> [--positions BTN,SB,BB] [--stacks 100] [--scenarios single-open] [--opener CO] [--callers BTN] [--sizes 2.5,3]
   npm run strategy:data -- convert <input.csv|json> <output.json> --id <id> --license <license> [--generated-at YYYY-MM-DD]
+  npm run strategy:data -- convert-dcfr <charts.json> <output.json> --id <id> --license <license> --revision <git-sha> --iterations <n> [--seed 42] [--stack 100]
   npm run strategy:data -- validate <dataset.json>`;
 
 export async function main(argv=process.argv.slice(2)){
@@ -123,6 +139,14 @@ export async function main(argv=process.argv.slice(2)){
     if(input.toLowerCase().endsWith(".csv"))sourceRows=parseCsv(text);else{const value=JSON.parse(text);sourceRows=Array.isArray(value)?value:value.rows;}
     const report=validateDataset({contract:CONTRACT,id:parsed.id,license:parsed.license,generatedAt:parsed["generated-at"]??new Date().toISOString().slice(0,10),rows:sourceRows});
     await writeFile(output,`${JSON.stringify(report.dataset,null,2)}\n`,"utf8");return `Wrote ${output}: ${report.spots} spots, ${report.rows} rows.`;
+  }
+  if(command==="convert-dcfr"){
+    const [input,output]=parsed._;const iterations=Number(parsed.iterations),seed=Number(parsed.seed??42),stack=Number(parsed.stack??100);
+    if(!input||!output||!parsed.id||!parsed.license||!parsed.revision||!Number.isInteger(iterations)||iterations<1||!Number.isInteger(seed)||!STACKS.includes(stack))throw new Error(usage);
+    const charts=JSON.parse(await readFile(input,"utf8"));
+    const provenance={generator:"exinori/DCFR-SOLVER",revision:parsed.revision,iterations,seed,model:"6-max External Sampling MCCFR with sampled-board equity and OOP pot tax",config:{stack,openSizeBb:Number(parsed["open-size"]??2.5),sbOpenSizeBb:Number(parsed["sb-open-size"]??3.5),threeBetSizeBb:Number(parsed["3bet-size"]??9),fourBetSizeBb:Number(parsed["4bet-size"]??22),oopPotTax:Number(parsed["oop-pot-tax"]??0.2)}};
+    const report=validateDataset({contract:CONTRACT,id:parsed.id,license:parsed.license,generatedAt:parsed["generated-at"]??new Date().toISOString().slice(0,10),provenance,rows:convertDcfrCharts(charts,{stack})});
+    await writeFile(output,`${JSON.stringify(report.dataset,null,2)}\n`,"utf8");return `Wrote ${output}: ${report.spots} DCFR RFI spots, ${report.rows} rows.`;
   }
   if(command==="validate"){
     const [input]=parsed._;if(!input)throw new Error(usage);const report=validateDataset(JSON.parse(await readFile(input,"utf8")));

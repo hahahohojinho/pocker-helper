@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | 프리플랍 순서/유효성 | 구현 | 자동 폴드, 림프·오픈·콜·3/4/5-bet, 최소 레이즈, 숏 올인 재오픈 포함 |
 | 팟/스택 | 구현 | 블라인드, 누적 기여금, 올인 메인·사이드 팟 포함 |
-| 169 핸드 전략 | 기초 구현 | v2 데이터는 opener·callers·sizing별 조회, v1 wildcard 호환; 미적재 spot은 `baseline-v1` |
+| 169 핸드 전략 | 기초 구현 | v2 opener·callers·sizing별 조회, v1 wildcard 호환, 검증 데이터 브라우저 영구 저장; 미적재 spot은 `baseline-v1` |
 | 포스트플랍 | 구현 | 플랍·턴·리버 순서와 스트리트 간 상태 유지 |
 | Equity | 구현 | 7-card hand ranking + Monte Carlo, 다중 상대 가중 레인지 지원 |
 | 상대 레인지 | 기초 구현 | 프리플랍 액션·사이징 및 포스트플랍 made hand·draw·blocker 휴리스틱으로 자동 갱신; 직접 편집 가능 |
@@ -43,6 +43,8 @@ npm run build
 ```
 
 프리플랍 solve 데이터의 CSV 템플릿 생성, 정규 JSON 변환 및 검증은 `npm run strategy:data -- ...`로 수행합니다. 자세한 사용법은 [프리플랍 데이터 파이프라인 문서](docs/PREFLOP_DATA.md)를 참고하세요.
+
+오픈소스 6-max MCCFR 생성기는 고정된 DCFR-SOLVER submodule을 사용합니다. 모델의 정확도 경계, Windows 빌드 및 변환 절차는 [DCFR 프리플랍 통합 문서](docs/DCFR_PREFLOP.md)를 참고하세요.
 
 실행 중인 production 서버의 브라우저 smoke test는 `node scripts/e2e-smoke.mjs`로 수행합니다.
 
