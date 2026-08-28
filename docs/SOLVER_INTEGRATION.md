@@ -56,6 +56,23 @@ The UI reads `GET /api/solver` capabilities. A configured counterfactual backend
 
 The configured URL is server-only. Requests time out after 120 seconds, responses are limited to 4 MB, and the response is validated with the normalized solver-result parser before it reaches the client. When no backend URL is configured, the existing local TexasSolver path remains the fallback.
 
+## Local DCFR counterfactual EV adapter
+
+RangeLab includes `tools/dcfr-adapter`, a small Rust binary linked against the pinned `tools/dcfr-solver` submodule. Unlike the upstream display JSON's single mixed-strategy combo EV, the adapter calls `compute_action_evs()` and returns a distinct counterfactual EV for every root action. The solver normalizes raw utility by compatible opponent reach with card removal, and the adapter then converts its scaled chip units to BB before the result reaches the UI.
+
+Build the adapter from a Visual Studio Developer PowerShell:
+
+```powershell
+cargo build --release --manifest-path tools\dcfr-adapter\Cargo.toml
+$env:DCFR_ADAPTER_PATH="$PWD\tools\dcfr-adapter\target\release\rangelab-dcfr-adapter.exe"
+$env:ALLOW_LOCAL_SOLVER_API='1'
+npm run dev
+```
+
+When `COUNTERFACTUAL_EV_BACKEND_URL` is absent and `DCFR_ADAPTER_PATH` is set, `GET /api/solver` reports backend `dcfr` with a two-player limit. The current adapter intentionally supports heads-up Hero-OOP street roots with `toCall=0`; action histories, IP roots, and multiway nodes are rejected instead of returning misleading EV. It uses the job's first bet and raise sizes, accepts 1–5,000 iterations through the shared validator, hides the child window, limits output to 4 MB, and terminates after 120 seconds.
+
+Backend precedence is remote HTTP counterfactual backend, local DCFR adapter, then local TexasSolver. DCFR output containing numeric action EV is labeled `SOLVER EV`; TexasSolver frequency-only output remains `SOLVER FREQ · MODEL EV`.
+
 The production API is disabled unless `ALLOW_LOCAL_SOLVER_API=1`. Range strings are character-whitelisted, newlines are rejected, numeric limits are bounded, each job runs in a temporary directory, and the child process has a timeout and output-size limit.
 
 References:

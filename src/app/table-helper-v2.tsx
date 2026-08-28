@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PlayerAction, PlayerActionType, recommendFromHistory } from "@/lib/game-state";
 import { Position } from "@/lib/preflop";
 import { availableActions, bettingAmounts, nextPosition, positionOrder, validatePreflopAction } from "@/lib/preflop-machine";
-import { activeStrategyDataset, buildStrategyMatrix, clearStrategyDataset, nearestStackBucket, parseStrategyDatasetJson } from "@/lib/strategy-data";
+import { activeStrategyDataset, buildStrategyMatrix, bundledStrategyDatasetId, clearStrategyDataset, nearestStackBucket, parseStrategyDatasetJson } from "@/lib/strategy-data";
 import PostflopPanel from "./postflop-panel";
 import { calculatePokerPots } from "@/lib/pots";
 import { deriveBettingState } from "@/lib/preflop-machine";
@@ -46,7 +46,7 @@ export default function TableHelperV2(){
     let active=true;
     queueMicrotask(()=>{if(!active)return;const saved=localStorage.getItem(strategyStorageKey);if(!saved)return;
       try{const dataset=parseStrategyDatasetJson(saved);setDatasetRevision(value=>value+1);setDatasetMessage(`${dataset.id} 자동 복원 · ${activeStrategyDataset()?.spots} spots · ${dataset.license}`);}
-      catch{localStorage.removeItem(strategyStorageKey);clearStrategyDataset();setDatasetMessage("저장된 전략 데이터가 유효하지 않아 baseline-v1으로 복원했습니다.");}
+      catch{localStorage.removeItem(strategyStorageKey);clearStrategyDataset();setDatasetMessage("저장된 전략 데이터가 유효하지 않아 내장 DCFR 데이터로 복원했습니다.");}
     });
     return()=>{active=false;};
   },[]);
@@ -56,7 +56,7 @@ export default function TableHelperV2(){
     try{if(file.size>5_000_000)throw new Error("파일은 5 MB 이하여야 합니다.");const text=await file.text();const dataset=parseStrategyDatasetJson(text);let persistence="영구 저장";try{localStorage.setItem(strategyStorageKey,text);}catch{persistence="현재 세션만";}setDatasetRevision(value=>value+1);setDatasetMessage(`${dataset.id} · ${activeStrategyDataset()?.spots} spots · ${dataset.license} · ${persistence}`);}
     catch(error){setDatasetMessage(error instanceof Error?error.message:"데이터셋을 가져오지 못했습니다.");}
   }
-  function resetDataset(){clearStrategyDataset();localStorage.removeItem(strategyStorageKey);setDatasetRevision(value=>value+1);setDatasetMessage("baseline-v1으로 복원하고 저장된 데이터셋을 삭제했습니다.");}
+  function resetDataset(){clearStrategyDataset();localStorage.removeItem(strategyStorageKey);setDatasetRevision(value=>value+1);setDatasetMessage("내장 DCFR 데이터로 복원하고 저장된 데이터셋을 삭제했습니다.");}
 
   function enter(size:TableSize){setTableSize(size);setHeroSeat(0);setSelectedSeat(3);setActions([]);setStacks(Array(size).fill(100))}
   function selectActingSeat(seat:number){
@@ -114,7 +114,7 @@ export default function TableHelperV2(){
         <div className="hero-inputs"><label>내 핸드<input value={hand} maxLength={3} onChange={e=>setHand(e.target.value)}/></label><label>{currentSeat>=0?`${positions[currentSeat]} 시작 스택`:"Hero 시작 스택"}<input type="number" min="1" value={currentSeat>=0?stacks[currentSeat]:heroStack} onChange={e=>{const seat=currentSeat>=0?currentSeat:heroSeat;setStacks(current=>current.map((value,index)=>index===seat?Number(e.target.value):value))}}/></label></div>
         {currentPosition?<><div className="action-result compact"><p>{currentSeat===heroSeat?"RECOMMENDED ACTION":"HERO DECISION PREVIEW"} <span>신뢰도 {result.confidence}</span></p><h2>{result.primaryDisplay}</h2><p>{currentSeat===heroSeat?result.summary:"상대 액션을 계속 입력하면 Hero 차례에 최종 추천을 표시합니다."}</p></div><div className="frequency-list">{result.displayFrequencies.map(item=><div key={item.action}><span>{item.action}</span><i><b style={{width:`${item.frequency}%`}}/></i><strong>{item.frequency}%</strong></div>)}</div><details className="range-matrix"><summary>169 핸드 전략표 보기 <span>{positions[heroSeat]} · {nearestStackBucket(heroStack)}BB</span></summary><div>{strategyMatrix.map(cell=><span key={cell.hand} className={cell.aggressive>=50?"range-aggressive":cell.passive>=40?"range-passive":"range-fold"} title={`Fold ${cell.fold}% / Passive ${cell.passive}% / Aggressive ${cell.aggressive}%`}>{cell.hand}</span>)}</div><p><i/>공격적 액션 <i/>패시브 액션 <i/>Fold</p></details></>:<div className="preflop-complete-card"><small>PREFLOP COMPLETE</small><b>{accounting.pot.toFixed(1)} BB POT</b><span>아래에서 플랍 보드와 액션을 입력하세요.</span></div>}
         <p className="solver-note">CURRENT SOURCE · {result.strategySource}{result.strategySource==="baseline-v1"?" · NOT GTO FALLBACK":" · LICENSED DATASET"}</p>
-        <details className="strategy-import"><summary>STRATEGY DATA · {datasetInfo?datasetInfo.id:"baseline-v1"}</summary><label>검증된 JSON 데이터셋 불러오기<input type="file" accept="application/json,.json" onChange={event=>void importDataset(event.target.files?.[0])}/></label>{datasetInfo&&<button type="button" onClick={resetDataset}>BASELINE으로 복원</button>}{datasetInfo&&<small>{datasetInfo.contract} · {datasetInfo.spots} spots · {datasetInfo.license}</small>}{datasetInfo?.provenance&&<small>{datasetInfo.provenance.generator} · {datasetInfo.provenance.revision.slice(0,12)} · {datasetInfo.provenance.iterations.toLocaleString()} iterations · seed {datasetInfo.provenance.seed}</small>}{datasetMessage&&<small>{datasetMessage}</small>}<p>각 spot은 169핸드 전체, 빈도 합 100%, 라이선스 메타데이터가 필요합니다. 검증된 데이터는 이 브라우저에 저장됩니다.</p></details>
+        <details className="strategy-import"><summary>STRATEGY DATA · {datasetInfo?.id}</summary><label>검증된 JSON 데이터셋 불러오기<input type="file" accept="application/json,.json" onChange={event=>void importDataset(event.target.files?.[0])}/></label>{datasetInfo?.id!==bundledStrategyDatasetId&&<button type="button" onClick={resetDataset}>기본 DCFR로 복원</button>}{datasetInfo&&<small>{datasetInfo.contract} · {datasetInfo.spots} spots · {datasetInfo.license}</small>}{datasetInfo?.provenance&&<small>{datasetInfo.provenance.generator} · {datasetInfo.provenance.revision.slice(0,12)} · {datasetInfo.provenance.iterations.toLocaleString()} iterations · seed {datasetInfo.provenance.seed}</small>}{datasetMessage&&<small>{datasetMessage}</small>}<p>각 spot은 169핸드 전체, 빈도 합 100%, 라이선스 메타데이터가 필요합니다. 검증된 데이터는 이 브라우저에 저장됩니다.</p></details>
         {!currentPosition&&<PostflopPanel positions={positions} preflopActions={actions} stacks={stacks} heroSeat={heroSeat}/>} 
       </aside>
     </div>

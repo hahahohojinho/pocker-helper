@@ -1,5 +1,6 @@
 import type { PreflopScenario } from "./game-state";
 import type { Position } from "./preflop";
+import bundledDcfrDataset from "../data/dcfr-6max-100bb-rfi-v1.json";
 
 export type StackBucket = 20 | 40 | 60 | 100 | 150;
 export interface StrategyMix { fold: number; passive: number; aggressive: number; source: "baseline-v1"|`dataset:${string}`; }
@@ -7,6 +8,7 @@ export interface PreflopSpotContext { openerPosition?:Position;callerPositions?:
 export interface StrategyDatasetRow extends PreflopSpotContext { hand:string;position:Position;stack:StackBucket;scenario:PreflopScenario;fold:number;passive:number;aggressive:number; }
 export interface StrategyDatasetProvenance { generator:string;revision:string;iterations:number;seed:number;model:string;config?:Record<string,unknown>; }
 export interface StrategyDataset { contract?:"rangelab.preflop_strategy.v1"|"rangelab.preflop_strategy.v2";id:string;license:string;generatedAt:string;provenance?:StrategyDatasetProvenance;rows:StrategyDatasetRow[]; }
+export const bundledStrategyDatasetId="dcfr-6max-100bb-rfi-v1";
 const validPositions=new Set<Position>(["UTG","UTG+1","MP","HJ","CO","BTN","SB","BB"]);
 const validStacks=new Set<StackBucket>([20,40,60,100,150]);
 const validScenarios=new Set<PreflopScenario>(["unopened","single-open","open-with-callers","facing-3bet","facing-4bet"]);
@@ -64,7 +66,7 @@ export function parseStrategyDatasetJson(text:string):StrategyDataset{
   return dataset;
 }
 
-export function clearStrategyDataset(){activeDataset=null;activeIndex=new Map();}
+export function clearStrategyDataset(){installStrategyDataset(bundledDcfrDataset as StrategyDataset);}
 export function activeStrategyDataset(){return activeDataset&&{id:activeDataset.id,contract:activeDataset.contract??"rangelab.preflop_strategy.v1",license:activeDataset.license,generatedAt:activeDataset.generatedAt,provenance:activeDataset.provenance,spots:new Set(activeDataset.rows.map(spotKey)).size};}
 
 const ranks = "AKQJT98765432";
@@ -126,3 +128,5 @@ export function lookupStrategy(input:{hand:string;position:Position;stack:number
 export function buildStrategyMatrix(position:Position,stack:number,scenario:PreflopScenario,context:PreflopSpotContext={}){
   return allStartingHands.map(hand=>({hand,...lookupStrategy({hand,position,stack,scenario,...context})}));
 }
+
+installStrategyDataset(bundledDcfrDataset as StrategyDataset);

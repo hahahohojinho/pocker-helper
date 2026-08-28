@@ -1,0 +1,13 @@
+[package]
+name = "rangelab-dcfr-adapter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dcfr-solver = { path = "../dcfr-solver" }
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1

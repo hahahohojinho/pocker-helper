@@ -26,10 +26,12 @@ The v2 CSV columns are `hand,position,stack,scenario,openerPosition,callerPositi
 
 The output contract is `rangelab.preflop_strategy.v2`. Every distinct position/stack/scenario/opener/callers/size group must contain each of the 169 normalized starting hands exactly once. Existing `rangelab.preflop_strategy.v1` datasets remain valid and act as wildcard spots when no more specific v2 row matches.
 
+The application ships with `dcfr-6max-100bb-rfi-v1` as its default dataset. It contains the five 100bb unopened RFI positions exported by the pinned DCFR solver after 100,000,000 iterations. A browser import overrides this bundled data; reset removes the browser copy and restores the bundled dataset.
+
 ## 3. Validate before import
 
 ```powershell
 npm run strategy:data -- validate data\6max-100bb-rfi-v1.json
 ```
 
-Validation checks the contract, dataset id, license, ISO generation date, supported spot values, non-negative finite frequencies, sums within 0.01 of 100, duplicates, and missing hands. A successful JSON file can be loaded through the app's `STRATEGY DATA` panel. The validated source JSON is stored only in that browser and restored after reload; `BASELINE으로 복원` removes the saved copy.
+Validation checks the contract, dataset id, license, ISO generation date, supported spot values, non-negative finite frequencies, sums within 0.01 of 100, duplicates, and missing hands. A successful JSON file can be loaded through the app's `STRATEGY DATA` panel. The validated source JSON is stored only in that browser and restored after reload; `기본 DCFR로 복원` removes the saved copy.

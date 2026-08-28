@@ -5,7 +5,7 @@ import { derivePreflopSpotContext, recommendFromHistory } from "./game-state";
 import { deriveBettingState, validatePreflopAction } from "./preflop-machine";
 import { availableActions } from "./preflop-machine";
 import type { Position } from "./preflop";
-import { allStartingHands, buildStrategyMatrix, clearStrategyDataset, installStrategyDataset, lookupStrategy, normalizeStartingHand, parseStrategyDatasetJson } from "./strategy-data";
+import { activeStrategyDataset, allStartingHands, buildStrategyMatrix, bundledStrategyDatasetId, clearStrategyDataset, installStrategyDataset, lookupStrategy, normalizeStartingHand, parseStrategyDatasetJson } from "./strategy-data";
 import { createSolverNode, parseSolverResult, parseTexasSolverNode, parseTexasSolverNodeAtHistory } from "./solver-adapter";
 import { calculatePokerPots, calculatePotLayers, totalPot } from "./pots";
 import { buildTexasSolverCommands } from "./texas-solver-config";
@@ -89,6 +89,11 @@ describe("postflop state persistence",()=>{
 });
 
 describe("169 hand strategy",()=>{
+  it("loads the bundled 100M-iteration DCFR RFI dataset by default",()=>{
+    clearStrategyDataset();
+    expect(activeStrategyDataset()).toMatchObject({id:bundledStrategyDatasetId,contract:"rangelab.preflop_strategy.v2",spots:5,provenance:{iterations:100_000_000,seed:42,revision:"4ade6a9e15a841c41867afde1258b9d110cd6fb1"}});
+    expect(lookupStrategy({hand:"AA",position:"BTN",stack:100,scenario:"unopened"}).source).toBe(`dataset:${bundledStrategyDatasetId}`);
+  });
   it("derives v2 opener, caller positions, and latest sizing from action history",()=>{
     const actions:PlayerAction[]=[
       {id:"1",street:"preflop",seat:0,position:"CO",type:"open",amount:2.5},

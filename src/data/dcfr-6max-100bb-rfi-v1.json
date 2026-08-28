@@ -1,0 +1,7628 @@
+{
+  "contract": "rangelab.preflop_strategy.v2",
+  "id": "dcfr-6max-100bb-rfi-v1",
+  "license": "MIT generator; self-generated strategy output",
+  "generatedAt": "2026-08-28",
+  "provenance": {
+    "generator": "exinori/DCFR-SOLVER",
+    "revision": "4ade6a9e15a841c41867afde1258b9d110cd6fb1",
+    "iterations": 100000000,
+    "seed": 42,
+    "model": "6-max External Sampling MCCFR with sampled-board equity and OOP pot tax",
+    "config": {
+      "stack": 100,
+      "openSizeBb": 2.5,
+      "sbOpenSizeBb": 3.5,
+      "threeBetSizeBb": 9,
+      "fourBetSizeBb": 22,
+      "oopPotTax": 0.2
+    }
+  },
+  "rows": [
+    {
+      "hand": "22",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.8358,
+      "passive": 0,
+      "aggressive": 1.1642
+    },
+    {
+      "hand": "33",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.8025,
+      "passive": 0,
+      "aggressive": 1.1975
+    },
+    {
+      "hand": "44",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.0932,
+      "passive": 0,
+      "aggressive": 1.9068
+    },
+    {
+      "hand": "55",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.3962,
+      "passive": 0,
+      "aggressive": 3.6038
+    },
+    {
+      "hand": "66",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 95.0156,
+      "passive": 0,
+      "aggressive": 4.9844
+    },
+    {
+      "hand": "77",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 72.5228,
+      "passive": 0,
+      "aggressive": 27.4772
+    },
+    {
+      "hand": "88",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 6.5466,
+      "passive": 0,
+      "aggressive": 93.4534
+    },
+    {
+      "hand": "99",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.2305,
+      "passive": 0,
+      "aggressive": 97.7695
+    },
+    {
+      "hand": "TT",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.4692,
+      "passive": 0,
+      "aggressive": 98.5308
+    },
+    {
+      "hand": "JJ",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.2664,
+      "passive": 0,
+      "aggressive": 98.7336
+    },
+    {
+      "hand": "QQ",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.1105,
+      "passive": 0,
+      "aggressive": 98.8895
+    },
+    {
+      "hand": "KK",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.5139,
+      "passive": 0,
+      "aggressive": 99.4861
+    },
+    {
+      "hand": "AA",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.0449,
+      "passive": 0,
+      "aggressive": 99.9551
+    },
+    {
+      "hand": "32s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4805,
+      "passive": 0,
+      "aggressive": 0.5195
+    },
+    {
+      "hand": "42s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.555,
+      "passive": 0,
+      "aggressive": 0.445
+    },
+    {
+      "hand": "43s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3287,
+      "passive": 0,
+      "aggressive": 0.6714
+    },
+    {
+      "hand": "52s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4727,
+      "passive": 0,
+      "aggressive": 0.5273
+    },
+    {
+      "hand": "53s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3065,
+      "passive": 0,
+      "aggressive": 0.6935
+    },
+    {
+      "hand": "54s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.2224,
+      "passive": 0,
+      "aggressive": 0.7776
+    },
+    {
+      "hand": "62s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4951,
+      "passive": 0,
+      "aggressive": 0.5049
+    },
+    {
+      "hand": "63s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.263,
+      "passive": 0,
+      "aggressive": 0.737
+    },
+    {
+      "hand": "64s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3737,
+      "passive": 0,
+      "aggressive": 0.6263
+    },
+    {
+      "hand": "65s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.2694,
+      "passive": 0,
+      "aggressive": 0.7306
+    },
+    {
+      "hand": "72s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.5171,
+      "passive": 0,
+      "aggressive": 0.4829
+    },
+    {
+      "hand": "73s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4178,
+      "passive": 0,
+      "aggressive": 0.5822
+    },
+    {
+      "hand": "74s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3196,
+      "passive": 0,
+      "aggressive": 0.6804
+    },
+    {
+      "hand": "75s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0185,
+      "passive": 0,
+      "aggressive": 0.9815
+    },
+    {
+      "hand": "76s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0283,
+      "passive": 0,
+      "aggressive": 0.9717
+    },
+    {
+      "hand": "82s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4475,
+      "passive": 0,
+      "aggressive": 0.5525
+    },
+    {
+      "hand": "83s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.5301,
+      "passive": 0,
+      "aggressive": 0.4698
+    },
+    {
+      "hand": "84s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.2412,
+      "passive": 0,
+      "aggressive": 0.7588
+    },
+    {
+      "hand": "85s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.2586,
+      "passive": 0,
+      "aggressive": 0.7414
+    },
+    {
+      "hand": "86s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.9186,
+      "passive": 0,
+      "aggressive": 1.0814
+    },
+    {
+      "hand": "87s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.9098,
+      "passive": 0,
+      "aggressive": 1.0902
+    },
+    {
+      "hand": "92s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4879,
+      "passive": 0,
+      "aggressive": 0.5122
+    },
+    {
+      "hand": "93s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.313,
+      "passive": 0,
+      "aggressive": 0.687
+    },
+    {
+      "hand": "94s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.2897,
+      "passive": 0,
+      "aggressive": 0.7103
+    },
+    {
+      "hand": "95s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.1819,
+      "passive": 0,
+      "aggressive": 0.8181
+    },
+    {
+      "hand": "96s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.1982,
+      "passive": 0,
+      "aggressive": 0.8018
+    },
+    {
+      "hand": "97s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0459,
+      "passive": 0,
+      "aggressive": 0.9541
+    },
+    {
+      "hand": "98s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.718,
+      "passive": 0,
+      "aggressive": 1.282
+    },
+    {
+      "hand": "T2s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3604,
+      "passive": 0,
+      "aggressive": 0.6396
+    },
+    {
+      "hand": "T3s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.2273,
+      "passive": 0,
+      "aggressive": 0.7727
+    },
+    {
+      "hand": "T4s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3918,
+      "passive": 0,
+      "aggressive": 0.6082
+    },
+    {
+      "hand": "T5s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.207,
+      "passive": 0,
+      "aggressive": 0.793
+    },
+    {
+      "hand": "T6s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.2949,
+      "passive": 0,
+      "aggressive": 0.7051
+    },
+    {
+      "hand": "T7s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0484,
+      "passive": 0,
+      "aggressive": 0.9516
+    },
+    {
+      "hand": "T8s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.2094,
+      "passive": 0,
+      "aggressive": 1.7906
+    },
+    {
+      "hand": "T9s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.6653,
+      "passive": 0,
+      "aggressive": 2.3347
+    },
+    {
+      "hand": "J2s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3356,
+      "passive": 0,
+      "aggressive": 0.6643
+    },
+    {
+      "hand": "J3s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.1294,
+      "passive": 0,
+      "aggressive": 0.8706
+    },
+    {
+      "hand": "J4s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.049,
+      "passive": 0,
+      "aggressive": 0.951
+    },
+    {
+      "hand": "J5s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0176,
+      "passive": 0,
+      "aggressive": 0.9824
+    },
+    {
+      "hand": "J6s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.9366,
+      "passive": 0,
+      "aggressive": 1.0634
+    },
+    {
+      "hand": "J7s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.7929,
+      "passive": 0,
+      "aggressive": 1.2071
+    },
+    {
+      "hand": "J8s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.5248,
+      "passive": 0,
+      "aggressive": 1.4752
+    },
+    {
+      "hand": "J9s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.8145,
+      "passive": 0,
+      "aggressive": 3.1855
+    },
+    {
+      "hand": "JTs",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.5477,
+      "passive": 0,
+      "aggressive": 5.4523
+    },
+    {
+      "hand": "Q2s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0252,
+      "passive": 0,
+      "aggressive": 0.9747
+    },
+    {
+      "hand": "Q3s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0127,
+      "passive": 0,
+      "aggressive": 0.9873
+    },
+    {
+      "hand": "Q4s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.866,
+      "passive": 0,
+      "aggressive": 1.134
+    },
+    {
+      "hand": "Q5s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.5831,
+      "passive": 0,
+      "aggressive": 1.4169
+    },
+    {
+      "hand": "Q6s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.7655,
+      "passive": 0,
+      "aggressive": 1.2345
+    },
+    {
+      "hand": "Q7s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.3313,
+      "passive": 0,
+      "aggressive": 1.6687
+    },
+    {
+      "hand": "Q8s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.1242,
+      "passive": 0,
+      "aggressive": 1.8758
+    },
+    {
+      "hand": "Q9s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.9169,
+      "passive": 0,
+      "aggressive": 2.0831
+    },
+    {
+      "hand": "QTs",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 93.5203,
+      "passive": 0,
+      "aggressive": 6.4797
+    },
+    {
+      "hand": "QJs",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 90.155,
+      "passive": 0,
+      "aggressive": 9.845
+    },
+    {
+      "hand": "K2s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.8859,
+      "passive": 0,
+      "aggressive": 1.1141
+    },
+    {
+      "hand": "K3s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.7217,
+      "passive": 0,
+      "aggressive": 1.2783
+    },
+    {
+      "hand": "K4s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.0465,
+      "passive": 0,
+      "aggressive": 1.9535
+    },
+    {
+      "hand": "K5s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.3943,
+      "passive": 0,
+      "aggressive": 1.6057
+    },
+    {
+      "hand": "K6s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.6998,
+      "passive": 0,
+      "aggressive": 2.3002
+    },
+    {
+      "hand": "K7s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.7238,
+      "passive": 0,
+      "aggressive": 2.2762
+    },
+    {
+      "hand": "K8s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.3517,
+      "passive": 0,
+      "aggressive": 2.6483
+    },
+    {
+      "hand": "K9s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.2967,
+      "passive": 0,
+      "aggressive": 5.7033
+    },
+    {
+      "hand": "KTs",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 90.7112,
+      "passive": 0,
+      "aggressive": 9.2888
+    },
+    {
+      "hand": "KJs",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 55.0951,
+      "passive": 0,
+      "aggressive": 44.9049
+    },
+    {
+      "hand": "KQs",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 6.0922,
+      "passive": 0,
+      "aggressive": 93.9078
+    },
+    {
+      "hand": "A2s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.3906,
+      "passive": 0,
+      "aggressive": 3.6094
+    },
+    {
+      "hand": "A3s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.5512,
+      "passive": 0,
+      "aggressive": 5.4488
+    },
+    {
+      "hand": "A4s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 95.1093,
+      "passive": 0,
+      "aggressive": 4.8907
+    },
+    {
+      "hand": "A5s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 92.8541,
+      "passive": 0,
+      "aggressive": 7.1459
+    },
+    {
+      "hand": "A6s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 95.5949,
+      "passive": 0,
+      "aggressive": 4.4051
+    },
+    {
+      "hand": "A7s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.8842,
+      "passive": 0,
+      "aggressive": 5.1158
+    },
+    {
+      "hand": "A8s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 69.7325,
+      "passive": 0,
+      "aggressive": 30.2675
+    },
+    {
+      "hand": "A9s",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 55.1445,
+      "passive": 0,
+      "aggressive": 44.8555
+    },
+    {
+      "hand": "ATs",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.1632,
+      "passive": 0,
+      "aggressive": 95.8368
+    },
+    {
+      "hand": "AJs",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.8723,
+      "passive": 0,
+      "aggressive": 97.1277
+    },
+    {
+      "hand": "AQs",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.4395,
+      "passive": 0,
+      "aggressive": 97.5605
+    },
+    {
+      "hand": "AKs",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.6564,
+      "passive": 0,
+      "aggressive": 98.3436
+    },
+    {
+      "hand": "32o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.7128,
+      "passive": 0,
+      "aggressive": 0.2872
+    },
+    {
+      "hand": "42o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.7297,
+      "passive": 0,
+      "aggressive": 0.2703
+    },
+    {
+      "hand": "43o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.7285,
+      "passive": 0,
+      "aggressive": 0.2715
+    },
+    {
+      "hand": "52o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.7057,
+      "passive": 0,
+      "aggressive": 0.2943
+    },
+    {
+      "hand": "53o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.69,
+      "passive": 0,
+      "aggressive": 0.31
+    },
+    {
+      "hand": "54o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6787,
+      "passive": 0,
+      "aggressive": 0.3213
+    },
+    {
+      "hand": "62o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.7073,
+      "passive": 0,
+      "aggressive": 0.2927
+    },
+    {
+      "hand": "63o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.7064,
+      "passive": 0,
+      "aggressive": 0.2936
+    },
+    {
+      "hand": "64o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6821,
+      "passive": 0,
+      "aggressive": 0.3179
+    },
+    {
+      "hand": "65o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6522,
+      "passive": 0,
+      "aggressive": 0.3478
+    },
+    {
+      "hand": "72o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.702,
+      "passive": 0,
+      "aggressive": 0.298
+    },
+    {
+      "hand": "73o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.7115,
+      "passive": 0,
+      "aggressive": 0.2885
+    },
+    {
+      "hand": "74o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6784,
+      "passive": 0,
+      "aggressive": 0.3216
+    },
+    {
+      "hand": "75o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6365,
+      "passive": 0,
+      "aggressive": 0.3635
+    },
+    {
+      "hand": "76o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6098,
+      "passive": 0,
+      "aggressive": 0.3902
+    },
+    {
+      "hand": "82o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.7008,
+      "passive": 0,
+      "aggressive": 0.2992
+    },
+    {
+      "hand": "83o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.688,
+      "passive": 0,
+      "aggressive": 0.312
+    },
+    {
+      "hand": "84o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6578,
+      "passive": 0,
+      "aggressive": 0.3422
+    },
+    {
+      "hand": "85o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6757,
+      "passive": 0,
+      "aggressive": 0.3243
+    },
+    {
+      "hand": "86o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.625,
+      "passive": 0,
+      "aggressive": 0.3751
+    },
+    {
+      "hand": "87o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.5679,
+      "passive": 0,
+      "aggressive": 0.4321
+    },
+    {
+      "hand": "92o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6846,
+      "passive": 0,
+      "aggressive": 0.3154
+    },
+    {
+      "hand": "93o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6804,
+      "passive": 0,
+      "aggressive": 0.3196
+    },
+    {
+      "hand": "94o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6763,
+      "passive": 0,
+      "aggressive": 0.3237
+    },
+    {
+      "hand": "95o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6632,
+      "passive": 0,
+      "aggressive": 0.3368
+    },
+    {
+      "hand": "96o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6352,
+      "passive": 0,
+      "aggressive": 0.3648
+    },
+    {
+      "hand": "97o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.5502,
+      "passive": 0,
+      "aggressive": 0.4497
+    },
+    {
+      "hand": "98o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.5158,
+      "passive": 0,
+      "aggressive": 0.4842
+    },
+    {
+      "hand": "T2o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6944,
+      "passive": 0,
+      "aggressive": 0.3056
+    },
+    {
+      "hand": "T3o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6859,
+      "passive": 0,
+      "aggressive": 0.3141
+    },
+    {
+      "hand": "T4o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6626,
+      "passive": 0,
+      "aggressive": 0.3374
+    },
+    {
+      "hand": "T5o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6262,
+      "passive": 0,
+      "aggressive": 0.3739
+    },
+    {
+      "hand": "T6o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.5912,
+      "passive": 0,
+      "aggressive": 0.4088
+    },
+    {
+      "hand": "T7o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.5673,
+      "passive": 0,
+      "aggressive": 0.4327
+    },
+    {
+      "hand": "T8o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4422,
+      "passive": 0,
+      "aggressive": 0.5578
+    },
+    {
+      "hand": "T9o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3273,
+      "passive": 0,
+      "aggressive": 0.6727
+    },
+    {
+      "hand": "J2o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6526,
+      "passive": 0,
+      "aggressive": 0.3474
+    },
+    {
+      "hand": "J3o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6503,
+      "passive": 0,
+      "aggressive": 0.3497
+    },
+    {
+      "hand": "J4o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6293,
+      "passive": 0,
+      "aggressive": 0.3707
+    },
+    {
+      "hand": "J5o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6048,
+      "passive": 0,
+      "aggressive": 0.3952
+    },
+    {
+      "hand": "J6o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.6129,
+      "passive": 0,
+      "aggressive": 0.3871
+    },
+    {
+      "hand": "J7o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.5323,
+      "passive": 0,
+      "aggressive": 0.4677
+    },
+    {
+      "hand": "J8o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4724,
+      "passive": 0,
+      "aggressive": 0.5276
+    },
+    {
+      "hand": "J9o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.2728,
+      "passive": 0,
+      "aggressive": 0.7272
+    },
+    {
+      "hand": "JTo",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.7588,
+      "passive": 0,
+      "aggressive": 1.2412
+    },
+    {
+      "hand": "Q2o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.5761,
+      "passive": 0,
+      "aggressive": 0.4239
+    },
+    {
+      "hand": "Q3o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.5892,
+      "passive": 0,
+      "aggressive": 0.4108
+    },
+    {
+      "hand": "Q4o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4792,
+      "passive": 0,
+      "aggressive": 0.5208
+    },
+    {
+      "hand": "Q5o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.5353,
+      "passive": 0,
+      "aggressive": 0.4647
+    },
+    {
+      "hand": "Q6o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.529,
+      "passive": 0,
+      "aggressive": 0.471
+    },
+    {
+      "hand": "Q7o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4964,
+      "passive": 0,
+      "aggressive": 0.5036
+    },
+    {
+      "hand": "Q8o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3263,
+      "passive": 0,
+      "aggressive": 0.6737
+    },
+    {
+      "hand": "Q9o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.1899,
+      "passive": 0,
+      "aggressive": 0.8101
+    },
+    {
+      "hand": "QTo",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.5608,
+      "passive": 0,
+      "aggressive": 1.4392
+    },
+    {
+      "hand": "QJo",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.9636,
+      "passive": 0,
+      "aggressive": 3.0364
+    },
+    {
+      "hand": "K2o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4609,
+      "passive": 0,
+      "aggressive": 0.5391
+    },
+    {
+      "hand": "K3o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4445,
+      "passive": 0,
+      "aggressive": 0.5555
+    },
+    {
+      "hand": "K4o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4215,
+      "passive": 0,
+      "aggressive": 0.5785
+    },
+    {
+      "hand": "K5o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3225,
+      "passive": 0,
+      "aggressive": 0.6775
+    },
+    {
+      "hand": "K6o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.2925,
+      "passive": 0,
+      "aggressive": 0.7075
+    },
+    {
+      "hand": "K7o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0858,
+      "passive": 0,
+      "aggressive": 0.9142
+    },
+    {
+      "hand": "K8o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.8786,
+      "passive": 0,
+      "aggressive": 1.1214
+    },
+    {
+      "hand": "K9o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.4931,
+      "passive": 0,
+      "aggressive": 1.5069
+    },
+    {
+      "hand": "KTo",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.2387,
+      "passive": 0,
+      "aggressive": 3.7613
+    },
+    {
+      "hand": "KJo",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 79.8369,
+      "passive": 0,
+      "aggressive": 20.1631
+    },
+    {
+      "hand": "KQo",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 18.8448,
+      "passive": 0,
+      "aggressive": 81.1552
+    },
+    {
+      "hand": "A2o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.7069,
+      "passive": 0,
+      "aggressive": 1.2932
+    },
+    {
+      "hand": "A3o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.7393,
+      "passive": 0,
+      "aggressive": 1.2607
+    },
+    {
+      "hand": "A4o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.9733,
+      "passive": 0,
+      "aggressive": 2.0267
+    },
+    {
+      "hand": "A5o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.9674,
+      "passive": 0,
+      "aggressive": 2.0326
+    },
+    {
+      "hand": "A6o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.0274,
+      "passive": 0,
+      "aggressive": 1.9726
+    },
+    {
+      "hand": "A7o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.3327,
+      "passive": 0,
+      "aggressive": 2.6673
+    },
+    {
+      "hand": "A8o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 95.6301,
+      "passive": 0,
+      "aggressive": 4.3699
+    },
+    {
+      "hand": "A9o",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 82.9863,
+      "passive": 0,
+      "aggressive": 17.0137
+    },
+    {
+      "hand": "ATo",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 30.8082,
+      "passive": 0,
+      "aggressive": 69.1918
+    },
+    {
+      "hand": "AJo",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.8838,
+      "passive": 0,
+      "aggressive": 97.1162
+    },
+    {
+      "hand": "AQo",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.1691,
+      "passive": 0,
+      "aggressive": 98.8309
+    },
+    {
+      "hand": "AKo",
+      "position": "UTG",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.0694,
+      "passive": 0,
+      "aggressive": 98.9306
+    },
+    {
+      "hand": "22",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.9281,
+      "passive": 0,
+      "aggressive": 2.0719
+    },
+    {
+      "hand": "33",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.188,
+      "passive": 0,
+      "aggressive": 3.812
+    },
+    {
+      "hand": "44",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 88.217,
+      "passive": 0,
+      "aggressive": 11.783
+    },
+    {
+      "hand": "55",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 68.3767,
+      "passive": 0,
+      "aggressive": 31.6233
+    },
+    {
+      "hand": "66",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 9.0342,
+      "passive": 0,
+      "aggressive": 90.9658
+    },
+    {
+      "hand": "77",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.2181,
+      "passive": 0,
+      "aggressive": 95.7819
+    },
+    {
+      "hand": "88",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.515,
+      "passive": 0,
+      "aggressive": 97.485
+    },
+    {
+      "hand": "99",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.9833,
+      "passive": 0,
+      "aggressive": 98.0167
+    },
+    {
+      "hand": "TT",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.2301,
+      "passive": 0,
+      "aggressive": 97.7699
+    },
+    {
+      "hand": "JJ",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.4844,
+      "passive": 0,
+      "aggressive": 98.5156
+    },
+    {
+      "hand": "QQ",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.8646,
+      "passive": 0,
+      "aggressive": 99.1354
+    },
+    {
+      "hand": "KK",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.3838,
+      "passive": 0,
+      "aggressive": 99.6162
+    },
+    {
+      "hand": "AA",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.034,
+      "passive": 0,
+      "aggressive": 99.966
+    },
+    {
+      "hand": "32s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0926,
+      "passive": 0,
+      "aggressive": 0.9074
+    },
+    {
+      "hand": "42s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.9154,
+      "passive": 0,
+      "aggressive": 1.0846
+    },
+    {
+      "hand": "43s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.9773,
+      "passive": 0,
+      "aggressive": 1.0227
+    },
+    {
+      "hand": "52s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0338,
+      "passive": 0,
+      "aggressive": 0.9663
+    },
+    {
+      "hand": "53s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.8873,
+      "passive": 0,
+      "aggressive": 1.1127
+    },
+    {
+      "hand": "54s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.5435,
+      "passive": 0,
+      "aggressive": 1.4565
+    },
+    {
+      "hand": "62s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0979,
+      "passive": 0,
+      "aggressive": 0.9021
+    },
+    {
+      "hand": "63s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.8425,
+      "passive": 0,
+      "aggressive": 1.1575
+    },
+    {
+      "hand": "64s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.6195,
+      "passive": 0,
+      "aggressive": 1.3805
+    },
+    {
+      "hand": "65s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.6255,
+      "passive": 0,
+      "aggressive": 1.3745
+    },
+    {
+      "hand": "72s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0886,
+      "passive": 0,
+      "aggressive": 0.9114
+    },
+    {
+      "hand": "73s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.9495,
+      "passive": 0,
+      "aggressive": 1.0505
+    },
+    {
+      "hand": "74s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.9517,
+      "passive": 0,
+      "aggressive": 1.0483
+    },
+    {
+      "hand": "75s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.7438,
+      "passive": 0,
+      "aggressive": 1.2562
+    },
+    {
+      "hand": "76s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.487,
+      "passive": 0,
+      "aggressive": 1.5131
+    },
+    {
+      "hand": "82s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.9026,
+      "passive": 0,
+      "aggressive": 1.0974
+    },
+    {
+      "hand": "83s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.1197,
+      "passive": 0,
+      "aggressive": 0.8803
+    },
+    {
+      "hand": "84s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.9081,
+      "passive": 0,
+      "aggressive": 1.0919
+    },
+    {
+      "hand": "85s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.5626,
+      "passive": 0,
+      "aggressive": 1.4374
+    },
+    {
+      "hand": "86s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.5267,
+      "passive": 0,
+      "aggressive": 1.4733
+    },
+    {
+      "hand": "87s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.8033,
+      "passive": 0,
+      "aggressive": 2.1967
+    },
+    {
+      "hand": "92s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0891,
+      "passive": 0,
+      "aggressive": 0.9109
+    },
+    {
+      "hand": "93s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.7974,
+      "passive": 0,
+      "aggressive": 1.2026
+    },
+    {
+      "hand": "94s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.97,
+      "passive": 0,
+      "aggressive": 1.03
+    },
+    {
+      "hand": "95s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.5933,
+      "passive": 0,
+      "aggressive": 1.4067
+    },
+    {
+      "hand": "96s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.6112,
+      "passive": 0,
+      "aggressive": 1.3888
+    },
+    {
+      "hand": "97s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.1733,
+      "passive": 0,
+      "aggressive": 1.8267
+    },
+    {
+      "hand": "98s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.9271,
+      "passive": 0,
+      "aggressive": 2.0729
+    },
+    {
+      "hand": "T2s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.8506,
+      "passive": 0,
+      "aggressive": 1.1494
+    },
+    {
+      "hand": "T3s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.7202,
+      "passive": 0,
+      "aggressive": 1.2798
+    },
+    {
+      "hand": "T4s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.8865,
+      "passive": 0,
+      "aggressive": 1.1135
+    },
+    {
+      "hand": "T5s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.4749,
+      "passive": 0,
+      "aggressive": 1.5251
+    },
+    {
+      "hand": "T6s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.6918,
+      "passive": 0,
+      "aggressive": 1.3082
+    },
+    {
+      "hand": "T7s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.6651,
+      "passive": 0,
+      "aggressive": 2.3349
+    },
+    {
+      "hand": "T8s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.6657,
+      "passive": 0,
+      "aggressive": 2.3343
+    },
+    {
+      "hand": "T9s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.0745,
+      "passive": 0,
+      "aggressive": 3.9255
+    },
+    {
+      "hand": "J2s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.8717,
+      "passive": 0,
+      "aggressive": 1.1283
+    },
+    {
+      "hand": "J3s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.8009,
+      "passive": 0,
+      "aggressive": 1.1991
+    },
+    {
+      "hand": "J4s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.4108,
+      "passive": 0,
+      "aggressive": 1.5892
+    },
+    {
+      "hand": "J5s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.2086,
+      "passive": 0,
+      "aggressive": 1.7914
+    },
+    {
+      "hand": "J6s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.6122,
+      "passive": 0,
+      "aggressive": 1.3879
+    },
+    {
+      "hand": "J7s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.2137,
+      "passive": 0,
+      "aggressive": 1.7864
+    },
+    {
+      "hand": "J8s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.7101,
+      "passive": 0,
+      "aggressive": 3.2899
+    },
+    {
+      "hand": "J9s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 95.75,
+      "passive": 0,
+      "aggressive": 4.25
+    },
+    {
+      "hand": "JTs",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 93.2863,
+      "passive": 0,
+      "aggressive": 6.7137
+    },
+    {
+      "hand": "Q2s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.5297,
+      "passive": 0,
+      "aggressive": 1.4703
+    },
+    {
+      "hand": "Q3s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.4789,
+      "passive": 0,
+      "aggressive": 1.5211
+    },
+    {
+      "hand": "Q4s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.348,
+      "passive": 0,
+      "aggressive": 1.652
+    },
+    {
+      "hand": "Q5s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.6061,
+      "passive": 0,
+      "aggressive": 2.3939
+    },
+    {
+      "hand": "Q6s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.7123,
+      "passive": 0,
+      "aggressive": 2.2878
+    },
+    {
+      "hand": "Q7s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.1791,
+      "passive": 0,
+      "aggressive": 2.8209
+    },
+    {
+      "hand": "Q8s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.9862,
+      "passive": 0,
+      "aggressive": 3.0138
+    },
+    {
+      "hand": "Q9s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.8598,
+      "passive": 0,
+      "aggressive": 5.1402
+    },
+    {
+      "hand": "QTs",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 62.3641,
+      "passive": 0,
+      "aggressive": 37.6359
+    },
+    {
+      "hand": "QJs",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 20.0383,
+      "passive": 0,
+      "aggressive": 79.9617
+    },
+    {
+      "hand": "K2s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.7693,
+      "passive": 0,
+      "aggressive": 2.2308
+    },
+    {
+      "hand": "K3s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.0586,
+      "passive": 0,
+      "aggressive": 3.9414
+    },
+    {
+      "hand": "K4s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.5121,
+      "passive": 0,
+      "aggressive": 2.4879
+    },
+    {
+      "hand": "K5s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.2809,
+      "passive": 0,
+      "aggressive": 2.7191
+    },
+    {
+      "hand": "K6s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.0059,
+      "passive": 0,
+      "aggressive": 3.9941
+    },
+    {
+      "hand": "K7s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.5505,
+      "passive": 0,
+      "aggressive": 5.4495
+    },
+    {
+      "hand": "K8s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.7383,
+      "passive": 0,
+      "aggressive": 5.2618
+    },
+    {
+      "hand": "K9s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 87.5689,
+      "passive": 0,
+      "aggressive": 12.4311
+    },
+    {
+      "hand": "KTs",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 10.2148,
+      "passive": 0,
+      "aggressive": 89.7852
+    },
+    {
+      "hand": "KJs",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 7.9009,
+      "passive": 0,
+      "aggressive": 92.0991
+    },
+    {
+      "hand": "KQs",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.1281,
+      "passive": 0,
+      "aggressive": 95.8719
+    },
+    {
+      "hand": "A2s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 68.2523,
+      "passive": 0,
+      "aggressive": 31.7477
+    },
+    {
+      "hand": "A3s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 57.1216,
+      "passive": 0,
+      "aggressive": 42.8784
+    },
+    {
+      "hand": "A4s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 32.5314,
+      "passive": 0,
+      "aggressive": 67.4686
+    },
+    {
+      "hand": "A5s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 21.7046,
+      "passive": 0,
+      "aggressive": 78.2954
+    },
+    {
+      "hand": "A6s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 29.3581,
+      "passive": 0,
+      "aggressive": 70.6419
+    },
+    {
+      "hand": "A7s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 14.011,
+      "passive": 0,
+      "aggressive": 85.989
+    },
+    {
+      "hand": "A8s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 7.092,
+      "passive": 0,
+      "aggressive": 92.908
+    },
+    {
+      "hand": "A9s",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 5.0517,
+      "passive": 0,
+      "aggressive": 94.9483
+    },
+    {
+      "hand": "ATs",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.3468,
+      "passive": 0,
+      "aggressive": 96.6532
+    },
+    {
+      "hand": "AJs",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.2924,
+      "passive": 0,
+      "aggressive": 96.7076
+    },
+    {
+      "hand": "AQs",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.8494,
+      "passive": 0,
+      "aggressive": 98.1506
+    },
+    {
+      "hand": "AKs",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.3251,
+      "passive": 0,
+      "aggressive": 98.6749
+    },
+    {
+      "hand": "32o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.5008,
+      "passive": 0,
+      "aggressive": 0.4992
+    },
+    {
+      "hand": "42o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4801,
+      "passive": 0,
+      "aggressive": 0.5199
+    },
+    {
+      "hand": "43o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4171,
+      "passive": 0,
+      "aggressive": 0.5829
+    },
+    {
+      "hand": "52o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4662,
+      "passive": 0,
+      "aggressive": 0.5338
+    },
+    {
+      "hand": "53o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4441,
+      "passive": 0,
+      "aggressive": 0.5559
+    },
+    {
+      "hand": "54o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3761,
+      "passive": 0,
+      "aggressive": 0.6239
+    },
+    {
+      "hand": "62o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4481,
+      "passive": 0,
+      "aggressive": 0.5519
+    },
+    {
+      "hand": "63o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4484,
+      "passive": 0,
+      "aggressive": 0.5516
+    },
+    {
+      "hand": "64o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3333,
+      "passive": 0,
+      "aggressive": 0.6667
+    },
+    {
+      "hand": "65o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3659,
+      "passive": 0,
+      "aggressive": 0.6341
+    },
+    {
+      "hand": "72o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4915,
+      "passive": 0,
+      "aggressive": 0.5085
+    },
+    {
+      "hand": "73o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4606,
+      "passive": 0,
+      "aggressive": 0.5394
+    },
+    {
+      "hand": "74o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4129,
+      "passive": 0,
+      "aggressive": 0.5871
+    },
+    {
+      "hand": "75o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3457,
+      "passive": 0,
+      "aggressive": 0.6543
+    },
+    {
+      "hand": "76o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.2992,
+      "passive": 0,
+      "aggressive": 0.7008
+    },
+    {
+      "hand": "82o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4835,
+      "passive": 0,
+      "aggressive": 0.5165
+    },
+    {
+      "hand": "83o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4489,
+      "passive": 0,
+      "aggressive": 0.5511
+    },
+    {
+      "hand": "84o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.391,
+      "passive": 0,
+      "aggressive": 0.609
+    },
+    {
+      "hand": "85o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3801,
+      "passive": 0,
+      "aggressive": 0.6199
+    },
+    {
+      "hand": "86o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3484,
+      "passive": 0,
+      "aggressive": 0.6516
+    },
+    {
+      "hand": "87o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.1813,
+      "passive": 0,
+      "aggressive": 0.8187
+    },
+    {
+      "hand": "92o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4621,
+      "passive": 0,
+      "aggressive": 0.5379
+    },
+    {
+      "hand": "93o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4273,
+      "passive": 0,
+      "aggressive": 0.5728
+    },
+    {
+      "hand": "94o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4337,
+      "passive": 0,
+      "aggressive": 0.5663
+    },
+    {
+      "hand": "95o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3694,
+      "passive": 0,
+      "aggressive": 0.6306
+    },
+    {
+      "hand": "96o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3476,
+      "passive": 0,
+      "aggressive": 0.6524
+    },
+    {
+      "hand": "97o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.2775,
+      "passive": 0,
+      "aggressive": 0.7225
+    },
+    {
+      "hand": "98o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.1925,
+      "passive": 0,
+      "aggressive": 0.8075
+    },
+    {
+      "hand": "T2o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3598,
+      "passive": 0,
+      "aggressive": 0.6402
+    },
+    {
+      "hand": "T3o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3302,
+      "passive": 0,
+      "aggressive": 0.6698
+    },
+    {
+      "hand": "T4o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4101,
+      "passive": 0,
+      "aggressive": 0.5899
+    },
+    {
+      "hand": "T5o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.4017,
+      "passive": 0,
+      "aggressive": 0.5983
+    },
+    {
+      "hand": "T6o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.2571,
+      "passive": 0,
+      "aggressive": 0.7429
+    },
+    {
+      "hand": "T7o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.1853,
+      "passive": 0,
+      "aggressive": 0.8147
+    },
+    {
+      "hand": "T8o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.06,
+      "passive": 0,
+      "aggressive": 0.94
+    },
+    {
+      "hand": "T9o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.8698,
+      "passive": 0,
+      "aggressive": 1.1302
+    },
+    {
+      "hand": "J2o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3108,
+      "passive": 0,
+      "aggressive": 0.6892
+    },
+    {
+      "hand": "J3o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3106,
+      "passive": 0,
+      "aggressive": 0.6894
+    },
+    {
+      "hand": "J4o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.3456,
+      "passive": 0,
+      "aggressive": 0.6544
+    },
+    {
+      "hand": "J5o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.299,
+      "passive": 0,
+      "aggressive": 0.701
+    },
+    {
+      "hand": "J6o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.2804,
+      "passive": 0,
+      "aggressive": 0.7196
+    },
+    {
+      "hand": "J7o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.209,
+      "passive": 0,
+      "aggressive": 0.791
+    },
+    {
+      "hand": "J8o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.8588,
+      "passive": 0,
+      "aggressive": 1.1412
+    },
+    {
+      "hand": "J9o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.6908,
+      "passive": 0,
+      "aggressive": 1.3092
+    },
+    {
+      "hand": "JTo",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.6117,
+      "passive": 0,
+      "aggressive": 3.3884
+    },
+    {
+      "hand": "Q2o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.2027,
+      "passive": 0,
+      "aggressive": 0.7973
+    },
+    {
+      "hand": "Q3o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.2764,
+      "passive": 0,
+      "aggressive": 0.7236
+    },
+    {
+      "hand": "Q4o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.246,
+      "passive": 0,
+      "aggressive": 0.754
+    },
+    {
+      "hand": "Q5o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.1817,
+      "passive": 0,
+      "aggressive": 0.8183
+    },
+    {
+      "hand": "Q6o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0984,
+      "passive": 0,
+      "aggressive": 0.9016
+    },
+    {
+      "hand": "Q7o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0908,
+      "passive": 0,
+      "aggressive": 0.9092
+    },
+    {
+      "hand": "Q8o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.7885,
+      "passive": 0,
+      "aggressive": 1.2115
+    },
+    {
+      "hand": "Q9o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.0012,
+      "passive": 0,
+      "aggressive": 1.9988
+    },
+    {
+      "hand": "QTo",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 95.0244,
+      "passive": 0,
+      "aggressive": 4.9756
+    },
+    {
+      "hand": "QJo",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 57.1432,
+      "passive": 0,
+      "aggressive": 42.8568
+    },
+    {
+      "hand": "K2o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0125,
+      "passive": 0,
+      "aggressive": 0.9875
+    },
+    {
+      "hand": "K3o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0178,
+      "passive": 0,
+      "aggressive": 0.9822
+    },
+    {
+      "hand": "K4o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.8846,
+      "passive": 0,
+      "aggressive": 1.1154
+    },
+    {
+      "hand": "K5o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.7364,
+      "passive": 0,
+      "aggressive": 1.2636
+    },
+    {
+      "hand": "K6o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.5541,
+      "passive": 0,
+      "aggressive": 1.4459
+    },
+    {
+      "hand": "K7o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.3172,
+      "passive": 0,
+      "aggressive": 1.6828
+    },
+    {
+      "hand": "K8o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.0823,
+      "passive": 0,
+      "aggressive": 1.9176
+    },
+    {
+      "hand": "K9o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.3629,
+      "passive": 0,
+      "aggressive": 3.6372
+    },
+    {
+      "hand": "KTo",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 55.1219,
+      "passive": 0,
+      "aggressive": 44.8781
+    },
+    {
+      "hand": "KJo",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 6.9985,
+      "passive": 0,
+      "aggressive": 93.0015
+    },
+    {
+      "hand": "KQo",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.2178,
+      "passive": 0,
+      "aggressive": 97.7822
+    },
+    {
+      "hand": "A2o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.4572,
+      "passive": 0,
+      "aggressive": 5.5428
+    },
+    {
+      "hand": "A3o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 87.9329,
+      "passive": 0,
+      "aggressive": 12.0671
+    },
+    {
+      "hand": "A4o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 56.3395,
+      "passive": 0,
+      "aggressive": 43.6605
+    },
+    {
+      "hand": "A5o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 36.1015,
+      "passive": 0,
+      "aggressive": 63.8985
+    },
+    {
+      "hand": "A6o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 38.9704,
+      "passive": 0,
+      "aggressive": 61.0296
+    },
+    {
+      "hand": "A7o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 27.2956,
+      "passive": 0,
+      "aggressive": 72.7044
+    },
+    {
+      "hand": "A8o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 13.7057,
+      "passive": 0,
+      "aggressive": 86.2943
+    },
+    {
+      "hand": "A9o",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 5.0413,
+      "passive": 0,
+      "aggressive": 94.9587
+    },
+    {
+      "hand": "ATo",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.577,
+      "passive": 0,
+      "aggressive": 98.423
+    },
+    {
+      "hand": "AJo",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.2305,
+      "passive": 0,
+      "aggressive": 98.7695
+    },
+    {
+      "hand": "AQo",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.9896,
+      "passive": 0,
+      "aggressive": 99.0104
+    },
+    {
+      "hand": "AKo",
+      "position": "HJ",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.1023,
+      "passive": 0,
+      "aggressive": 98.8977
+    },
+    {
+      "hand": "22",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 21.3967,
+      "passive": 0,
+      "aggressive": 78.6033
+    },
+    {
+      "hand": "33",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 8.2743,
+      "passive": 0,
+      "aggressive": 91.7257
+    },
+    {
+      "hand": "44",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.5471,
+      "passive": 0,
+      "aggressive": 95.4529
+    },
+    {
+      "hand": "55",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.7854,
+      "passive": 0,
+      "aggressive": 97.2145
+    },
+    {
+      "hand": "66",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.0604,
+      "passive": 0,
+      "aggressive": 96.9396
+    },
+    {
+      "hand": "77",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.1189,
+      "passive": 0,
+      "aggressive": 97.8811
+    },
+    {
+      "hand": "88",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.8063,
+      "passive": 0,
+      "aggressive": 98.1937
+    },
+    {
+      "hand": "99",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.0978,
+      "passive": 0,
+      "aggressive": 97.9022
+    },
+    {
+      "hand": "TT",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.7442,
+      "passive": 0,
+      "aggressive": 98.2558
+    },
+    {
+      "hand": "JJ",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.2267,
+      "passive": 0,
+      "aggressive": 98.7733
+    },
+    {
+      "hand": "QQ",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.6709,
+      "passive": 0,
+      "aggressive": 99.3291
+    },
+    {
+      "hand": "KK",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.3682,
+      "passive": 0,
+      "aggressive": 99.6318
+    },
+    {
+      "hand": "AA",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.0383,
+      "passive": 0,
+      "aggressive": 99.9617
+    },
+    {
+      "hand": "32s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.1876,
+      "passive": 0,
+      "aggressive": 1.8124
+    },
+    {
+      "hand": "42s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.2447,
+      "passive": 0,
+      "aggressive": 1.7553
+    },
+    {
+      "hand": "43s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.5435,
+      "passive": 0,
+      "aggressive": 2.4565
+    },
+    {
+      "hand": "52s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.0695,
+      "passive": 0,
+      "aggressive": 1.9305
+    },
+    {
+      "hand": "53s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.4007,
+      "passive": 0,
+      "aggressive": 2.5993
+    },
+    {
+      "hand": "54s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.3648,
+      "passive": 0,
+      "aggressive": 3.6352
+    },
+    {
+      "hand": "62s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.12,
+      "passive": 0,
+      "aggressive": 1.88
+    },
+    {
+      "hand": "63s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.11,
+      "passive": 0,
+      "aggressive": 1.89
+    },
+    {
+      "hand": "64s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.0627,
+      "passive": 0,
+      "aggressive": 2.9373
+    },
+    {
+      "hand": "65s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 95.8353,
+      "passive": 0,
+      "aggressive": 4.1647
+    },
+    {
+      "hand": "72s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.225,
+      "passive": 0,
+      "aggressive": 1.775
+    },
+    {
+      "hand": "73s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.1104,
+      "passive": 0,
+      "aggressive": 1.8896
+    },
+    {
+      "hand": "74s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.6264,
+      "passive": 0,
+      "aggressive": 2.3736
+    },
+    {
+      "hand": "75s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.5704,
+      "passive": 0,
+      "aggressive": 3.4296
+    },
+    {
+      "hand": "76s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 93.8534,
+      "passive": 0,
+      "aggressive": 6.1466
+    },
+    {
+      "hand": "82s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.249,
+      "passive": 0,
+      "aggressive": 1.751
+    },
+    {
+      "hand": "83s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.1266,
+      "passive": 0,
+      "aggressive": 1.8734
+    },
+    {
+      "hand": "84s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.4791,
+      "passive": 0,
+      "aggressive": 2.5209
+    },
+    {
+      "hand": "85s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.2885,
+      "passive": 0,
+      "aggressive": 2.7115
+    },
+    {
+      "hand": "86s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.9801,
+      "passive": 0,
+      "aggressive": 5.0199
+    },
+    {
+      "hand": "87s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 92.7851,
+      "passive": 0,
+      "aggressive": 7.2149
+    },
+    {
+      "hand": "92s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.6442,
+      "passive": 0,
+      "aggressive": 2.3558
+    },
+    {
+      "hand": "93s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.7712,
+      "passive": 0,
+      "aggressive": 2.2288
+    },
+    {
+      "hand": "94s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.928,
+      "passive": 0,
+      "aggressive": 2.072
+    },
+    {
+      "hand": "95s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.0207,
+      "passive": 0,
+      "aggressive": 2.9793
+    },
+    {
+      "hand": "96s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.5086,
+      "passive": 0,
+      "aggressive": 3.4914
+    },
+    {
+      "hand": "97s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 91.3597,
+      "passive": 0,
+      "aggressive": 8.6403
+    },
+    {
+      "hand": "98s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 79.191,
+      "passive": 0,
+      "aggressive": 20.809
+    },
+    {
+      "hand": "T2s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.6191,
+      "passive": 0,
+      "aggressive": 2.3809
+    },
+    {
+      "hand": "T3s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.6334,
+      "passive": 0,
+      "aggressive": 2.3666
+    },
+    {
+      "hand": "T4s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.7013,
+      "passive": 0,
+      "aggressive": 2.2987
+    },
+    {
+      "hand": "T5s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.5767,
+      "passive": 0,
+      "aggressive": 3.4233
+    },
+    {
+      "hand": "T6s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.4461,
+      "passive": 0,
+      "aggressive": 3.5539
+    },
+    {
+      "hand": "T7s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.7696,
+      "passive": 0,
+      "aggressive": 5.2305
+    },
+    {
+      "hand": "T8s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 88.2807,
+      "passive": 0,
+      "aggressive": 11.7193
+    },
+    {
+      "hand": "T9s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 15.0191,
+      "passive": 0,
+      "aggressive": 84.9809
+    },
+    {
+      "hand": "J2s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.4981,
+      "passive": 0,
+      "aggressive": 2.5019
+    },
+    {
+      "hand": "J3s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.2824,
+      "passive": 0,
+      "aggressive": 2.7176
+    },
+    {
+      "hand": "J4s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.9929,
+      "passive": 0,
+      "aggressive": 3.0071
+    },
+    {
+      "hand": "J5s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.2603,
+      "passive": 0,
+      "aggressive": 3.7397
+    },
+    {
+      "hand": "J6s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.2385,
+      "passive": 0,
+      "aggressive": 3.7615
+    },
+    {
+      "hand": "J7s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 91.5197,
+      "passive": 0,
+      "aggressive": 8.4803
+    },
+    {
+      "hand": "J8s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 82.1221,
+      "passive": 0,
+      "aggressive": 17.8779
+    },
+    {
+      "hand": "J9s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 48.7777,
+      "passive": 0,
+      "aggressive": 51.2223
+    },
+    {
+      "hand": "JTs",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.4071,
+      "passive": 0,
+      "aggressive": 95.5929
+    },
+    {
+      "hand": "Q2s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.4101,
+      "passive": 0,
+      "aggressive": 3.5899
+    },
+    {
+      "hand": "Q3s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.1276,
+      "passive": 0,
+      "aggressive": 3.8724
+    },
+    {
+      "hand": "Q4s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.2161,
+      "passive": 0,
+      "aggressive": 5.7839
+    },
+    {
+      "hand": "Q5s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 93.5443,
+      "passive": 0,
+      "aggressive": 6.4557
+    },
+    {
+      "hand": "Q6s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 90.9581,
+      "passive": 0,
+      "aggressive": 9.0419
+    },
+    {
+      "hand": "Q7s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 90.6566,
+      "passive": 0,
+      "aggressive": 9.3435
+    },
+    {
+      "hand": "Q8s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 34.5869,
+      "passive": 0,
+      "aggressive": 65.4131
+    },
+    {
+      "hand": "Q9s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 13.2989,
+      "passive": 0,
+      "aggressive": 86.7011
+    },
+    {
+      "hand": "QTs",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 5.8753,
+      "passive": 0,
+      "aggressive": 94.1247
+    },
+    {
+      "hand": "QJs",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.9228,
+      "passive": 0,
+      "aggressive": 95.0772
+    },
+    {
+      "hand": "K2s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 92.4325,
+      "passive": 0,
+      "aggressive": 7.5675
+    },
+    {
+      "hand": "K3s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 89.204,
+      "passive": 0,
+      "aggressive": 10.796
+    },
+    {
+      "hand": "K4s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 89.0597,
+      "passive": 0,
+      "aggressive": 10.9403
+    },
+    {
+      "hand": "K5s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 42.3871,
+      "passive": 0,
+      "aggressive": 57.6129
+    },
+    {
+      "hand": "K6s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 16.9162,
+      "passive": 0,
+      "aggressive": 83.0838
+    },
+    {
+      "hand": "K7s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 24.0779,
+      "passive": 0,
+      "aggressive": 75.9221
+    },
+    {
+      "hand": "K8s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 21.9521,
+      "passive": 0,
+      "aggressive": 78.0479
+    },
+    {
+      "hand": "K9s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 5.5,
+      "passive": 0,
+      "aggressive": 94.5
+    },
+    {
+      "hand": "KTs",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.6246,
+      "passive": 0,
+      "aggressive": 95.3754
+    },
+    {
+      "hand": "KJs",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.6198,
+      "passive": 0,
+      "aggressive": 97.3802
+    },
+    {
+      "hand": "KQs",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.7727,
+      "passive": 0,
+      "aggressive": 97.2273
+    },
+    {
+      "hand": "A2s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 5.0793,
+      "passive": 0,
+      "aggressive": 94.9207
+    },
+    {
+      "hand": "A3s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.9419,
+      "passive": 0,
+      "aggressive": 95.0581
+    },
+    {
+      "hand": "A4s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.9892,
+      "passive": 0,
+      "aggressive": 96.0108
+    },
+    {
+      "hand": "A5s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.2169,
+      "passive": 0,
+      "aggressive": 95.7831
+    },
+    {
+      "hand": "A6s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 5.0163,
+      "passive": 0,
+      "aggressive": 94.9837
+    },
+    {
+      "hand": "A7s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.1093,
+      "passive": 0,
+      "aggressive": 96.8907
+    },
+    {
+      "hand": "A8s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.7493,
+      "passive": 0,
+      "aggressive": 97.2507
+    },
+    {
+      "hand": "A9s",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.8851,
+      "passive": 0,
+      "aggressive": 98.1149
+    },
+    {
+      "hand": "ATs",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.935,
+      "passive": 0,
+      "aggressive": 98.065
+    },
+    {
+      "hand": "AJs",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.8181,
+      "passive": 0,
+      "aggressive": 98.1819
+    },
+    {
+      "hand": "AQs",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.5597,
+      "passive": 0,
+      "aggressive": 98.4403
+    },
+    {
+      "hand": "AKs",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.9771,
+      "passive": 0,
+      "aggressive": 99.0229
+    },
+    {
+      "hand": "32o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.1605,
+      "passive": 0,
+      "aggressive": 0.8396
+    },
+    {
+      "hand": "42o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.1467,
+      "passive": 0,
+      "aggressive": 0.8533
+    },
+    {
+      "hand": "43o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.9682,
+      "passive": 0,
+      "aggressive": 1.0318
+    },
+    {
+      "hand": "52o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.1547,
+      "passive": 0,
+      "aggressive": 0.8453
+    },
+    {
+      "hand": "53o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.9537,
+      "passive": 0,
+      "aggressive": 1.0464
+    },
+    {
+      "hand": "54o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.7339,
+      "passive": 0,
+      "aggressive": 1.2661
+    },
+    {
+      "hand": "62o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.1176,
+      "passive": 0,
+      "aggressive": 0.8824
+    },
+    {
+      "hand": "63o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.993,
+      "passive": 0,
+      "aggressive": 1.007
+    },
+    {
+      "hand": "64o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.8118,
+      "passive": 0,
+      "aggressive": 1.1882
+    },
+    {
+      "hand": "65o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.6667,
+      "passive": 0,
+      "aggressive": 1.3333
+    },
+    {
+      "hand": "72o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.1592,
+      "passive": 0,
+      "aggressive": 0.8408
+    },
+    {
+      "hand": "73o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.1282,
+      "passive": 0,
+      "aggressive": 0.8718
+    },
+    {
+      "hand": "74o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.9089,
+      "passive": 0,
+      "aggressive": 1.0911
+    },
+    {
+      "hand": "75o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.6,
+      "passive": 0,
+      "aggressive": 1.4
+    },
+    {
+      "hand": "76o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.4073,
+      "passive": 0,
+      "aggressive": 1.5927
+    },
+    {
+      "hand": "82o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.1449,
+      "passive": 0,
+      "aggressive": 0.8551
+    },
+    {
+      "hand": "83o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.1406,
+      "passive": 0,
+      "aggressive": 0.8594
+    },
+    {
+      "hand": "84o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.9724,
+      "passive": 0,
+      "aggressive": 1.0276
+    },
+    {
+      "hand": "85o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.7123,
+      "passive": 0,
+      "aggressive": 1.2877
+    },
+    {
+      "hand": "86o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.5742,
+      "passive": 0,
+      "aggressive": 1.4258
+    },
+    {
+      "hand": "87o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.8083,
+      "passive": 0,
+      "aggressive": 2.1917
+    },
+    {
+      "hand": "92o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.173,
+      "passive": 0,
+      "aggressive": 0.8269
+    },
+    {
+      "hand": "93o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0138,
+      "passive": 0,
+      "aggressive": 0.9862
+    },
+    {
+      "hand": "94o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.9342,
+      "passive": 0,
+      "aggressive": 1.0658
+    },
+    {
+      "hand": "95o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.7321,
+      "passive": 0,
+      "aggressive": 1.2679
+    },
+    {
+      "hand": "96o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.4961,
+      "passive": 0,
+      "aggressive": 1.5039
+    },
+    {
+      "hand": "97o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.8764,
+      "passive": 0,
+      "aggressive": 2.1236
+    },
+    {
+      "hand": "98o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.0778,
+      "passive": 0,
+      "aggressive": 2.9222
+    },
+    {
+      "hand": "T2o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.9977,
+      "passive": 0,
+      "aggressive": 1.0023
+    },
+    {
+      "hand": "T3o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.9676,
+      "passive": 0,
+      "aggressive": 1.0324
+    },
+    {
+      "hand": "T4o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.7756,
+      "passive": 0,
+      "aggressive": 1.2244
+    },
+    {
+      "hand": "T5o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.7767,
+      "passive": 0,
+      "aggressive": 1.2233
+    },
+    {
+      "hand": "T6o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.6699,
+      "passive": 0,
+      "aggressive": 1.3301
+    },
+    {
+      "hand": "T7o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.6125,
+      "passive": 0,
+      "aggressive": 2.3875
+    },
+    {
+      "hand": "T8o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.7616,
+      "passive": 0,
+      "aggressive": 3.2384
+    },
+    {
+      "hand": "T9o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 87.077,
+      "passive": 0,
+      "aggressive": 12.923
+    },
+    {
+      "hand": "J2o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.8745,
+      "passive": 0,
+      "aggressive": 1.1255
+    },
+    {
+      "hand": "J3o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.8578,
+      "passive": 0,
+      "aggressive": 1.1422
+    },
+    {
+      "hand": "J4o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.6943,
+      "passive": 0,
+      "aggressive": 1.3057
+    },
+    {
+      "hand": "J5o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.4786,
+      "passive": 0,
+      "aggressive": 1.5214
+    },
+    {
+      "hand": "J6o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.3027,
+      "passive": 0,
+      "aggressive": 1.6973
+    },
+    {
+      "hand": "J7o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.8756,
+      "passive": 0,
+      "aggressive": 2.1244
+    },
+    {
+      "hand": "J8o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.3058,
+      "passive": 0,
+      "aggressive": 3.6942
+    },
+    {
+      "hand": "J9o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 84.1969,
+      "passive": 0,
+      "aggressive": 15.8031
+    },
+    {
+      "hand": "JTo",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.3672,
+      "passive": 0,
+      "aggressive": 95.6328
+    },
+    {
+      "hand": "Q2o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.6001,
+      "passive": 0,
+      "aggressive": 1.3999
+    },
+    {
+      "hand": "Q3o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.4167,
+      "passive": 0,
+      "aggressive": 1.5833
+    },
+    {
+      "hand": "Q4o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.3635,
+      "passive": 0,
+      "aggressive": 1.6365
+    },
+    {
+      "hand": "Q5o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.0792,
+      "passive": 0,
+      "aggressive": 1.9208
+    },
+    {
+      "hand": "Q6o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.9269,
+      "passive": 0,
+      "aggressive": 2.0732
+    },
+    {
+      "hand": "Q7o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.1265,
+      "passive": 0,
+      "aggressive": 2.8735
+    },
+    {
+      "hand": "Q8o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 93.5599,
+      "passive": 0,
+      "aggressive": 6.4402
+    },
+    {
+      "hand": "Q9o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 23.5355,
+      "passive": 0,
+      "aggressive": 76.4645
+    },
+    {
+      "hand": "QTo",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.1697,
+      "passive": 0,
+      "aggressive": 95.8303
+    },
+    {
+      "hand": "QJo",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.6994,
+      "passive": 0,
+      "aggressive": 97.3006
+    },
+    {
+      "hand": "K2o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.4309,
+      "passive": 0,
+      "aggressive": 2.5691
+    },
+    {
+      "hand": "K3o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.6034,
+      "passive": 0,
+      "aggressive": 3.3966
+    },
+    {
+      "hand": "K4o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.4016,
+      "passive": 0,
+      "aggressive": 3.5984
+    },
+    {
+      "hand": "K5o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 92.2203,
+      "passive": 0,
+      "aggressive": 7.7797
+    },
+    {
+      "hand": "K6o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 85.9337,
+      "passive": 0,
+      "aggressive": 14.0663
+    },
+    {
+      "hand": "K7o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 27.2805,
+      "passive": 0,
+      "aggressive": 72.7195
+    },
+    {
+      "hand": "K8o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 13.1288,
+      "passive": 0,
+      "aggressive": 86.8712
+    },
+    {
+      "hand": "K9o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.7772,
+      "passive": 0,
+      "aggressive": 95.2228
+    },
+    {
+      "hand": "KTo",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.7733,
+      "passive": 0,
+      "aggressive": 98.2268
+    },
+    {
+      "hand": "KJo",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.2711,
+      "passive": 0,
+      "aggressive": 98.7289
+    },
+    {
+      "hand": "KQo",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.2434,
+      "passive": 0,
+      "aggressive": 98.7566
+    },
+    {
+      "hand": "A2o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.9766,
+      "passive": 0,
+      "aggressive": 96.0234
+    },
+    {
+      "hand": "A3o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.3959,
+      "passive": 0,
+      "aggressive": 96.6041
+    },
+    {
+      "hand": "A4o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.7402,
+      "passive": 0,
+      "aggressive": 98.2599
+    },
+    {
+      "hand": "A5o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.0854,
+      "passive": 0,
+      "aggressive": 97.9146
+    },
+    {
+      "hand": "A6o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.1722,
+      "passive": 0,
+      "aggressive": 97.8278
+    },
+    {
+      "hand": "A7o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.4184,
+      "passive": 0,
+      "aggressive": 98.5817
+    },
+    {
+      "hand": "A8o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.2055,
+      "passive": 0,
+      "aggressive": 98.7945
+    },
+    {
+      "hand": "A9o",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.898,
+      "passive": 0,
+      "aggressive": 99.102
+    },
+    {
+      "hand": "ATo",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.7289,
+      "passive": 0,
+      "aggressive": 99.2711
+    },
+    {
+      "hand": "AJo",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.9532,
+      "passive": 0,
+      "aggressive": 99.0468
+    },
+    {
+      "hand": "AQo",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.9877,
+      "passive": 0,
+      "aggressive": 99.0123
+    },
+    {
+      "hand": "AKo",
+      "position": "CO",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.764,
+      "passive": 0,
+      "aggressive": 99.236
+    },
+    {
+      "hand": "22",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.3145,
+      "passive": 0,
+      "aggressive": 95.6855
+    },
+    {
+      "hand": "33",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.982,
+      "passive": 0,
+      "aggressive": 97.018
+    },
+    {
+      "hand": "44",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.8251,
+      "passive": 0,
+      "aggressive": 97.1749
+    },
+    {
+      "hand": "55",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.477,
+      "passive": 0,
+      "aggressive": 97.523
+    },
+    {
+      "hand": "66",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.0408,
+      "passive": 0,
+      "aggressive": 97.9592
+    },
+    {
+      "hand": "77",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.0631,
+      "passive": 0,
+      "aggressive": 97.9369
+    },
+    {
+      "hand": "88",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.4965,
+      "passive": 0,
+      "aggressive": 98.5035
+    },
+    {
+      "hand": "99",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.4309,
+      "passive": 0,
+      "aggressive": 98.5691
+    },
+    {
+      "hand": "TT",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.2288,
+      "passive": 0,
+      "aggressive": 98.7712
+    },
+    {
+      "hand": "JJ",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.8931,
+      "passive": 0,
+      "aggressive": 99.1069
+    },
+    {
+      "hand": "QQ",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.6052,
+      "passive": 0,
+      "aggressive": 99.3948
+    },
+    {
+      "hand": "KK",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.317,
+      "passive": 0,
+      "aggressive": 99.683
+    },
+    {
+      "hand": "AA",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.0043,
+      "passive": 0,
+      "aggressive": 99.9957
+    },
+    {
+      "hand": "32s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 93.5172,
+      "passive": 0,
+      "aggressive": 6.4828
+    },
+    {
+      "hand": "42s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 90.3546,
+      "passive": 0,
+      "aggressive": 9.6454
+    },
+    {
+      "hand": "43s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 46.5214,
+      "passive": 0,
+      "aggressive": 53.4786
+    },
+    {
+      "hand": "52s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 71.755,
+      "passive": 0,
+      "aggressive": 28.245
+    },
+    {
+      "hand": "53s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 22.173,
+      "passive": 0,
+      "aggressive": 77.827
+    },
+    {
+      "hand": "54s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 6.6916,
+      "passive": 0,
+      "aggressive": 93.3084
+    },
+    {
+      "hand": "62s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 95.2621,
+      "passive": 0,
+      "aggressive": 4.7379
+    },
+    {
+      "hand": "63s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 60.6524,
+      "passive": 0,
+      "aggressive": 39.3476
+    },
+    {
+      "hand": "64s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 10.2288,
+      "passive": 0,
+      "aggressive": 89.7712
+    },
+    {
+      "hand": "65s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 5.7019,
+      "passive": 0,
+      "aggressive": 94.2981
+    },
+    {
+      "hand": "72s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.0156,
+      "passive": 0,
+      "aggressive": 5.9844
+    },
+    {
+      "hand": "73s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 76.9934,
+      "passive": 0,
+      "aggressive": 23.0066
+    },
+    {
+      "hand": "74s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 21.7269,
+      "passive": 0,
+      "aggressive": 78.2731
+    },
+    {
+      "hand": "75s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 5.6119,
+      "passive": 0,
+      "aggressive": 94.3881
+    },
+    {
+      "hand": "76s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 5.5094,
+      "passive": 0,
+      "aggressive": 94.4906
+    },
+    {
+      "hand": "82s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 90.1807,
+      "passive": 0,
+      "aggressive": 9.8193
+    },
+    {
+      "hand": "83s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 78.8258,
+      "passive": 0,
+      "aggressive": 21.1742
+    },
+    {
+      "hand": "84s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 18.6237,
+      "passive": 0,
+      "aggressive": 81.3763
+    },
+    {
+      "hand": "85s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 5.4678,
+      "passive": 0,
+      "aggressive": 94.5322
+    },
+    {
+      "hand": "86s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.8919,
+      "passive": 0,
+      "aggressive": 96.1081
+    },
+    {
+      "hand": "87s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.7406,
+      "passive": 0,
+      "aggressive": 96.2594
+    },
+    {
+      "hand": "92s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 77.5334,
+      "passive": 0,
+      "aggressive": 22.4666
+    },
+    {
+      "hand": "93s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 31.9019,
+      "passive": 0,
+      "aggressive": 68.0981
+    },
+    {
+      "hand": "94s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 31.3763,
+      "passive": 0,
+      "aggressive": 68.6237
+    },
+    {
+      "hand": "95s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 6.8551,
+      "passive": 0,
+      "aggressive": 93.1449
+    },
+    {
+      "hand": "96s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.2792,
+      "passive": 0,
+      "aggressive": 96.7208
+    },
+    {
+      "hand": "97s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.8671,
+      "passive": 0,
+      "aggressive": 96.1329
+    },
+    {
+      "hand": "98s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.292,
+      "passive": 0,
+      "aggressive": 95.708
+    },
+    {
+      "hand": "T2s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 24.4331,
+      "passive": 0,
+      "aggressive": 75.5669
+    },
+    {
+      "hand": "T3s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 10.5692,
+      "passive": 0,
+      "aggressive": 89.4308
+    },
+    {
+      "hand": "T4s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 6.8805,
+      "passive": 0,
+      "aggressive": 93.1195
+    },
+    {
+      "hand": "T5s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.7667,
+      "passive": 0,
+      "aggressive": 96.2333
+    },
+    {
+      "hand": "T6s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.2982,
+      "passive": 0,
+      "aggressive": 96.7019
+    },
+    {
+      "hand": "T7s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.028,
+      "passive": 0,
+      "aggressive": 96.972
+    },
+    {
+      "hand": "T8s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.4155,
+      "passive": 0,
+      "aggressive": 95.5845
+    },
+    {
+      "hand": "T9s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.3227,
+      "passive": 0,
+      "aggressive": 96.6773
+    },
+    {
+      "hand": "J2s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.8706,
+      "passive": 0,
+      "aggressive": 95.1294
+    },
+    {
+      "hand": "J3s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 6.2225,
+      "passive": 0,
+      "aggressive": 93.7775
+    },
+    {
+      "hand": "J4s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.8208,
+      "passive": 0,
+      "aggressive": 96.1792
+    },
+    {
+      "hand": "J5s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.8907,
+      "passive": 0,
+      "aggressive": 95.1094
+    },
+    {
+      "hand": "J6s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.106,
+      "passive": 0,
+      "aggressive": 96.894
+    },
+    {
+      "hand": "J7s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.6048,
+      "passive": 0,
+      "aggressive": 95.3952
+    },
+    {
+      "hand": "J8s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.5627,
+      "passive": 0,
+      "aggressive": 97.4373
+    },
+    {
+      "hand": "J9s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.8191,
+      "passive": 0,
+      "aggressive": 96.1809
+    },
+    {
+      "hand": "JTs",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.6342,
+      "passive": 0,
+      "aggressive": 97.3658
+    },
+    {
+      "hand": "Q2s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.8892,
+      "passive": 0,
+      "aggressive": 97.1108
+    },
+    {
+      "hand": "Q3s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.8168,
+      "passive": 0,
+      "aggressive": 97.1832
+    },
+    {
+      "hand": "Q4s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.5648,
+      "passive": 0,
+      "aggressive": 96.4352
+    },
+    {
+      "hand": "Q5s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.1941,
+      "passive": 0,
+      "aggressive": 95.8059
+    },
+    {
+      "hand": "Q6s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.2456,
+      "passive": 0,
+      "aggressive": 97.7544
+    },
+    {
+      "hand": "Q7s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.0307,
+      "passive": 0,
+      "aggressive": 96.9693
+    },
+    {
+      "hand": "Q8s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.7887,
+      "passive": 0,
+      "aggressive": 97.2113
+    },
+    {
+      "hand": "Q9s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.5212,
+      "passive": 0,
+      "aggressive": 97.4788
+    },
+    {
+      "hand": "QTs",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.613,
+      "passive": 0,
+      "aggressive": 98.387
+    },
+    {
+      "hand": "QJs",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.9874,
+      "passive": 0,
+      "aggressive": 98.0126
+    },
+    {
+      "hand": "K2s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.3401,
+      "passive": 0,
+      "aggressive": 97.6599
+    },
+    {
+      "hand": "K3s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.4675,
+      "passive": 0,
+      "aggressive": 98.5325
+    },
+    {
+      "hand": "K4s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.2577,
+      "passive": 0,
+      "aggressive": 97.7423
+    },
+    {
+      "hand": "K5s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.6723,
+      "passive": 0,
+      "aggressive": 97.3277
+    },
+    {
+      "hand": "K6s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.3586,
+      "passive": 0,
+      "aggressive": 97.6414
+    },
+    {
+      "hand": "K7s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.5803,
+      "passive": 0,
+      "aggressive": 98.4197
+    },
+    {
+      "hand": "K8s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.4191,
+      "passive": 0,
+      "aggressive": 98.5809
+    },
+    {
+      "hand": "K9s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.0159,
+      "passive": 0,
+      "aggressive": 97.9841
+    },
+    {
+      "hand": "KTs",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.7153,
+      "passive": 0,
+      "aggressive": 98.2847
+    },
+    {
+      "hand": "KJs",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.2356,
+      "passive": 0,
+      "aggressive": 98.7644
+    },
+    {
+      "hand": "KQs",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.5359,
+      "passive": 0,
+      "aggressive": 98.4641
+    },
+    {
+      "hand": "A2s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.3673,
+      "passive": 0,
+      "aggressive": 97.6327
+    },
+    {
+      "hand": "A3s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.7497,
+      "passive": 0,
+      "aggressive": 98.2503
+    },
+    {
+      "hand": "A4s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.6201,
+      "passive": 0,
+      "aggressive": 98.3799
+    },
+    {
+      "hand": "A5s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.5332,
+      "passive": 0,
+      "aggressive": 98.4668
+    },
+    {
+      "hand": "A6s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.0147,
+      "passive": 0,
+      "aggressive": 97.9853
+    },
+    {
+      "hand": "A7s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.6188,
+      "passive": 0,
+      "aggressive": 98.3812
+    },
+    {
+      "hand": "A8s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.7003,
+      "passive": 0,
+      "aggressive": 98.2997
+    },
+    {
+      "hand": "A9s",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.6311,
+      "passive": 0,
+      "aggressive": 98.3689
+    },
+    {
+      "hand": "ATs",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.1688,
+      "passive": 0,
+      "aggressive": 98.8312
+    },
+    {
+      "hand": "AJs",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.1315,
+      "passive": 0,
+      "aggressive": 98.8685
+    },
+    {
+      "hand": "AQs",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.0266,
+      "passive": 0,
+      "aggressive": 98.9734
+    },
+    {
+      "hand": "AKs",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.5871,
+      "passive": 0,
+      "aggressive": 99.4129
+    },
+    {
+      "hand": "32o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.4734,
+      "passive": 0,
+      "aggressive": 1.5266
+    },
+    {
+      "hand": "42o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.9558,
+      "passive": 0,
+      "aggressive": 1.0442
+    },
+    {
+      "hand": "43o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 95.4727,
+      "passive": 0,
+      "aggressive": 4.5273
+    },
+    {
+      "hand": "52o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.6012,
+      "passive": 0,
+      "aggressive": 2.3988
+    },
+    {
+      "hand": "53o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 93.5827,
+      "passive": 0,
+      "aggressive": 6.4173
+    },
+    {
+      "hand": "54o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 80.1866,
+      "passive": 0,
+      "aggressive": 19.8134
+    },
+    {
+      "hand": "62o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.5118,
+      "passive": 0,
+      "aggressive": 1.4882
+    },
+    {
+      "hand": "63o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 95.9668,
+      "passive": 0,
+      "aggressive": 4.0332
+    },
+    {
+      "hand": "64o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 90.664,
+      "passive": 0,
+      "aggressive": 9.336
+    },
+    {
+      "hand": "65o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 54.5679,
+      "passive": 0,
+      "aggressive": 45.4321
+    },
+    {
+      "hand": "72o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0056,
+      "passive": 0,
+      "aggressive": 0.9944
+    },
+    {
+      "hand": "73o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.4564,
+      "passive": 0,
+      "aggressive": 3.5436
+    },
+    {
+      "hand": "74o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 93.2195,
+      "passive": 0,
+      "aggressive": 6.7805
+    },
+    {
+      "hand": "75o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 80.3482,
+      "passive": 0,
+      "aggressive": 19.6518
+    },
+    {
+      "hand": "76o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 7.2308,
+      "passive": 0,
+      "aggressive": 92.7692
+    },
+    {
+      "hand": "82o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.1678,
+      "passive": 0,
+      "aggressive": 1.8322
+    },
+    {
+      "hand": "83o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.0406,
+      "passive": 0,
+      "aggressive": 1.9594
+    },
+    {
+      "hand": "84o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.1091,
+      "passive": 0,
+      "aggressive": 5.8909
+    },
+    {
+      "hand": "85o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 89.0335,
+      "passive": 0,
+      "aggressive": 10.9665
+    },
+    {
+      "hand": "86o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 11.5773,
+      "passive": 0,
+      "aggressive": 88.4227
+    },
+    {
+      "hand": "87o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.4718,
+      "passive": 0,
+      "aggressive": 97.5282
+    },
+    {
+      "hand": "92o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.0255,
+      "passive": 0,
+      "aggressive": 2.9745
+    },
+    {
+      "hand": "93o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.7021,
+      "passive": 0,
+      "aggressive": 5.2979
+    },
+    {
+      "hand": "94o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.2355,
+      "passive": 0,
+      "aggressive": 5.7645
+    },
+    {
+      "hand": "95o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 86.0979,
+      "passive": 0,
+      "aggressive": 13.9021
+    },
+    {
+      "hand": "96o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 19.6576,
+      "passive": 0,
+      "aggressive": 80.3424
+    },
+    {
+      "hand": "97o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.4647,
+      "passive": 0,
+      "aggressive": 97.5353
+    },
+    {
+      "hand": "98o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.6518,
+      "passive": 0,
+      "aggressive": 98.3482
+    },
+    {
+      "hand": "T2o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 93.2237,
+      "passive": 0,
+      "aggressive": 6.7763
+    },
+    {
+      "hand": "T3o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 92.0098,
+      "passive": 0,
+      "aggressive": 7.9902
+    },
+    {
+      "hand": "T4o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 87.7145,
+      "passive": 0,
+      "aggressive": 12.2855
+    },
+    {
+      "hand": "T5o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 85.3523,
+      "passive": 0,
+      "aggressive": 14.6477
+    },
+    {
+      "hand": "T6o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 16.3615,
+      "passive": 0,
+      "aggressive": 83.6385
+    },
+    {
+      "hand": "T7o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.3164,
+      "passive": 0,
+      "aggressive": 97.6836
+    },
+    {
+      "hand": "T8o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.4457,
+      "passive": 0,
+      "aggressive": 98.5543
+    },
+    {
+      "hand": "T9o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.8018,
+      "passive": 0,
+      "aggressive": 99.1982
+    },
+    {
+      "hand": "J2o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 82.2244,
+      "passive": 0,
+      "aggressive": 17.7756
+    },
+    {
+      "hand": "J3o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 71.0707,
+      "passive": 0,
+      "aggressive": 28.9293
+    },
+    {
+      "hand": "J4o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 54.7906,
+      "passive": 0,
+      "aggressive": 45.2094
+    },
+    {
+      "hand": "J5o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 8.7028,
+      "passive": 0,
+      "aggressive": 91.2972
+    },
+    {
+      "hand": "J6o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 6.2056,
+      "passive": 0,
+      "aggressive": 93.7944
+    },
+    {
+      "hand": "J7o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.9086,
+      "passive": 0,
+      "aggressive": 98.0914
+    },
+    {
+      "hand": "J8o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.1966,
+      "passive": 0,
+      "aggressive": 98.8034
+    },
+    {
+      "hand": "J9o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.7356,
+      "passive": 0,
+      "aggressive": 99.2644
+    },
+    {
+      "hand": "JTo",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.8326,
+      "passive": 0,
+      "aggressive": 99.1675
+    },
+    {
+      "hand": "Q2o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 6.9995,
+      "passive": 0,
+      "aggressive": 93.0005
+    },
+    {
+      "hand": "Q3o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.774,
+      "passive": 0,
+      "aggressive": 96.226
+    },
+    {
+      "hand": "Q4o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.0607,
+      "passive": 0,
+      "aggressive": 97.9393
+    },
+    {
+      "hand": "Q5o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.5528,
+      "passive": 0,
+      "aggressive": 98.4472
+    },
+    {
+      "hand": "Q6o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.4395,
+      "passive": 0,
+      "aggressive": 98.5605
+    },
+    {
+      "hand": "Q7o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.0923,
+      "passive": 0,
+      "aggressive": 98.9077
+    },
+    {
+      "hand": "Q8o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.813,
+      "passive": 0,
+      "aggressive": 99.187
+    },
+    {
+      "hand": "Q9o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.7087,
+      "passive": 0,
+      "aggressive": 99.2913
+    },
+    {
+      "hand": "QTo",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.2939,
+      "passive": 0,
+      "aggressive": 98.7061
+    },
+    {
+      "hand": "QJo",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.078,
+      "passive": 0,
+      "aggressive": 98.922
+    },
+    {
+      "hand": "K2o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.9681,
+      "passive": 0,
+      "aggressive": 99.0319
+    },
+    {
+      "hand": "K3o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.8679,
+      "passive": 0,
+      "aggressive": 99.1321
+    },
+    {
+      "hand": "K4o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.7115,
+      "passive": 0,
+      "aggressive": 99.2885
+    },
+    {
+      "hand": "K5o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.6385,
+      "passive": 0,
+      "aggressive": 99.3614
+    },
+    {
+      "hand": "K6o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.583,
+      "passive": 0,
+      "aggressive": 99.417
+    },
+    {
+      "hand": "K7o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.4697,
+      "passive": 0,
+      "aggressive": 99.5303
+    },
+    {
+      "hand": "K8o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.43,
+      "passive": 0,
+      "aggressive": 99.5701
+    },
+    {
+      "hand": "K9o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.4742,
+      "passive": 0,
+      "aggressive": 99.5258
+    },
+    {
+      "hand": "KTo",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.4824,
+      "passive": 0,
+      "aggressive": 99.5176
+    },
+    {
+      "hand": "KJo",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.8582,
+      "passive": 0,
+      "aggressive": 99.1419
+    },
+    {
+      "hand": "KQo",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.9713,
+      "passive": 0,
+      "aggressive": 99.0287
+    },
+    {
+      "hand": "A2o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.9797,
+      "passive": 0,
+      "aggressive": 99.0203
+    },
+    {
+      "hand": "A3o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.9918,
+      "passive": 0,
+      "aggressive": 99.0082
+    },
+    {
+      "hand": "A4o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.9623,
+      "passive": 0,
+      "aggressive": 99.0377
+    },
+    {
+      "hand": "A5o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.9848,
+      "passive": 0,
+      "aggressive": 99.0151
+    },
+    {
+      "hand": "A6o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.8806,
+      "passive": 0,
+      "aggressive": 99.1195
+    },
+    {
+      "hand": "A7o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.9545,
+      "passive": 0,
+      "aggressive": 99.0455
+    },
+    {
+      "hand": "A8o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.739,
+      "passive": 0,
+      "aggressive": 99.261
+    },
+    {
+      "hand": "A9o",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.8019,
+      "passive": 0,
+      "aggressive": 99.1981
+    },
+    {
+      "hand": "ATo",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.9767,
+      "passive": 0,
+      "aggressive": 99.0233
+    },
+    {
+      "hand": "AJo",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.9339,
+      "passive": 0,
+      "aggressive": 99.0661
+    },
+    {
+      "hand": "AQo",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.7725,
+      "passive": 0,
+      "aggressive": 99.2275
+    },
+    {
+      "hand": "AKo",
+      "position": "BTN",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.4916,
+      "passive": 0,
+      "aggressive": 99.5084
+    },
+    {
+      "hand": "22",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.7141,
+      "passive": 91.1176,
+      "aggressive": 4.1682
+    },
+    {
+      "hand": "33",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.21,
+      "passive": 92.3464,
+      "aggressive": 5.4436
+    },
+    {
+      "hand": "44",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.2899,
+      "passive": 89.118,
+      "aggressive": 9.5921
+    },
+    {
+      "hand": "55",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.8387,
+      "passive": 90.0077,
+      "aggressive": 9.1536
+    },
+    {
+      "hand": "66",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.8178,
+      "passive": 38.4331,
+      "aggressive": 60.7491
+    },
+    {
+      "hand": "77",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.5184,
+      "passive": 30.9371,
+      "aggressive": 67.5445
+    },
+    {
+      "hand": "88",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.2042,
+      "passive": 15.9752,
+      "aggressive": 82.8207
+    },
+    {
+      "hand": "99",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.708,
+      "passive": 13.1328,
+      "aggressive": 83.1592
+    },
+    {
+      "hand": "TT",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.9871,
+      "passive": 26.0691,
+      "aggressive": 71.9438
+    },
+    {
+      "hand": "JJ",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.5135,
+      "passive": 17.6005,
+      "aggressive": 80.886
+    },
+    {
+      "hand": "QQ",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.8675,
+      "passive": 13.1554,
+      "aggressive": 85.9771
+    },
+    {
+      "hand": "KK",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.2426,
+      "passive": 17.4802,
+      "aggressive": 82.2773
+    },
+    {
+      "hand": "AA",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.0036,
+      "passive": 24.0757,
+      "aggressive": 75.9208
+    },
+    {
+      "hand": "32s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.6974,
+      "passive": 0.5149,
+      "aggressive": 1.7878
+    },
+    {
+      "hand": "42s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.9291,
+      "passive": 0.4919,
+      "aggressive": 1.579
+    },
+    {
+      "hand": "43s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.3172,
+      "passive": 0.6915,
+      "aggressive": 1.9913
+    },
+    {
+      "hand": "52s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.6271,
+      "passive": 0.6126,
+      "aggressive": 1.7603
+    },
+    {
+      "hand": "53s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.3926,
+      "passive": 0.7433,
+      "aggressive": 1.8641
+    },
+    {
+      "hand": "54s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.9489,
+      "passive": 1.1417,
+      "aggressive": 1.9094
+    },
+    {
+      "hand": "62s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.638,
+      "passive": 0.6438,
+      "aggressive": 1.7181
+    },
+    {
+      "hand": "63s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.2001,
+      "passive": 0.8578,
+      "aggressive": 1.942
+    },
+    {
+      "hand": "64s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.881,
+      "passive": 1.2108,
+      "aggressive": 1.9081
+    },
+    {
+      "hand": "65s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.1292,
+      "passive": 2.9936,
+      "aggressive": 2.8772
+    },
+    {
+      "hand": "72s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.0444,
+      "passive": 0.8412,
+      "aggressive": 2.1144
+    },
+    {
+      "hand": "73s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.5459,
+      "passive": 1.4024,
+      "aggressive": 2.0517
+    },
+    {
+      "hand": "74s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.452,
+      "passive": 1.4504,
+      "aggressive": 2.0976
+    },
+    {
+      "hand": "75s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 90.6198,
+      "passive": 6.5367,
+      "aggressive": 2.8435
+    },
+    {
+      "hand": "76s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 78.219,
+      "passive": 18.2594,
+      "aggressive": 3.5216
+    },
+    {
+      "hand": "82s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.7046,
+      "passive": 1.1932,
+      "aggressive": 2.1022
+    },
+    {
+      "hand": "83s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.6369,
+      "passive": 0.8268,
+      "aggressive": 1.5363
+    },
+    {
+      "hand": "84s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.6145,
+      "passive": 2.603,
+      "aggressive": 2.7825
+    },
+    {
+      "hand": "85s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 90.3707,
+      "passive": 6.6921,
+      "aggressive": 2.9372
+    },
+    {
+      "hand": "86s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 64.6691,
+      "passive": 31.5146,
+      "aggressive": 3.8163
+    },
+    {
+      "hand": "87s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 18.4271,
+      "passive": 78.6176,
+      "aggressive": 2.9553
+    },
+    {
+      "hand": "92s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.8102,
+      "passive": 2.804,
+      "aggressive": 2.3857
+    },
+    {
+      "hand": "93s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.0328,
+      "passive": 3.1575,
+      "aggressive": 2.8097
+    },
+    {
+      "hand": "94s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 95.7181,
+      "passive": 2.1053,
+      "aggressive": 2.1766
+    },
+    {
+      "hand": "95s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 79.3647,
+      "passive": 17.3762,
+      "aggressive": 3.2591
+    },
+    {
+      "hand": "96s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 34.8435,
+      "passive": 61.5175,
+      "aggressive": 3.639
+    },
+    {
+      "hand": "97s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 6.4597,
+      "passive": 89.5273,
+      "aggressive": 4.013
+    },
+    {
+      "hand": "98s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.9523,
+      "passive": 88.7007,
+      "aggressive": 6.347
+    },
+    {
+      "hand": "T2s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 86.8661,
+      "passive": 9.9632,
+      "aggressive": 3.1708
+    },
+    {
+      "hand": "T3s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 60.6358,
+      "passive": 36.9012,
+      "aggressive": 2.463
+    },
+    {
+      "hand": "T4s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 52.5617,
+      "passive": 45.0774,
+      "aggressive": 2.361
+    },
+    {
+      "hand": "T5s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 33.1734,
+      "passive": 62.5201,
+      "aggressive": 4.3065
+    },
+    {
+      "hand": "T6s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 5.4466,
+      "passive": 90.5412,
+      "aggressive": 4.0122
+    },
+    {
+      "hand": "T7s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 5.5106,
+      "passive": 90.7601,
+      "aggressive": 3.7292
+    },
+    {
+      "hand": "T8s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.479,
+      "passive": 90.8864,
+      "aggressive": 5.6347
+    },
+    {
+      "hand": "T9s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.7285,
+      "passive": 87.7615,
+      "aggressive": 9.5101
+    },
+    {
+      "hand": "J2s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 28.8553,
+      "passive": 67.3673,
+      "aggressive": 3.7773
+    },
+    {
+      "hand": "J3s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 14.1592,
+      "passive": 82.4575,
+      "aggressive": 3.3832
+    },
+    {
+      "hand": "J4s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 10.1404,
+      "passive": 85.7574,
+      "aggressive": 4.1022
+    },
+    {
+      "hand": "J5s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 4.452,
+      "passive": 91.2342,
+      "aggressive": 4.3137
+    },
+    {
+      "hand": "J6s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 10.2241,
+      "passive": 84.2657,
+      "aggressive": 5.5102
+    },
+    {
+      "hand": "J7s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.8484,
+      "passive": 89.2912,
+      "aggressive": 7.8604
+    },
+    {
+      "hand": "J8s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.8284,
+      "passive": 91.5196,
+      "aggressive": 5.652
+    },
+    {
+      "hand": "J9s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.4418,
+      "passive": 76.7054,
+      "aggressive": 21.8528
+    },
+    {
+      "hand": "JTs",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.8259,
+      "passive": 39.214,
+      "aggressive": 58.9602
+    },
+    {
+      "hand": "Q2s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 5.2523,
+      "passive": 88.754,
+      "aggressive": 5.9938
+    },
+    {
+      "hand": "Q3s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.3387,
+      "passive": 91.3468,
+      "aggressive": 5.3145
+    },
+    {
+      "hand": "Q4s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.3881,
+      "passive": 87.9029,
+      "aggressive": 8.709
+    },
+    {
+      "hand": "Q5s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.4929,
+      "passive": 88.4308,
+      "aggressive": 9.0763
+    },
+    {
+      "hand": "Q6s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.8213,
+      "passive": 83.1391,
+      "aggressive": 15.0396
+    },
+    {
+      "hand": "Q7s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.8263,
+      "passive": 79.1111,
+      "aggressive": 19.0625
+    },
+    {
+      "hand": "Q8s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.4466,
+      "passive": 85.3422,
+      "aggressive": 13.2113
+    },
+    {
+      "hand": "Q9s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.3542,
+      "passive": 75.0903,
+      "aggressive": 23.5555
+    },
+    {
+      "hand": "QTs",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.5385,
+      "passive": 48.0847,
+      "aggressive": 50.3769
+    },
+    {
+      "hand": "QJs",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.5256,
+      "passive": 29.9234,
+      "aggressive": 68.551
+    },
+    {
+      "hand": "K2s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.2895,
+      "passive": 87.8792,
+      "aggressive": 9.8313
+    },
+    {
+      "hand": "K3s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.7371,
+      "passive": 86.9624,
+      "aggressive": 11.3005
+    },
+    {
+      "hand": "K4s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.6135,
+      "passive": 86.6474,
+      "aggressive": 10.7391
+    },
+    {
+      "hand": "K5s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.5658,
+      "passive": 82.7299,
+      "aggressive": 15.7042
+    },
+    {
+      "hand": "K6s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.7366,
+      "passive": 67.2694,
+      "aggressive": 30.994
+    },
+    {
+      "hand": "K7s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.2899,
+      "passive": 76.1296,
+      "aggressive": 22.5805
+    },
+    {
+      "hand": "K8s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.2444,
+      "passive": 31.1274,
+      "aggressive": 67.6282
+    },
+    {
+      "hand": "K9s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.2123,
+      "passive": 43.0794,
+      "aggressive": 55.7083
+    },
+    {
+      "hand": "KTs",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.1776,
+      "passive": 17.6278,
+      "aggressive": 81.1946
+    },
+    {
+      "hand": "KJs",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.9901,
+      "passive": 16.9646,
+      "aggressive": 81.0453
+    },
+    {
+      "hand": "KQs",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.3849,
+      "passive": 6.9846,
+      "aggressive": 91.6305
+    },
+    {
+      "hand": "A2s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.1243,
+      "passive": 55.6302,
+      "aggressive": 43.2455
+    },
+    {
+      "hand": "A3s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.9155,
+      "passive": 50.7094,
+      "aggressive": 48.3751
+    },
+    {
+      "hand": "A4s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.8488,
+      "passive": 53.494,
+      "aggressive": 45.6571
+    },
+    {
+      "hand": "A5s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.3629,
+      "passive": 22.0881,
+      "aggressive": 76.549
+    },
+    {
+      "hand": "A6s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.4735,
+      "passive": 26.9512,
+      "aggressive": 71.5754
+    },
+    {
+      "hand": "A7s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.3275,
+      "passive": 19.8824,
+      "aggressive": 78.7901
+    },
+    {
+      "hand": "A8s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.3036,
+      "passive": 9.7602,
+      "aggressive": 88.9362
+    },
+    {
+      "hand": "A9s",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.5311,
+      "passive": 14.9854,
+      "aggressive": 83.4836
+    },
+    {
+      "hand": "ATs",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.649,
+      "passive": 12.0876,
+      "aggressive": 86.2633
+    },
+    {
+      "hand": "AJs",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.9457,
+      "passive": 13.1834,
+      "aggressive": 83.8709
+    },
+    {
+      "hand": "AQs",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.5793,
+      "passive": 33.5388,
+      "aggressive": 63.8819
+    },
+    {
+      "hand": "AKs",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.2434,
+      "passive": 22.8472,
+      "aggressive": 75.9094
+    },
+    {
+      "hand": "32o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 99.0404,
+      "passive": 0.1622,
+      "aggressive": 0.7974
+    },
+    {
+      "hand": "42o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.9237,
+      "passive": 0.1791,
+      "aggressive": 0.8972
+    },
+    {
+      "hand": "43o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.7734,
+      "passive": 0.2533,
+      "aggressive": 0.9733
+    },
+    {
+      "hand": "52o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.797,
+      "passive": 0.2237,
+      "aggressive": 0.9793
+    },
+    {
+      "hand": "53o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.6425,
+      "passive": 0.3118,
+      "aggressive": 1.0456
+    },
+    {
+      "hand": "54o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.4459,
+      "passive": 0.4391,
+      "aggressive": 1.115
+    },
+    {
+      "hand": "62o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.8345,
+      "passive": 0.2507,
+      "aggressive": 0.9148
+    },
+    {
+      "hand": "63o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.822,
+      "passive": 0.2993,
+      "aggressive": 0.8787
+    },
+    {
+      "hand": "64o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.4635,
+      "passive": 0.447,
+      "aggressive": 1.0895
+    },
+    {
+      "hand": "65o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.1352,
+      "passive": 0.6207,
+      "aggressive": 1.2441
+    },
+    {
+      "hand": "72o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.6998,
+      "passive": 0.331,
+      "aggressive": 0.9692
+    },
+    {
+      "hand": "73o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.6084,
+      "passive": 0.3827,
+      "aggressive": 1.0089
+    },
+    {
+      "hand": "74o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.3543,
+      "passive": 0.5403,
+      "aggressive": 1.1054
+    },
+    {
+      "hand": "75o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.529,
+      "passive": 0.8491,
+      "aggressive": 1.6219
+    },
+    {
+      "hand": "76o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 95.4318,
+      "passive": 2.7298,
+      "aggressive": 1.8384
+    },
+    {
+      "hand": "82o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.5258,
+      "passive": 0.4593,
+      "aggressive": 1.015
+    },
+    {
+      "hand": "83o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.3175,
+      "passive": 0.5626,
+      "aggressive": 1.1199
+    },
+    {
+      "hand": "84o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.9906,
+      "passive": 0.7445,
+      "aggressive": 1.265
+    },
+    {
+      "hand": "85o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.1843,
+      "passive": 1.3249,
+      "aggressive": 1.4909
+    },
+    {
+      "hand": "86o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 94.3292,
+      "passive": 3.9616,
+      "aggressive": 1.7092
+    },
+    {
+      "hand": "87o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 55.6132,
+      "passive": 42.6312,
+      "aggressive": 1.7556
+    },
+    {
+      "hand": "92o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 98.1224,
+      "passive": 0.7284,
+      "aggressive": 1.1492
+    },
+    {
+      "hand": "93o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.8227,
+      "passive": 0.9248,
+      "aggressive": 1.2525
+    },
+    {
+      "hand": "94o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 97.7809,
+      "passive": 0.9933,
+      "aggressive": 1.2257
+    },
+    {
+      "hand": "95o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 95.0167,
+      "passive": 3.2909,
+      "aggressive": 1.6924
+    },
+    {
+      "hand": "96o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 74.2547,
+      "passive": 23.7271,
+      "aggressive": 2.0182
+    },
+    {
+      "hand": "97o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 5.9848,
+      "passive": 92.0302,
+      "aggressive": 1.985
+    },
+    {
+      "hand": "98o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.87,
+      "passive": 95.5162,
+      "aggressive": 2.6138
+    },
+    {
+      "hand": "T2o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 96.6237,
+      "passive": 1.9789,
+      "aggressive": 1.3973
+    },
+    {
+      "hand": "T3o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 95.5384,
+      "passive": 2.7957,
+      "aggressive": 1.6659
+    },
+    {
+      "hand": "T4o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 90.137,
+      "passive": 8.0075,
+      "aggressive": 1.8555
+    },
+    {
+      "hand": "T5o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 78.7716,
+      "passive": 19.7092,
+      "aggressive": 1.5192
+    },
+    {
+      "hand": "T6o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 6.3685,
+      "passive": 91.4262,
+      "aggressive": 2.2052
+    },
+    {
+      "hand": "T7o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.8254,
+      "passive": 95.2649,
+      "aggressive": 1.9097
+    },
+    {
+      "hand": "T8o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.2662,
+      "passive": 94.8009,
+      "aggressive": 3.9329
+    },
+    {
+      "hand": "T9o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.853,
+      "passive": 95.5199,
+      "aggressive": 3.6271
+    },
+    {
+      "hand": "J2o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 51.0204,
+      "passive": 47.4818,
+      "aggressive": 1.4978
+    },
+    {
+      "hand": "J3o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 24.6408,
+      "passive": 73.7025,
+      "aggressive": 1.6568
+    },
+    {
+      "hand": "J4o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 11.3186,
+      "passive": 86.7793,
+      "aggressive": 1.9021
+    },
+    {
+      "hand": "J5o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.2733,
+      "passive": 94.3777,
+      "aggressive": 2.349
+    },
+    {
+      "hand": "J6o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 2.5869,
+      "passive": 95.1023,
+      "aggressive": 2.3107
+    },
+    {
+      "hand": "J7o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.5056,
+      "passive": 95.113,
+      "aggressive": 3.3815
+    },
+    {
+      "hand": "J8o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.0394,
+      "passive": 93.4073,
+      "aggressive": 5.5533
+    },
+    {
+      "hand": "J9o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.7926,
+      "passive": 93.7893,
+      "aggressive": 5.418
+    },
+    {
+      "hand": "JTo",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.5674,
+      "passive": 88.3039,
+      "aggressive": 11.1288
+    },
+    {
+      "hand": "Q2o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 3.3591,
+      "passive": 93.9976,
+      "aggressive": 2.6433
+    },
+    {
+      "hand": "Q3o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.9202,
+      "passive": 95.4572,
+      "aggressive": 2.6227
+    },
+    {
+      "hand": "Q4o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.5645,
+      "passive": 95.2133,
+      "aggressive": 3.2222
+    },
+    {
+      "hand": "Q5o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.2876,
+      "passive": 94.5236,
+      "aggressive": 4.1888
+    },
+    {
+      "hand": "Q6o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.1212,
+      "passive": 94.7916,
+      "aggressive": 4.0873
+    },
+    {
+      "hand": "Q7o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.9716,
+      "passive": 94.6341,
+      "aggressive": 4.3943
+    },
+    {
+      "hand": "Q8o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.8119,
+      "passive": 88.4745,
+      "aggressive": 10.7137
+    },
+    {
+      "hand": "Q9o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.5317,
+      "passive": 89.6508,
+      "aggressive": 9.8175
+    },
+    {
+      "hand": "QTo",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.424,
+      "passive": 55.4276,
+      "aggressive": 44.1484
+    },
+    {
+      "hand": "QJo",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.6607,
+      "passive": 31.7134,
+      "aggressive": 67.6259
+    },
+    {
+      "hand": "K2o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.0226,
+      "passive": 93.5779,
+      "aggressive": 5.3995
+    },
+    {
+      "hand": "K3o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.9043,
+      "passive": 94.3403,
+      "aggressive": 4.7554
+    },
+    {
+      "hand": "K4o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.7897,
+      "passive": 94.482,
+      "aggressive": 4.7284
+    },
+    {
+      "hand": "K5o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.6215,
+      "passive": 92.9658,
+      "aggressive": 6.4128
+    },
+    {
+      "hand": "K6o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.5174,
+      "passive": 86.318,
+      "aggressive": 13.1646
+    },
+    {
+      "hand": "K7o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.5027,
+      "passive": 90.1107,
+      "aggressive": 9.3866
+    },
+    {
+      "hand": "K8o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.5193,
+      "passive": 75.1681,
+      "aggressive": 24.3126
+    },
+    {
+      "hand": "K9o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.4708,
+      "passive": 60.7677,
+      "aggressive": 38.7615
+    },
+    {
+      "hand": "KTo",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.6599,
+      "passive": 16.0109,
+      "aggressive": 83.3292
+    },
+    {
+      "hand": "KJo",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.7823,
+      "passive": 8.3183,
+      "aggressive": 90.8994
+    },
+    {
+      "hand": "KQo",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.5456,
+      "passive": 8.4858,
+      "aggressive": 90.9686
+    },
+    {
+      "hand": "A2o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.4407,
+      "passive": 88.9179,
+      "aggressive": 10.6414
+    },
+    {
+      "hand": "A3o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.3693,
+      "passive": 82.6463,
+      "aggressive": 16.9844
+    },
+    {
+      "hand": "A4o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.3141,
+      "passive": 75.8646,
+      "aggressive": 23.8214
+    },
+    {
+      "hand": "A5o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.3387,
+      "passive": 56.0239,
+      "aggressive": 43.6374
+    },
+    {
+      "hand": "A6o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.7293,
+      "passive": 11.4652,
+      "aggressive": 87.8055
+    },
+    {
+      "hand": "A7o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.6472,
+      "passive": 13.3729,
+      "aggressive": 85.9799
+    },
+    {
+      "hand": "A8o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.6251,
+      "passive": 6.8398,
+      "aggressive": 92.5351
+    },
+    {
+      "hand": "A9o",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.5599,
+      "passive": 6.7234,
+      "aggressive": 92.7167
+    },
+    {
+      "hand": "ATo",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.4921,
+      "passive": 2.6132,
+      "aggressive": 96.8947
+    },
+    {
+      "hand": "AJo",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.699,
+      "passive": 3.8254,
+      "aggressive": 95.4756
+    },
+    {
+      "hand": "AQo",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 1.3232,
+      "passive": 27.5424,
+      "aggressive": 71.1344
+    },
+    {
+      "hand": "AKo",
+      "position": "SB",
+      "stack": 100,
+      "scenario": "unopened",
+      "fold": 0.7916,
+      "passive": 53.1058,
+      "aggressive": 46.1026
+    }
+  ]
+}
