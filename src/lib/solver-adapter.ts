@@ -1,4 +1,5 @@
 import type { PostflopActionType } from "./postflop-machine";
+import { roundToSolverUnit } from "./solver-tree";
 
 export interface SolverNodeV1 { contract:"rangelab.solver_node.v1";street:"flop"|"turn"|"river";heroHole:string[];board:string[];pot:number;toCall:number;effectiveStack:number;candidateActions:PostflopActionType[]; }
 export interface SolverActionResult { action:PostflopActionType;frequency:number;ev?:number; }
@@ -42,18 +43,44 @@ export function parseTexasSolverNode(raw:string,heroCombo:string):SolverResult{
   return parseSolverResult(JSON.stringify({source:"texassolver",actions:Object.fromEntries(merged)}));
 }
 
-export function parseTexasSolverNodeAtHistory(raw:string,heroCombo:string,history:SolverHistoryAction[]):SolverResult{
+export interface HistoryLookupOptions { allInAmount?:number;relativeTolerance?:number;absoluteTolerance?:number; }
+
+/** TexasSolver rounds sizes to the big blind, so small bets need an absolute allowance as well as a relative one. */
+const DEFAULT_RELATIVE_TOLERANCE=0.1;
+const DEFAULT_ABSOLUTE_TOLERANCE=0.51;
+const isAllInKey=(key:string)=>/^all-?in/i.test(key.trim());
+
+function childAmount(key:string,allInAmount:number|undefined){
+  if(isAllInKey(key))return allInAmount;
+  const match=key.match(/[\d.]+/);
+  const amount=match?Number(match[0]):Number.NaN;
+  return Number.isFinite(amount)?amount:undefined;
+}
+
+function selectSizedChild(candidates:[string,unknown][],step:SolverHistoryAction,options:HistoryLookupOptions){
+  const observed=step.amount!;
+  const sized=candidates.flatMap(([key,child])=>{const amount=childAmount(key,options.allInAmount);return amount===undefined?[]:[{key,child,amount}];});
+  // Native sizes are rounded to the solver unit, so rank children by distance to the rounded observation.
+  const target=roundToSolverUnit(observed);
+  const [nearest,runnerUp]=sized.toSorted((left,right)=>Math.abs(left.amount-target)-Math.abs(right.amount-target));
+  const available=sized.map(item=>item.amount).join(", ")||"none";
+  const tolerance=Math.max(observed*(options.relativeTolerance??DEFAULT_RELATIVE_TOLERANCE),options.absoluteTolerance??DEFAULT_ABSOLUTE_TOLERANCE);
+  if(!nearest||Math.abs(nearest.amount-observed)>tolerance)throw new Error(`TexasSolver tree has no ${step.action} near ${observed}BB (available: ${available}). 관측 사이즈가 트리에 없습니다.`);
+  if(runnerUp&&runnerUp.amount!==nearest.amount&&Math.abs(runnerUp.amount-target)===Math.abs(nearest.amount-target))throw new Error(`TexasSolver ${step.action} ${observed}BB is ambiguous between ${nearest.amount} and ${runnerUp.amount}.`);
+  return nearest.child;
+}
+
+/** Follows the observed street history through the native tree; bet and raise sizes must match within tolerance. */
+export function parseTexasSolverNodeAtHistory(raw:string,heroCombo:string,history:SolverHistoryAction[],options:HistoryLookupOptions={}):SolverResult{
   let node:unknown=JSON.parse(raw);
   for(const step of history){
     if(!node||typeof node!=="object")throw new Error("TexasSolver history path reached an invalid node.");
     const children=(node as Record<string,unknown>).childrens;
     if(!children||typeof children!=="object"||Array.isArray(children))throw new Error(`TexasSolver node has no child for ${step.action}.`);
-    const candidates=Object.entries(children as Record<string,unknown>).filter(([key])=>normalizeAction(key)===step.action);
+    const aggressive=step.action==="bet"||step.action==="raise";
+    const candidates=Object.entries(children as Record<string,unknown>).filter(([key])=>normalizeAction(key)===step.action||(aggressive&&isAllInKey(key)));
     if(!candidates.length)throw new Error(`TexasSolver node has no child for ${step.action}.`);
-    const selected=typeof step.amount==="number"&&["bet","raise"].includes(step.action)
-      ?candidates.toSorted(([left],[right])=>Math.abs((Number(left.match(/[\d.]+/)?.[0])||0)-step.amount!)-Math.abs((Number(right.match(/[\d.]+/)?.[0])||0)-step.amount!))[0]
-      :candidates[0];
-    node=selected[1];
+    node=aggressive&&typeof step.amount==="number"?selectSizedChild(candidates,step,options):candidates[0][1];
   }
   return parseTexasSolverNode(JSON.stringify(node),heroCombo);
 }

@@ -1,12 +1,15 @@
 import type { SolverHistoryAction, SolverNodeV1 } from "./solver-adapter";
 
 export interface TexasSolverRanges { oop:string; ip:string; }
-export interface TexasSolverTree { betPercent:number[]; raisePercent:number[]; includeAllIn:boolean; }
+/** street* sizes are added only on the solved street, where they reproduce sizes observed in the action history. */
+export interface TexasSolverTree { betPercent:number[]; raisePercent:number[]; includeAllIn:boolean; streetBetPercent?:number[]; streetRaisePercent?:number[]; }
 export interface SolverPlayerRange { seat:number;range:string;stack:number; }
 export interface TexasSolverJob { node:SolverNodeV1; ranges:TexasSolverRanges; tree:TexasSolverTree; accuracy:number; iterations:number; threads:number; useIsomorphism?:boolean; actionHistory?:SolverHistoryAction[]; players?:SolverPlayerRange[];actorSeat?:number; }
 
 const safeRange=/^[A0-9TJQKOsocdhs,:. ]+$/i;
 const finitePositive=(value:number)=>Number.isFinite(value)&&value>0;
+const MAX_SIZES_PER_LIST=8;
+const mergedSizes=(base:number[],street:number[]=[])=>[...new Set([...base,...street])];
 
 export function validateTexasSolverJob(job:TexasSolverJob){
   const expectedCards={flop:3,turn:4,river:5}[job.node.street];
@@ -16,7 +19,10 @@ export function validateTexasSolverJob(job:TexasSolverJob){
   if(!finitePositive(job.accuracy)||job.accuracy>10)throw new Error("Accuracy는 0 초과 10 이하만 허용합니다.");
   if(!Number.isInteger(job.iterations)||job.iterations<1||job.iterations>5000)throw new Error("Iterations는 1~5000 범위여야 합니다.");
   if(!Number.isInteger(job.threads)||job.threads<1||job.threads>32)throw new Error("Threads는 1~32 범위여야 합니다.");
-  for(const size of [...job.tree.betPercent,...job.tree.raisePercent])if(!finitePositive(size)||size>500)throw new Error("Bet/Raise size는 0 초과 500 이하의 팟 비율이어야 합니다.");
+  const sizeLists=[job.tree.betPercent,job.tree.raisePercent,job.tree.streetBetPercent??[],job.tree.streetRaisePercent??[]];
+  if(sizeLists.some(list=>!Array.isArray(list)||list.length>MAX_SIZES_PER_LIST))throw new Error(`Bet/Raise size 목록은 최대 ${MAX_SIZES_PER_LIST}개입니다.`);
+  for(const size of sizeLists.flat())if(!finitePositive(size)||size>500)throw new Error("Bet/Raise size는 0 초과 500 이하의 팟 비율이어야 합니다.");
+  if([mergedSizes(job.tree.betPercent,job.tree.streetBetPercent),mergedSizes(job.tree.raisePercent,job.tree.streetRaisePercent)].some(list=>list.length>MAX_SIZES_PER_LIST))throw new Error(`스트리트별 Bet/Raise size는 최대 ${MAX_SIZES_PER_LIST}개입니다.`);
   if(job.actionHistory){
     if(job.actionHistory.length>20)throw new Error("Solver action history exceeds 20 actions.");
     const validActions=new Set(["fold","check","bet","call","raise"]);
@@ -42,8 +48,11 @@ export function buildTexasSolverCommands(job:TexasSolverJob,outputFile="output_r
   ];
   for(const actor of ["oop","ip"]){
     for(const street of ["flop","turn","river"]){
-      if(job.tree.betPercent.length)lines.push(`set_bet_sizes ${actor},${street},bet,${job.tree.betPercent.join(",")}`);
-      if(job.tree.raisePercent.length)lines.push(`set_bet_sizes ${actor},${street},raise,${job.tree.raisePercent.join(",")}`);
+      const solvedStreet=street===job.node.street;
+      const betSizes=mergedSizes(job.tree.betPercent,solvedStreet?job.tree.streetBetPercent:[]);
+      const raiseSizes=mergedSizes(job.tree.raisePercent,solvedStreet?job.tree.streetRaisePercent:[]);
+      if(betSizes.length)lines.push(`set_bet_sizes ${actor},${street},bet,${betSizes.join(",")}`);
+      if(raiseSizes.length)lines.push(`set_bet_sizes ${actor},${street},raise,${raiseSizes.join(",")}`);
       if(job.tree.includeAllIn)lines.push(`set_bet_sizes ${actor},${street},allin`);
     }
   }

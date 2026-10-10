@@ -13,6 +13,7 @@ import { createSolverNode, parseSolverResult, parseTexasSolverNode, parseTexasSo
 import { calculateRangeEquity } from "@/lib/range-equity";
 import { conditionRangeOnPostflop, inferRangeFromPreflop, toTexasSolverRange } from "@/lib/range-model";
 import { exploitabilityLevel, getSolverPreset } from "@/lib/solver-presets";
+import { buildSolverTree } from "@/lib/solver-tree";
 
 const labels:Record<PostflopActionType,string>={fold:"Fold",check:"Check",bet:"Bet",call:"Call",raise:"Raise"};
 const nextStreet={flop:"turn",turn:"river"} as const;
@@ -109,11 +110,13 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat}
     const seatRange=(seat:number)=>toTexasSolverRange(seat===heroSeat?heroInferredRange.text:inferredRanges[seat]?.text??baselineRange,seat===heroSeat?holeCards:undefined,0.01,preset.maxClasses,requestNode.board);
     const actionHistory=streetActions.map(action=>({action:action.type,amount:action.amount}));
     try{
+      // Local TexasSolver solves from the street root, so the tree must contain the sizes already seen this street.
+      const tree=solverCapability.backend==="texassolver"?buildSolverTree(preset.tree,actionHistory,requestNode.pot,requestNode.effectiveStack):preset.tree;
       const players=liveSeats.map(seat=>({seat,range:seatRange(seat),stack:context.remainingAtStart[seat]??0}));
-      const response=await fetch("/api/solver",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({node:requestNode,ranges:{oop:seatRange(oopSeat),ip:seatRange(ipSeat)},tree:preset.tree,accuracy:preset.accuracy,iterations:preset.iterations,threads:preset.threads,useIsomorphism:preset.useIsomorphism,actionHistory,players,actorSeat:actor})});
+      const response=await fetch("/api/solver",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({node:requestNode,ranges:{oop:seatRange(oopSeat),ip:seatRange(ipSeat)},tree,accuracy:preset.accuracy,iterations:preset.iterations,threads:preset.threads,useIsomorphism:preset.useIsomorphism,actionHistory,players,actorSeat:actor})});
       const raw=await response.text();
       if(!response.ok){let reason="Solver API request failed.";try{reason=(JSON.parse(raw) as {error?:string}).error??reason;}catch{}throw new Error(reason);}
-      let parsed:SolverResult;try{parsed=parseSolverResult(raw);}catch{parsed=actionHistory.length?parseTexasSolverNodeAtHistory(raw,holeCards.join(""),actionHistory):parseTexasSolverNode(raw,holeCards.join(""));}
+      let parsed:SolverResult;try{parsed=parseSolverResult(raw);}catch{parsed=actionHistory.length?parseTexasSolverNodeAtHistory(raw,holeCards.join(""),actionHistory,{allInAmount:requestNode.effectiveStack}):parseTexasSolverNode(raw,holeCards.join(""));}
       const exploitabilityHeader=response.headers.get("x-solver-exploitability")?.trim();
       const headerExploitability=exploitabilityHeader?Number(exploitabilityHeader):Number.NaN;
       if(parsed.exploitability===undefined&&Number.isFinite(headerExploitability))parsed={...parsed,exploitability:headerExploitability};

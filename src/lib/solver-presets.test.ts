@@ -103,3 +103,12 @@ describe("solver API guards",()=>{
     expect(isTrustedSolverRequest(headers({"content-type":"application/json","origin":"http://localhost:3000","host":"localhost:3000"}))).toBe(true);
   });
 });
+
+describe("solver tree size limits",()=>{
+  it("deduplicates merged street sizes and caps the merged list",()=>{
+    const node=createSolverNode({street:"flop",heroHole:["As","Qh"],board:["Js","7d","2c"],pot:10,toCall:0,effectiveStack:90,candidateActions:["check","bet"]});
+    const job={node,ranges:{oop:"AA",ip:"KK"},accuracy:1,iterations:10,threads:1};
+    expect(buildTexasSolverCommands({...job,tree:{betPercent:[50],raisePercent:[60],includeAllIn:false,streetBetPercent:[50,120]}})).toContain("set_bet_sizes oop,flop,bet,50,120\n");
+    expect(()=>buildTexasSolverCommands({...job,tree:{betPercent:[10,20,30,40,50],raisePercent:[60],includeAllIn:false,streetBetPercent:[60,70,80,90]}})).toThrow(/최대/);
+  });
+});

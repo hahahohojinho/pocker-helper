@@ -27,3 +27,9 @@
 - `bestHandScore` now uses rank counts and suit bitmasks and returns exactly the old score (the 21-combination evaluator is kept as `bestHandScoreReference`, the test oracle; 300k random hands and edge cases match). About 60x faster per evaluation.
 - `calculateRangeEquity` prepares each range once and samples with cumulative weights, binary search, and rejection against already-dealt cards, falling back to the exact filtered draw; the distribution is unchanged.
 - Result (5000 iterations): heads-up vs wide range 358ms -> 27ms, 4-way 969ms -> 40ms, 7-way preflop 1547ms -> 36ms. The UI now runs 20,000 equity and 10,000 called-equity iterations (MC error about +-0.65%p). A Web Worker was not added because runs stay well under a second.
+
+### Observed bet sizes in the solver tree (step 3)
+- New `src/lib/solver-tree.ts` adds bet/raise sizes seen on the solved street to that street's tree, reproducing TexasSolver's 1BB rounding and pot-after-call raise sizing (verified in `GameTree.cpp` / `CommandLineTool.h`: `big_blind=1`, `raise_limit=4`, RAISE keys store the street-total commitment).
+- `parseTexasSolverNodeAtHistory` now rejects a lookup whose nearest native size is outside max(10%, 0.51BB) of the observed amount or ties between two sizes. Why: the tree had only a 50% bet, so a 120% pot bet was silently read from the 50% node.
+- The validator dedupes merged sizes, caps them at 8 per action, and ignores malformed numeric child keys.
+- Order note: steps ran 2a -> 1 -> 4 -> 5 -> 3; model EV and equity speed affect every user, while this step only affects local TexasSolver intermediate nodes.

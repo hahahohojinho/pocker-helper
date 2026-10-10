@@ -68,11 +68,11 @@ The adapter binary and Cargo `target` directory are intentionally not committed.
 
 ## Known issues (2026-10-11 solver quality review, branch fix/solver-quality)
 
-Plan (reordered): 2a range weights (done) -> 1 presets/budget (done) -> 4 model EV (done) -> 5 equity perf (done) -> 3 observed bet sizes. See CHANGELOG.md.
+Plan (reordered): 2a range weights (done) -> 1 presets/budget (done) -> 4 model EV (done) -> 5 equity perf (done) -> 3 observed bet sizes (done). All planned steps are committed on `fix/solver-quality` (not pushed). See CHANGELOG.md.
 
 - Solver budgets in `src/lib/solver-presets.ts` are uncalibrated; run one local TexasSolver/DCFR solve per street and tune iterations and `SOLVER_TIMEOUT_MS`.
-- Manual checks needing a solver binary: isomorphism=1 keeps the exact Hero combo in the dump; RAISE child key amount is raise-to or increment.
-- Intermediate-node lookup still picks the nearest size from a single 50% tree (step 3).
+- Manual checks needing a solver binary: isomorphism=1 keeps the exact Hero combo in the dump; an observed-size tree resolves a bet -> raise -> call history end to end; solve times per street fit `SOLVER_TIMEOUT_MS`.
+- Histories with more than 4 raises exceed TexasSolver's default `raise_limit=4` and will be reported as a missing size.
 - Model EV is a one-street heuristic (no future betting, multiway approximated as heads-up); equity itself is not invalidated when cards change.
 - Equity still runs synchronously on the main thread; ranges whose heavy combos all collide with dealt cards fall back to a full scan per sample and can freeze the UI for seconds.
 - Deferred security items: no Host allowlist against DNS rebinding (would block LAN access), 512MB solver output read into memory, no request body size limit, solver error text returned to the client.
