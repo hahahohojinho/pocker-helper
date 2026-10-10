@@ -1,9 +1,10 @@
+import { resolveSolverTimeoutMs } from "../solver-presets";
 import { validateTexasSolverJob, type TexasSolverJob } from "../texas-solver-config";
 import { parseSolverResult } from "../solver-adapter";
 
 const MAX_RESPONSE_BYTES=4*1024*1024;
 
-export async function runCounterfactualBackend(job:TexasSolverJob,timeoutMs=120_000){
+export async function runCounterfactualBackend(job:TexasSolverJob,timeoutMs=resolveSolverTimeoutMs(process.env.SOLVER_TIMEOUT_MS)){
   validateTexasSolverJob(job);
   const configured=process.env.COUNTERFACTUAL_EV_BACKEND_URL;
   if(!configured)throw new Error("COUNTERFACTUAL_EV_BACKEND_URL이 설정되지 않았습니다.");

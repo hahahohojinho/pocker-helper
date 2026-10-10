@@ -3,9 +3,9 @@ import type { SolverHistoryAction, SolverNodeV1 } from "./solver-adapter";
 export interface TexasSolverRanges { oop:string; ip:string; }
 export interface TexasSolverTree { betPercent:number[]; raisePercent:number[]; includeAllIn:boolean; }
 export interface SolverPlayerRange { seat:number;range:string;stack:number; }
-export interface TexasSolverJob { node:SolverNodeV1; ranges:TexasSolverRanges; tree:TexasSolverTree; accuracy:number; iterations:number; threads:number; actionHistory?:SolverHistoryAction[]; players?:SolverPlayerRange[];actorSeat?:number; }
+export interface TexasSolverJob { node:SolverNodeV1; ranges:TexasSolverRanges; tree:TexasSolverTree; accuracy:number; iterations:number; threads:number; useIsomorphism?:boolean; actionHistory?:SolverHistoryAction[]; players?:SolverPlayerRange[];actorSeat?:number; }
 
-const safeRange=/^[A0-9TJQKOsocdhs,:.\s]+$/i;
+const safeRange=/^[A0-9TJQKOsocdhs,:. ]+$/i;
 const finitePositive=(value:number)=>Number.isFinite(value)&&value>0;
 
 export function validateTexasSolverJob(job:TexasSolverJob){
@@ -47,6 +47,6 @@ export function buildTexasSolverCommands(job:TexasSolverJob,outputFile="output_r
       if(job.tree.includeAllIn)lines.push(`set_bet_sizes ${actor},${street},allin`);
     }
   }
-  lines.push("set_allin_threshold 1.0","build_tree",`set_thread_num ${job.threads}`,`set_accuracy ${job.accuracy}`,`set_max_iteration ${job.iterations}`,"set_print_interval 10","set_use_isomorphism 0","start_solve","set_dump_rounds 2",`dump_result ${outputFile}`);
+  lines.push("set_allin_threshold 1.0","build_tree",`set_thread_num ${job.threads}`,`set_accuracy ${job.accuracy}`,`set_max_iteration ${job.iterations}`,`set_print_interval ${Math.max(1,Math.floor(job.iterations/10))}`,`set_use_isomorphism ${job.useIsomorphism?1:0}`,"start_solve","set_dump_rounds 2",`dump_result ${outputFile}`);
   return `${lines.join("\n")}\n`;
 }

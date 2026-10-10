@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { basename, resolve } from "node:path";
 import { parseSolverResult } from "../solver-adapter";
+import { resolveSolverTimeoutMs } from "../solver-presets";
 import { validateTexasSolverJob, type TexasSolverJob } from "../texas-solver-config";
 
 const MAX_OUTPUT_BYTES=4*1024*1024;
@@ -25,7 +26,7 @@ export function buildDcfrAdapterArgs(job:TexasSolverJob){
   ];
 }
 
-export async function runDcfrAdapter(job:TexasSolverJob,timeoutMs=120_000){
+export async function runDcfrAdapter(job:TexasSolverJob,timeoutMs=resolveSolverTimeoutMs(process.env.SOLVER_TIMEOUT_MS),signal?:AbortSignal){
   const configured=process.env.DCFR_ADAPTER_PATH;
   if(!configured)throw new Error("DCFR_ADAPTER_PATH is not configured.");
   const executable=resolve(configured);
@@ -34,8 +35,10 @@ export async function runDcfrAdapter(job:TexasSolverJob,timeoutMs=120_000){
   const raw=await new Promise<string>((resolveRun,reject)=>{
     const child=spawn(executable,args,{windowsHide:true,stdio:["ignore","pipe","pipe"]});
     const output:Buffer[]=[];const errors:Buffer[]=[];let bytes=0;let settled=false;
-    const finish=(error?:Error,value?:string)=>{if(settled)return;settled=true;clearTimeout(timer);if(error)reject(error);else resolveRun(value??"");};
+    const onAbort=()=>{child.kill();finish(new Error("DCFR adapter request was cancelled."));};
+    const finish=(error?:Error,value?:string)=>{if(settled)return;settled=true;clearTimeout(timer);signal?.removeEventListener("abort",onAbort);if(error)reject(error);else resolveRun(value??"");};
     const timer=setTimeout(()=>{child.kill();finish(new Error(`DCFR adapter timeout after ${timeoutMs}ms`));},timeoutMs);
+    if(signal?.aborted)onAbort();else signal?.addEventListener("abort",onAbort,{once:true});
     child.stdout.on("data",(chunk:Buffer)=>{bytes+=chunk.length;if(bytes>MAX_OUTPUT_BYTES){child.kill();finish(new Error("DCFR adapter output exceeds 4 MB limit."));return;}output.push(chunk);});
     child.stderr.on("data",(chunk:Buffer)=>{if(Buffer.concat(errors).length<16_384)errors.push(chunk);});
     child.once("error",error=>finish(error));

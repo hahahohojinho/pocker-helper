@@ -11,6 +11,7 @@ import { attachActionEvs, estimateActionEvs } from "@/lib/decision-ev";
 import { createSolverNode, parseSolverResult, parseTexasSolverNode, parseTexasSolverNodeAtHistory, SolverResult } from "@/lib/solver-adapter";
 import { calculateRangeEquity } from "@/lib/range-equity";
 import { conditionRangeOnPostflop, inferRangeFromPreflop, toTexasSolverRange } from "@/lib/range-model";
+import { exploitabilityLevel, getSolverPreset } from "@/lib/solver-presets";
 
 const labels:Record<PostflopActionType,string>={fold:"Fold",check:"Check",bet:"Bet",call:"Call",raise:"Raise"};
 const nextStreet={flop:"turn",turn:"river"} as const;
@@ -67,6 +68,7 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat}
   const toCall=Math.max(0,context.currentBet-actorCommitted);
   const estimatedEvs=equity?estimateActionEvs({equity:equity.equity,pot,toCall,betSize:amount}):[];
   const solverActions=solverResult?attachActionEvs(solverResult.actions,estimatedEvs):[];
+  const convergence=exploitabilityLevel(solverResult?.exploitability);
   let solverNode:ReturnType<typeof createSolverNode>|null=null;
   try{solverNode=createSolverNode({street,heroHole:holeCards,board:board.slice(0,boardCount).filter(Boolean),pot,toCall,effectiveStack,candidateActions:allowed});}catch{solverNode=null;}
   let localRootNode:ReturnType<typeof createSolverNode>|null=null;
@@ -77,15 +79,19 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat}
     if(!requestNode||!solverReady||actor===null)return;
     runEquity();
     setSolving(true);setMessage("");
+    const preset=getSolverPreset(solverCapability.backend,street);
     const oopSeat=order.find(seat=>liveSeats.includes(seat))!;const ipSeat=liveSeats.find(seat=>seat!==oopSeat)!;
-    const seatRange=(seat:number)=>toTexasSolverRange(seat===heroSeat?heroInferredRange.text:inferredRanges[seat]?.text??baselineRange,seat===heroSeat?holeCards:undefined,0.01,8,requestNode.board);
+    const seatRange=(seat:number)=>toTexasSolverRange(seat===heroSeat?heroInferredRange.text:inferredRanges[seat]?.text??baselineRange,seat===heroSeat?holeCards:undefined,0.01,preset.maxClasses,requestNode.board);
     const actionHistory=streetActions.map(action=>({action:action.type,amount:action.amount}));
     try{
       const players=liveSeats.map(seat=>({seat,range:seatRange(seat),stack:context.remainingAtStart[seat]??0}));
-      const response=await fetch("/api/solver",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({node:requestNode,ranges:{oop:seatRange(oopSeat),ip:seatRange(ipSeat)},tree:{betPercent:[50],raisePercent:[60],includeAllIn:false},accuracy:10,iterations:10,threads:1,actionHistory,players,actorSeat:actor})});
+      const response=await fetch("/api/solver",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({node:requestNode,ranges:{oop:seatRange(oopSeat),ip:seatRange(ipSeat)},tree:preset.tree,accuracy:preset.accuracy,iterations:preset.iterations,threads:preset.threads,useIsomorphism:preset.useIsomorphism,actionHistory,players,actorSeat:actor})});
       const raw=await response.text();
       if(!response.ok){let reason="Solver API request failed.";try{reason=(JSON.parse(raw) as {error?:string}).error??reason;}catch{}throw new Error(reason);}
       let parsed:SolverResult;try{parsed=parseSolverResult(raw);}catch{parsed=actionHistory.length?parseTexasSolverNodeAtHistory(raw,holeCards.join(""),actionHistory):parseTexasSolverNode(raw,holeCards.join(""));}
+      const exploitabilityHeader=response.headers.get("x-solver-exploitability")?.trim();
+      const headerExploitability=exploitabilityHeader?Number(exploitabilityHeader):Number.NaN;
+      if(parsed.exploitability===undefined&&Number.isFinite(headerExploitability))parsed={...parsed,exploitability:headerExploitability};
       setSolverText(raw);setSolverResult(parsed);
     }catch(error){setMessage(error instanceof Error?error.message:"로컬 Solver 실행에 실패했습니다.");}finally{setSolving(false);}
   }
@@ -101,8 +107,8 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat}
     {actor===null&&street!=="river"&&<button className="advance-street" onClick={advance}>{street==="flop"?"턴":"리버"}으로 진행 →</button>}
     {actor===null&&street==="river"&&<p className="hand-complete">HAND ACTION COMPLETE</p>}
     <div className="equity-calculator"><div><span><small>HERO CARDS</small><span className="hole-inputs">{holeCards.map((card,index)=><input key={index} value={card} maxLength={2} onChange={event=>setHoleCards(current=>current.map((value,i)=>i===index?event.target.value:value))}/>)}</span></span><button onClick={runEquity}>EQUITY 계산</button></div><details className="opponent-ranges"><summary>상대 가중 레인지 <span>{liveSeats.filter(seat=>seat!==heroSeat).length}명</span></summary>{liveSeats.filter(seat=>seat!==heroSeat).map(seat=><label key={seat}>{positions[seat]} RANGE · ACTION BASELINE ({inferredRanges[seat]?.handCount??169}/169)<textarea value={rangeFor(seat)} onChange={event=>setRangeBySeat(current=>({...current,[seat]:event.target.value}))}/><button type="button" onClick={()=>setRangeBySeat(current=>{const next={...current};delete next[seat];return next;})}>RESET TO INFERRED</button></label>)}</details>{equity&&<div className="equity-result"><strong>{equity.equity}%<small>EQUITY ±{equity.marginOfError}%</small></strong><span><b>{equity.win}%</b><small>WIN</small></span><span><b>{equity.tie}%</b><small>TIE</small></span><span><b>{equity.loss}%</b><small>LOSS</small></span><em>{equity.iterations.toLocaleString()} weighted simulations · seed {equity.seed}{"availableCombos" in equity?` · ${(equity as {availableCombos:number[]}).availableCombos.join("/")} combos`:""}</em></div>}</div>
-    {equity&&<div className="ev-panel"><div className="ev-head"><b>{solverResult?"SOLVER STRATEGY":"ESTIMATED EV"}</b><span className={solverResult?"solver-source":"estimate-source"}>{solverResult?(solverResult.evSource==="solver"?"SOLVER EV":"SOLVER FREQ · MODEL EV"):"NOT GTO"}</span></div>{solverResult?solverActions.map(item=><div className="ev-row" key={item.action}><span>{item.action}</span><i><b style={{width:`${item.frequency}%`}}/></i><strong>{item.frequency.toFixed(1)}% · {item.ev>=0?"+":""}{item.ev.toFixed(2)}BB<small>{item.evSource.toUpperCase()} EV</small></strong></div>):estimatedEvs.map(item=><div className="ev-row" key={item.action}><span>{item.action}</span><small>{item.assumption}</small><strong className={item.ev>=0?"positive":"negative"}>{item.ev>=0?"+":""}{item.ev.toFixed(2)} BB</strong></div>)}</div>}
-    <button className="local-solver-button" disabled={!solverReady||solving} onClick={runLocalSolver}>{solving?"SOLVING…":solverCapability.backend==="counterfactual"?"COUNTERFACTUAL SOLVER 실행":solverCapability.backend==="dcfr"?"LOCAL DCFR EV 실행":"LOCAL TEXASSOLVER 실행"}</button><small className="local-solver-help">FAST PREVIEW · {solverCapability.backend==="counterfactual"?`외부 backend · 최대 ${solverCapability.maxPlayers}명`:solverCapability.backend==="dcfr"?"Heads-up · OOP street root · solver counterfactual EV":"Heads-up · street root 및 중간 액션 노드 · Hero OOP/IP"} · 상위 8개 weighted class.</small>
+    {equity&&<div className="ev-panel"><div className="ev-head"><b>{solverResult?"SOLVER STRATEGY":"ESTIMATED EV"}</b><span className={solverResult?"solver-source":"estimate-source"}>{solverResult?(solverResult.evSource==="solver"?"SOLVER EV":"SOLVER FREQ · MODEL EV"):"NOT GTO"}</span>{solverResult&&<span className={`convergence convergence-${convergence}`}>{solverResult.exploitability===undefined?"수렴도 미확인":`EXPLOIT ${solverResult.exploitability.toFixed(2)}% POT`}{convergence==="warn"&&" · 수렴 부족"}{convergence==="bad"&&" · 미수렴, 신뢰 불가"}</span>}</div>{solverResult?solverActions.map(item=><div className="ev-row" key={item.action}><span>{item.action}</span><i><b style={{width:`${item.frequency}%`}}/></i><strong>{item.frequency.toFixed(1)}% · {item.ev>=0?"+":""}{item.ev.toFixed(2)}BB<small>{item.evSource.toUpperCase()} EV</small></strong></div>):estimatedEvs.map(item=><div className="ev-row" key={item.action}><span>{item.action}</span><small>{item.assumption}</small><strong className={item.ev>=0?"positive":"negative"}>{item.ev>=0?"+":""}{item.ev.toFixed(2)} BB</strong></div>)}</div>}
+    <button className="local-solver-button" disabled={!solverReady||solving} onClick={runLocalSolver}>{solving?"SOLVING…":solverCapability.backend==="counterfactual"?"COUNTERFACTUAL SOLVER 실행":solverCapability.backend==="dcfr"?"LOCAL DCFR EV 실행":"LOCAL TEXASSOLVER 실행"}</button><small className="local-solver-help">BOUNDED SOLVE · {solverCapability.backend==="counterfactual"?`외부 backend · 최대 ${solverCapability.maxPlayers}명`:solverCapability.backend==="dcfr"?"Heads-up · OOP street root · solver counterfactual EV":"Heads-up · street root 및 중간 액션 노드 · Hero OOP/IP"} · 전체 weighted class · 반복 상한 내 조기 종료.</small>
     <details className="solver-import"><summary>Solver 노드 내보내기 / 결과 가져오기</summary>{solverNode&&<textarea readOnly value={JSON.stringify(solverNode,null,2)}/>}<textarea value={solverText} onChange={event=>setSolverText(event.target.value)} placeholder={'정규화 결과 또는 TexasSolver native strategy node'}/><button onClick={importSolver}>전략 적용</button><small>TexasSolver native 콤보 전략과 RangeLab/OpenSpiel 정규화 JSON을 지원합니다.</small></details>
   </section>;
 }

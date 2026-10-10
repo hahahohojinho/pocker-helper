@@ -66,13 +66,16 @@ The adapter binary and Cargo `target` directory are intentionally not committed.
 - Browser E2E against local DCFR adapter, including `SOLVER EV` labeling: passed
 - DCFR upstream library tests from the prior integration: 107 passed, 2 ignored
 
-## Known issues (2026-10-11 solver quality review)
+## Known issues (2026-10-11 solver quality review, branch fix/solver-quality)
 
-- UI solver request is hard-coded to `iterations:10`, `accuracy:10` (`src/app/postflop-panel.tsx:85`); results are far from converged (smoke log: 34.5% pot exploitability at iteration 5).
-- `toTexasSolverRange(...,8)` keeps only 8 hand classes; with equal weights it keeps the first 8 in input order (e.g. a 28-class range becomes `22-99`).
-- Intermediate-node lookup picks the nearest available size from a single 50% tree, so a different villain sizing silently maps to the 50% node.
-- Model EV (`decision-ev.ts`) uses fixed 25% fold equity and full-range equity when called; bet beats check whenever equity > 25%.
-- Equity evaluator is correct but slow (~30us per 7-card eval); 5000 iterations take 0.3-1.5s on the main thread, MC error about +-1.3%p.
+Plan: 2a range weights (done) -> 1 presets/budget (done) -> 3 observed bet sizes -> 4 model EV -> 5 equity perf. See CHANGELOG.md.
+
+- Solver budgets in `src/lib/solver-presets.ts` are uncalibrated; run one local TexasSolver/DCFR solve per street and tune iterations and `SOLVER_TIMEOUT_MS`.
+- Manual checks needing a solver binary: isomorphism=1 keeps the exact Hero combo in the dump; RAISE child key amount is raise-to or increment.
+- Intermediate-node lookup still picks the nearest size from a single 50% tree (step 3).
+- Model EV (`decision-ev.ts`) uses fixed 25% fold equity and full-range equity when called (step 4).
+- Equity evaluator is correct but slow (~30us per 7-card eval), runs on the main thread (step 5).
+- Deferred security items: no Host allowlist against DNS rebinding (would block LAN access), 512MB solver output read into memory, no request body size limit, solver error text returned to the client.
 
 ## Next TODO
 

@@ -42,9 +42,11 @@ The local API supports flop, turn, and river root nodes when the board contains 
 
 For heads-up intermediate nodes, the job may include an `actionHistory` array such as `[{"action":"check"}]` or `[{"action":"bet","amount":5},{"action":"call","amount":5}]`. Local TexasSolver still solves the complete street tree, then RangeLab follows the native `childrens` path and extracts Hero's exact OOP or IP combo strategy. Bet and raise paths select the closest configured native size. Histories are limited to 20 validated actions.
 
-TexasSolver v0.2.0 accepts weighted 169-hand classes such as `AQo:0.75`, but exact combos such as `AsQh:0.75` can crash the native process. RangeLab keeps exact-combo weights for Equity, then aggregates and prunes them to the top eight weighted 169 classes immediately before a local solve. The actual Hero class is retained.
+TexasSolver v0.2.0 accepts weighted 169-hand classes such as `AQo:0.75`, but exact combos such as `AsQh:0.75` can crash the native process. RangeLab keeps exact-combo weights for Equity, then aggregates them to weighted 169 classes immediately before a local solve. A class weight is the summed combo weight divided by the number of board-compatible combos in that class, because TexasSolver applies the class weight to every such combo. The UI sends every class; when a caller passes `maxClasses`, pruning keeps the classes with the most expected combos. The actual Hero class is retained.
 
-The UI profile is intentionally bounded to one thread, 10 iterations, one bet size, one raise size, and an all-in threshold of 1.0. It supports heads-up OOP/IP root and intermediate action nodes and is labeled `FAST PREVIEW`; it is not evidence of a fully converged GTO solution.
+Solve budgets come from `src/lib/solver-presets.ts` per backend and street (for example TexasSolver flop: up to 200 iterations, stop at 1% pot exploitability; river: up to 500 iterations, 0.5%). The tree still uses one bet size (50%) and one raise size (60%) with an all-in threshold of 1.0. The client requests all threads and the API clamps them to `min(32, SOLVER_MAX_THREADS, CPU count)`. Isomorphism stays off until a native dump confirms the exact Hero combo survives it. These budgets have not been calibrated against real solve times.
+
+The API forwards TexasSolver's last logged exploitability (read from `tmp_log.txt` in the job directory, falling back to stdout) in the `x-solver-exploitability` header. The UI shows it as a percentage of the pot: up to 1% is OK, up to 5% is flagged as under-converged, and above 5% is flagged as not trustworthy. DCFR output carries its own `exploitability` field.
 
 TexasSolver native dumps provide action frequencies but no counterfactual EV in the integrated format. When Equity is available, RangeLab labels the fallback as `SOLVER FREQ · MODEL EV`; imported formats that contain EV remain labeled `SOLVER EV`.
 
@@ -54,7 +56,7 @@ Set `COUNTERFACTUAL_EV_BACKEND_URL` to send the same versioned solver job to an 
 
 The UI reads `GET /api/solver` capabilities. A configured counterfactual backend enables multiway jobs up to `COUNTERFACTUAL_EV_BACKEND_MAX_PLAYERS` (2–8, default 8). Such jobs include `players`, an array of `{seat, range, stack}`, and `actorSeat`. Without the remote backend, the API reports a two-player limit and rejects multiway execution because local TexasSolver is heads-up only.
 
-The configured URL is server-only. Requests time out after 120 seconds, responses are limited to 4 MB, and the response is validated with the normalized solver-result parser before it reaches the client. When no backend URL is configured, the existing local TexasSolver path remains the fallback.
+The configured URL is server-only. Requests time out after `SOLVER_TIMEOUT_MS` (default 300 seconds, clamped to 10-1800 seconds), responses are limited to 4 MB, and the response is validated with the normalized solver-result parser before it reaches the client. When no backend URL is configured, the existing local TexasSolver path remains the fallback.
 
 ## Local DCFR counterfactual EV adapter
 
@@ -69,11 +71,11 @@ $env:ALLOW_LOCAL_SOLVER_API='1'
 npm run dev
 ```
 
-When `COUNTERFACTUAL_EV_BACKEND_URL` is absent and `DCFR_ADAPTER_PATH` is set, `GET /api/solver` reports backend `dcfr` with a two-player limit. The current adapter intentionally supports heads-up Hero-OOP street roots with `toCall=0`; action histories, IP roots, and multiway nodes are rejected instead of returning misleading EV. It uses the job's first bet and raise sizes, accepts 1–5,000 iterations through the shared validator, hides the child window, limits output to 4 MB, and terminates after 120 seconds.
+When `COUNTERFACTUAL_EV_BACKEND_URL` is absent and `DCFR_ADAPTER_PATH` is set, `GET /api/solver` reports backend `dcfr` with a two-player limit. The current adapter intentionally supports heads-up Hero-OOP street roots with `toCall=0`; action histories, IP roots, and multiway nodes are rejected instead of returning misleading EV. It uses the job's first bet and raise sizes, accepts 1–5,000 iterations through the shared validator, hides the child window, limits output to 4 MB, and terminates after `SOLVER_TIMEOUT_MS`.
 
 Backend precedence is remote HTTP counterfactual backend, local DCFR adapter, then local TexasSolver. DCFR output containing numeric action EV is labeled `SOLVER EV`; TexasSolver frequency-only output remains `SOLVER FREQ · MODEL EV`.
 
-The production API is disabled unless `ALLOW_LOCAL_SOLVER_API=1`. Range strings are character-whitelisted, newlines are rejected, numeric limits are bounded, each job runs in a temporary directory, and the child process has a timeout and output-size limit.
+The production API is disabled unless `ALLOW_LOCAL_SOLVER_API=1`. The API accepts only same-origin `application/json` POSTs, so a third-party page cannot start a local solve. Local solves run one at a time by default (`SOLVER_MAX_CONCURRENCY`, extra requests get HTTP 429), client iterations are capped at `SOLVER_MAX_ITERATIONS` (default 1000) and accuracy is floored at 0.1%, and a cancelled request kills the solver process. Range strings are character-whitelisted, newlines are rejected, numeric limits are bounded, each job runs in a temporary directory, and the child process has a timeout and output-size limit.
 
 References:
 
