@@ -4,7 +4,7 @@ import type { Position } from "./preflop";
 import { allStartingHands, lookupStrategy } from "./strategy-data";
 import { normalizeStartingHand } from "./strategy-data";
 import { bestHandScore, parseCard } from "./equity";
-import { parseWeightedRange } from "./range-equity";
+import { parseWeightedRange, type WeightedCombo } from "./range-equity";
 import type { PostflopActionType } from "./postflop-machine";
 
 export interface InferredRange {
@@ -53,23 +53,36 @@ export function inferRangeFromPreflop(input: { actions: PlayerAction[]; seat: nu
   };
 }
 
-/** Applies board-aware made-hand, draw, and blocker heuristics to an already weighted range. */
-export function conditionRangeOnPostflop(input:{rangeText:string;boardCodes:string[];actions:PostflopActionType[]}):string{
-  if(input.boardCodes.length<3||!input.actions.length)return input.rangeText;
-  const board=input.boardCodes.map(parseCard);
-  if(board.some(card=>!card))return input.rangeText;
+export interface ScoredCombo { combo:WeightedCombo;strength:number;continueStrength:number;aggressionStrength:number; }
+
+/**
+ * Scores each board-compatible combo: strength is the made-hand percentile within the range, continueStrength adds
+ * draw equity, and aggressionStrength adds blocker value. Returns null when the board is incomplete or invalid.
+ */
+export function scoreRangeOnBoard(rangeText:string,boardCodes:string[]):ScoredCombo[]|null{
+  if(boardCodes.length<3)return null;
+  const board=boardCodes.map(parseCard);
+  if(board.some(card=>!card))return null;
   const boardCards=board.filter(card=>card!==null);
-  const combos=parseWeightedRange(input.rangeText).filter(combo=>{
-    const codes=new Set([...input.boardCodes.map(card=>card.toUpperCase()),...combo.cards.map(card=>card.toUpperCase())]);
-    return codes.size===input.boardCodes.length+2;
-  }).map(combo=>{const holeCards=combo.cards.map(card=>parseCard(card)!);const cards=[...holeCards,...boardCards];return {combo,score:bestHandScore(cards),draw:drawPotential(cards,input.boardCodes.length),blocker:blockerPotential(holeCards,boardCards)};});
-  if(!combos.length)return input.rangeText;
+  const combos=parseWeightedRange(rangeText).filter(combo=>{
+    const codes=new Set([...boardCodes.map(card=>card.toUpperCase()),...combo.cards.map(card=>card.toUpperCase())]);
+    return codes.size===boardCodes.length+2;
+  }).map(combo=>{const holeCards=combo.cards.map(card=>parseCard(card)!);const cards=[...holeCards,...boardCards];return {combo,score:bestHandScore(cards),draw:drawPotential(cards,boardCodes.length),blocker:blockerPotential(holeCards,boardCards)};});
   const orderedScores=[...new Set(combos.map(item=>item.score))].sort((a,b)=>a-b);
   const scorePercentile=new Map(orderedScores.map((score,index)=>[score,orderedScores.length===1?1:index/(orderedScores.length-1)]));
-  const weighted=combos.map(({combo,score,draw,blocker})=>{
+  return combos.map(({combo,score,draw,blocker})=>{
     const strength=scorePercentile.get(score)??0.5;
     const continueStrength=Math.min(1,strength+draw);
-    const aggressionStrength=Math.min(1,continueStrength+blocker*(1-continueStrength));
+    return {combo,strength,continueStrength,aggressionStrength:Math.min(1,continueStrength+blocker*(1-continueStrength))};
+  });
+}
+
+/** Applies board-aware made-hand, draw, and blocker heuristics to an already weighted range. */
+export function conditionRangeOnPostflop(input:{rangeText:string;boardCodes:string[];actions:PostflopActionType[]}):string{
+  if(!input.actions.length)return input.rangeText;
+  const scored=scoreRangeOnBoard(input.rangeText,input.boardCodes);
+  if(!scored?.length)return input.rangeText;
+  const weighted=scored.map(({combo,strength,continueStrength,aggressionStrength})=>{
     let weight=combo.weight;
     for(const action of input.actions){
       if(action==="bet"||action==="raise")weight*=0.2+0.8*aggressionStrength;

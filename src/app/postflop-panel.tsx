@@ -7,7 +7,8 @@ import { deriveBettingState } from "@/lib/preflop-machine";
 import { postflopOrder, PostflopAction, PostflopActionType } from "@/lib/postflop-machine";
 import { availablePostflopActions, buildPostflopContext, nextPostflopActor, validatePostflopActionV2 } from "@/lib/postflop-hand-state";
 import { calculateEquity, EquityResult } from "@/lib/equity";
-import { attachActionEvs, estimateActionEvs } from "@/lib/decision-ev";
+import { attachActionEvs, defaultFoldEquity, estimateActionEvs } from "@/lib/decision-ev";
+import { estimateEquityWhenCalled } from "@/lib/called-equity";
 import { createSolverNode, parseSolverResult, parseTexasSolverNode, parseTexasSolverNodeAtHistory, SolverResult } from "@/lib/solver-adapter";
 import { calculateRangeEquity } from "@/lib/range-equity";
 import { conditionRangeOnPostflop, inferRangeFromPreflop, toTexasSolverRange } from "@/lib/range-model";
@@ -30,6 +31,7 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat}
   const [message,setMessage]=useState("");
   const [holeCards,setHoleCards]=useState(["As","Qh"]);
   const [equity,setEquity]=useState<EquityResult|null>(null);
+  const [calledEquity,setCalledEquity]=useState<{value:number;key:string}|null>(null);
   const [solverText,setSolverText]=useState("");
   const [solverResult,setSolverResult]=useState<SolverResult|null>(null);
   const [solving,setSolving]=useState(false);
@@ -62,11 +64,31 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat}
     if(new Set(cards).size!==cards.length){setMessage("같은 카드를 두 번 사용할 수 없습니다.");return;}
     setStreet(nextStreet[street]);setAmount(Math.max(1,Math.round(pot)/2));setMessage("");
   }
-  function runEquity(){try{const knownBoard=board.slice(0,boardCount).filter(Boolean);const opponents=liveSeats.filter(seat=>seat!==heroSeat);setEquity(opponents.length?calculateRangeEquity(holeCards,knownBoard,opponents.map(rangeFor),5000):calculateEquity(holeCards,knownBoard,1,5000));setMessage("");}catch(error){setMessage(error instanceof Error?error.message:"Equity 계산에 실패했습니다.");}}
+  // Model EV is always from Hero's seat, so it uses Hero's commitments rather than the next actor's.
+  const heroCommitted=context.contributions.get(heroSeat)??0;
+  const heroToCall=Math.max(0,context.currentBet-heroCommitted);
+  const opponentSeats=liveSeats.filter(seat=>seat!==heroSeat);
+  const maxCommitment=Math.min(context.remainingAtStart[heroSeat]??0,Math.max(0,...opponentSeats.map(seat=>context.remainingAtStart[seat]??0)));
+  const knownBoard=board.slice(0,boardCount).filter(Boolean);
+  const modelSizing={pot,toCall:heroToCall,betSize:amount,heroCommitted,maxCommitment};
+  // Any input that changes equity when called invalidates a previous calculation.
+  const calledEquityKey=JSON.stringify([holeCards,knownBoard,opponentSeats.map(rangeFor),modelSizing]);
+  function runEquity(){
+    try{
+      setEquity(opponentSeats.length?calculateRangeEquity(holeCards,knownBoard,opponentSeats.map(rangeFor),5000):calculateEquity(holeCards,knownBoard,1,5000));
+      setMessage("");
+    }catch(error){setEquity(null);setCalledEquity(null);setMessage(error instanceof Error?error.message:"Equity 계산에 실패했습니다.");return;}
+    try{
+      const foldShare=defaultFoldEquity(modelSizing);
+      const value=opponentSeats.length&&foldShare>0&&foldShare<1?estimateEquityWhenCalled(holeCards,knownBoard,opponentSeats.map(rangeFor),foldShare,3000):null;
+      setCalledEquity(value===null?null:{value,key:calledEquityKey});
+    }catch(error){setCalledEquity(null);setMessage(error instanceof Error?`콜 레인지 Equity 계산 실패: ${error.message}`:"콜 레인지 Equity 계산에 실패했습니다.");}
+  }
   function importSolver(){try{let parsed:SolverResult;try{parsed=parseSolverResult(solverText);}catch{parsed=parseTexasSolverNode(solverText,holeCards.join(""));}setSolverResult(parsed);setMessage("");}catch(error){setMessage(error instanceof Error?error.message:"Solver 결과를 읽지 못했습니다.");}}
   const actorCommitted=actor===null?0:(context.contributions.get(actor)??0);
   const toCall=Math.max(0,context.currentBet-actorCommitted);
-  const estimatedEvs=equity?estimateActionEvs({equity:equity.equity,pot,toCall,betSize:amount}):[];
+  const freshCalledEquity=calledEquity?.key===calledEquityKey?calledEquity.value:undefined;
+  const estimatedEvs=equity&&actor===heroSeat?estimateActionEvs({...modelSizing,equity:equity.equity,equityWhenCalled:freshCalledEquity,opponents:opponentSeats.length}):[];
   const solverActions=solverResult?attachActionEvs(solverResult.actions,estimatedEvs):[];
   const convergence=exploitabilityLevel(solverResult?.exploitability);
   let solverNode:ReturnType<typeof createSolverNode>|null=null;
@@ -107,7 +129,7 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat}
     {actor===null&&street!=="river"&&<button className="advance-street" onClick={advance}>{street==="flop"?"턴":"리버"}으로 진행 →</button>}
     {actor===null&&street==="river"&&<p className="hand-complete">HAND ACTION COMPLETE</p>}
     <div className="equity-calculator"><div><span><small>HERO CARDS</small><span className="hole-inputs">{holeCards.map((card,index)=><input key={index} value={card} maxLength={2} onChange={event=>setHoleCards(current=>current.map((value,i)=>i===index?event.target.value:value))}/>)}</span></span><button onClick={runEquity}>EQUITY 계산</button></div><details className="opponent-ranges"><summary>상대 가중 레인지 <span>{liveSeats.filter(seat=>seat!==heroSeat).length}명</span></summary>{liveSeats.filter(seat=>seat!==heroSeat).map(seat=><label key={seat}>{positions[seat]} RANGE · ACTION BASELINE ({inferredRanges[seat]?.handCount??169}/169)<textarea value={rangeFor(seat)} onChange={event=>setRangeBySeat(current=>({...current,[seat]:event.target.value}))}/><button type="button" onClick={()=>setRangeBySeat(current=>{const next={...current};delete next[seat];return next;})}>RESET TO INFERRED</button></label>)}</details>{equity&&<div className="equity-result"><strong>{equity.equity}%<small>EQUITY ±{equity.marginOfError}%</small></strong><span><b>{equity.win}%</b><small>WIN</small></span><span><b>{equity.tie}%</b><small>TIE</small></span><span><b>{equity.loss}%</b><small>LOSS</small></span><em>{equity.iterations.toLocaleString()} weighted simulations · seed {equity.seed}{"availableCombos" in equity?` · ${(equity as {availableCombos:number[]}).availableCombos.join("/")} combos`:""}</em></div>}</div>
-    {equity&&<div className="ev-panel"><div className="ev-head"><b>{solverResult?"SOLVER STRATEGY":"ESTIMATED EV"}</b><span className={solverResult?"solver-source":"estimate-source"}>{solverResult?(solverResult.evSource==="solver"?"SOLVER EV":"SOLVER FREQ · MODEL EV"):"NOT GTO"}</span>{solverResult&&<span className={`convergence convergence-${convergence}`}>{solverResult.exploitability===undefined?"수렴도 미확인":`EXPLOIT ${solverResult.exploitability.toFixed(2)}% POT`}{convergence==="warn"&&" · 수렴 부족"}{convergence==="bad"&&" · 미수렴, 신뢰 불가"}</span>}</div>{solverResult?solverActions.map(item=><div className="ev-row" key={item.action}><span>{item.action}</span><i><b style={{width:`${item.frequency}%`}}/></i><strong>{item.frequency.toFixed(1)}% · {item.ev>=0?"+":""}{item.ev.toFixed(2)}BB<small>{item.evSource.toUpperCase()} EV</small></strong></div>):estimatedEvs.map(item=><div className="ev-row" key={item.action}><span>{item.action}</span><small>{item.assumption}</small><strong className={item.ev>=0?"positive":"negative"}>{item.ev>=0?"+":""}{item.ev.toFixed(2)} BB</strong></div>)}</div>}
+    {equity&&<div className="ev-panel"><div className="ev-head"><b>{solverResult?"SOLVER STRATEGY":"ESTIMATED EV"}</b><span className={solverResult?"solver-source":"estimate-source"}>{solverResult?(solverResult.evSource==="solver"?"SOLVER EV":"SOLVER FREQ · MODEL EV"):"NOT GTO"}</span>{solverResult&&<span className={`convergence convergence-${convergence}`}>{solverResult.exploitability===undefined?"수렴도 미확인":`EXPLOIT ${solverResult.exploitability.toFixed(2)}% POT`}{convergence==="warn"&&" · 수렴 부족"}{convergence==="bad"&&" · 미수렴, 신뢰 불가"}</span>}</div>{solverResult?solverActions.map(item=><div className="ev-row" key={item.action}><span>{item.action}</span><i><b style={{width:`${item.frequency}%`}}/></i><strong>{item.frequency.toFixed(1)}% · {item.ev>=0?"+":""}{item.ev.toFixed(2)}BB<small>{item.evSource.toUpperCase()} EV</small></strong></div>):estimatedEvs.map(item=><div className="ev-row" key={item.action}><span>{item.action}</span><small>{item.assumption}</small><strong className={item.ev>=0?"positive":"negative"}>{item.ev>=0?"+":""}{item.ev.toFixed(2)} BB</strong></div>)}{!solverResult&&!estimatedEvs.length&&<small className="ev-note">모델 EV는 Hero 차례에만 표시합니다.</small>}</div>}
     <button className="local-solver-button" disabled={!solverReady||solving} onClick={runLocalSolver}>{solving?"SOLVING…":solverCapability.backend==="counterfactual"?"COUNTERFACTUAL SOLVER 실행":solverCapability.backend==="dcfr"?"LOCAL DCFR EV 실행":"LOCAL TEXASSOLVER 실행"}</button><small className="local-solver-help">BOUNDED SOLVE · {solverCapability.backend==="counterfactual"?`외부 backend · 최대 ${solverCapability.maxPlayers}명`:solverCapability.backend==="dcfr"?"Heads-up · OOP street root · solver counterfactual EV":"Heads-up · street root 및 중간 액션 노드 · Hero OOP/IP"} · 전체 weighted class · 반복 상한 내 조기 종료.</small>
     <details className="solver-import"><summary>Solver 노드 내보내기 / 결과 가져오기</summary>{solverNode&&<textarea readOnly value={JSON.stringify(solverNode,null,2)}/>}<textarea value={solverText} onChange={event=>setSolverText(event.target.value)} placeholder={'정규화 결과 또는 TexasSolver native strategy node'}/><button onClick={importSolver}>전략 적용</button><small>TexasSolver native 콤보 전략과 RangeLab/OpenSpiel 정규화 JSON을 지원합니다.</small></details>
   </section>;
