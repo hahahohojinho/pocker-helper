@@ -12,7 +12,7 @@
 | 포스트플랍 | 구현 | 플랍·턴·리버 순서와 스트리트 간 상태 유지 |
 | Equity | 구현 | 7-card hand ranking + Monte Carlo, 다중 상대 가중 레인지 지원 |
 | 상대 레인지 | 기초 구현 | 프리플랍 액션·사이징 및 포스트플랍 made hand·draw·blocker 휴리스틱으로 자동 갱신; 직접 편집 가능 |
-| Solver | 부분 구현 | TexasSolver heads-up OOP/IP root·중간 노드 preview 및 외부 counterfactual EV/multiway backend 계약. EV 미제공 시 Model EV로 구분 |
+| Solver | 구현 | Heads-up은 브라우저 내장 DCFR(WASM)로 모든 스트리트·노드를 풀고 액션별 Solver EV와 수렴도를 표시. Multiway는 외부 counterfactual backend, 로컬 TexasSolver/DCFR adapter는 선택 사항 |
 
 현재 추천과 자동 레인지는 휴리스틱 baseline입니다. 화면의 `NOT GTO`, `ACTION BASELINE`, `MODEL EV` 표시는 솔버 결과와 추정값을 구분하는 의도적인 표기입니다.
 
@@ -47,6 +47,10 @@ npm run build
 오픈소스 6-max MCCFR 생성기는 고정된 DCFR-SOLVER submodule을 사용합니다. 모델의 정확도 경계, Windows 빌드 및 변환 절차는 [DCFR 프리플랍 통합 문서](docs/DCFR_PREFLOP.md)를 참고하세요.
 
 실행 중인 production 서버의 브라우저 smoke test는 `node scripts/e2e-smoke.mjs`로 수행합니다.
+
+## 브라우저 Solver
+
+Heads-up 스팟은 별도 설치 없이 브라우저에서 풀립니다(`public/solver/rangelab_dcfr_wasm.wasm`). 모듈을 다시 빌드하려면 Rust와 `wasm32-unknown-unknown` 타깃을 설치한 뒤 `npm run solver:wasm`을 실행합니다. 자세한 내용은 [solver integration 문서](docs/SOLVER_INTEGRATION.md)를 참고하세요.
 
 ## 로컬 TexasSolver
 

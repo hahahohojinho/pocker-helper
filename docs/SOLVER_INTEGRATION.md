@@ -50,6 +50,18 @@ The API forwards TexasSolver's last logged exploitability (read from `tmp_log.tx
 
 TexasSolver native dumps provide action frequencies but no counterfactual EV in the integrated format. When Equity is available, RangeLab labels the fallback as `SOLVER FREQ · MODEL EV`; imported formats that contain EV remain labeled `SOLVER EV`.
 
+## In-browser DCFR solver (default for heads-up)
+
+Heads-up spots are solved in the browser, with no installed binary, by `public/solver/rangelab_dcfr_wasm.wasm`. It is built from the pinned `tools/dcfr-solver` crate without modifying the submodule: `tools/dcfr-wasm` patches `rayon` (sequential iterators) and `memmap2` (heap-backed arena) with local shims through `[patch.crates-io]`, and exposes a raw `alloc`/`solve`/`result_ptr` ABI. A dedicated Web Worker (`src/workers/dcfr-solver.worker.ts`) runs each solve and is terminated on completion, timeout (240s), or cancellation.
+
+- Every street and every heads-up decision node is supported, including IP decisions and nodes after bets and raises. Observed sizes are encoded as exact reduced fractions in 1/100 BB chips (`src/lib/wasm-solver/request.ts`), matching dcfr-solver's `bet = frac * pot` and `raise = facedBet + frac * potAfterCall`, so the history node is reproduced without rounding.
+- Ranges are sent as exact weighted combos (DCFR accepts `AsQh:0.5`), using the street-start range: a user-edited range as entered, otherwise the preflop inference conditioned on earlier postflop streets.
+- Output includes per-action counterfactual EV, so the UI labels it `SOLVER EV`, plus exploitability (% of pot).
+- Budgets (`getSolverPreset("wasm", street)`): river 500, turn 100, flop 20 iterations. Single-threaded measurements with about 600-combo ranges: river 1000 iterations in 0.3s; turn 100 iterations in 4s at 0.03% pot exploitability; flop 12 iterations in 22s at 1.6%. Flop solves with wide ranges take one to two minutes.
+- Limits: at most three bets/raises before the decision (`max_raises` 4); a re-raise whose increment is below the bet faced is rejected with an explanation because dcfr-solver does not generate it; sizes up to 50x the pot (keeps dcfr-solver's i32 bet arithmetic in range); request JSON up to 256KB.
+- Rebuild with `npm run solver:wasm` (needs Rust with the `wasm32-unknown-unknown` target; `tools/dcfr-wasm/rust-toolchain.toml` pins 1.99.0). The script builds with `--locked`, writes `rangelab_dcfr_wasm.wasm.sha256`, copies the dcfr-solver MIT license, and generates `THIRD-PARTY-LICENSES.txt` for every crate linked into the module. The build is reproducible: rebuilding produced the same hash.
+- Multiway spots still use the server backends below.
+
 ## Counterfactual EV backend
 
 Set `COUNTERFACTUAL_EV_BACKEND_URL` to send the same versioned solver job to an HTTP backend instead of running local TexasSolver. The backend must return the normalized output above, including a numeric `ev` for every strategy action to be labeled `SOLVER EV`. An optional `COUNTERFACTUAL_EV_BACKEND_TOKEN` is sent as a Bearer token.

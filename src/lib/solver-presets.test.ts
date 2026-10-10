@@ -8,11 +8,11 @@ const boards={flop:["Js","7d","2c"],turn:["Js","7d","2c","Kh"],river:["Js","7d",
 
 describe("solver presets",()=>{
   it("produces valid jobs for every backend and street",()=>{
-    for(const backend of ["texassolver","dcfr","counterfactual"] as SolverBackend[])for(const street of ["flop","turn","river"] as const){
+    for(const backend of ["texassolver","dcfr","counterfactual","wasm"] as SolverBackend[])for(const street of ["flop","turn","river"] as const){
       const preset=getSolverPreset(backend,street);
       const node=createSolverNode({street,heroHole:["As","Qh"],board:[...boards[street]],pot:10,toCall:0,effectiveStack:90,candidateActions:["check","bet"]});
       expect(()=>validateTexasSolverJob({node,ranges:{oop:"AA",ip:"KK"},tree:preset.tree,accuracy:preset.accuracy,iterations:preset.iterations,threads:preset.threads,useIsomorphism:preset.useIsomorphism})).not.toThrow();
-      expect(preset.iterations).toBeGreaterThanOrEqual(100);
+      expect(preset.iterations).toBeGreaterThanOrEqual(backend==="wasm"?20:100);
       expect(preset.accuracy).toBeLessThanOrEqual(2);
       expect(preset.maxClasses).toBe(Number.POSITIVE_INFINITY);
     }

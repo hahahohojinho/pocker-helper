@@ -1,0 +1,29 @@
+[package]
+name = "rangelab-dcfr-wasm"
+version = "0.1.0"
+edition = "2021"
+description = "In-browser DCFR subgame solver for RangeLab, built from the pinned dcfr-solver crate."
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+dcfr-solver = { path = "../dcfr-solver" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# dcfr-solver pulls rand -> getrandom; wasm32-unknown-unknown needs an explicit backend. Solves use seeded RNGs only.
+getrandom = { version = "0.2", features = ["custom"] }
+
+# Standalone workspace so the patches below never affect the native adapter build.
+[workspace]
+
+# wasm32 has no threads or mmap: swap in sequential rayon and heap-backed memmap2 without editing the submodule.
+[patch.crates-io]
+rayon = { path = "shims/rayon" }
+memmap2 = { path = "shims/memmap2" }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1

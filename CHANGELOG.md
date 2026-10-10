@@ -33,3 +33,10 @@
 - `parseTexasSolverNodeAtHistory` now rejects a lookup whose nearest native size is outside max(10%, 0.51BB) of the observed amount or ties between two sizes. Why: the tree had only a 50% bet, so a 120% pot bet was silently read from the 50% node.
 - The validator dedupes merged sizes, caps them at 8 per action, and ignores malformed numeric child keys.
 - Order note: steps ran 2a -> 1 -> 4 -> 5 -> 3; model EV and equity speed affect every user, while this step only affects local TexasSolver intermediate nodes.
+
+### In-browser DCFR solver (WASM)
+- The service now solves heads-up spots itself: `tools/dcfr-wasm` compiles the pinned dcfr-solver crate to `public/solver/rangelab_dcfr_wasm.wasm` (373KB) without editing the submodule, using local `rayon`/`memmap2` shims via `[patch.crates-io]`. A Web Worker runs it; heads-up spots use it on every street.
+- Why: users previously needed a TexasSolver binary or a self-built adapter, and the native DCFR adapter only handled the OOP street root (its `max_raises: 1` also meant no raises in the tree). The wasm path supports IP decisions, facing bets, and re-raises, returns per-action solver EV, and reproduces observed sizes exactly as reduced fractions.
+- Measured (single thread, ~600-combo ranges): river 1000 iterations 0.3s, turn 100 iterations 4s at 0.03% pot exploitability, flop 12 iterations 22s at 1.6%. Presets: river 500, turn 100, flop 20. Browser E2E (Chromium, production build) solved a flop and a turn.
+- Build: `npm run solver:wasm` (`--locked`, pinned Rust 1.99.0, sha256 written, third-party license notices generated from cargo metadata). The prebuilt module is committed so the app runs without Rust.
+- Decided against: wasm threads (needs COOP/COEP headers and nightly build-std); TypeScript CFR rewrite (slower, duplicate of an existing MIT solver).

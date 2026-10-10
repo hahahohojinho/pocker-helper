@@ -1,6 +1,7 @@
 import type { TexasSolverTree } from "./texas-solver-config";
 
-export type SolverBackend="texassolver"|"dcfr"|"counterfactual";
+/** "wasm" is the in-browser DCFR solver; the others run behind /api/solver. */
+export type SolverBackend="texassolver"|"dcfr"|"counterfactual"|"wasm";
 export type SolverStreet="flop"|"turn"|"river";
 export type ExploitabilityLevel="ok"|"warn"|"bad"|"unknown";
 
@@ -24,6 +25,9 @@ const budgets:Record<SolverBackend,Record<SolverStreet,{iterations:number;accura
   texassolver:{flop:{iterations:200,accuracy:1},turn:{iterations:300,accuracy:0.5},river:{iterations:500,accuracy:0.5}},
   dcfr:{flop:{iterations:300,accuracy:1},turn:{iterations:500,accuracy:0.5},river:{iterations:1000,accuracy:0.5}},
   counterfactual:{flop:{iterations:1000,accuracy:0.5},turn:{iterations:1000,accuracy:0.5},river:{iterations:1000,accuracy:0.3}},
+  // Single-threaded in the browser; measured with ~600-combo ranges: river 1000 iterations 0.3s; turn 100 iterations
+  // 4s at 0.03% pot exploitability; flop 12 iterations 22s at 1.6%. DCFR has no early stop, so accuracy is informational.
+  wasm:{flop:{iterations:20,accuracy:1},turn:{iterations:100,accuracy:0.5},river:{iterations:500,accuracy:0.3}},
 };
 
 export function getSolverPreset(backend:SolverBackend,street:SolverStreet):SolverPreset{

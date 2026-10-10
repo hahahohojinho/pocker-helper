@@ -66,6 +66,13 @@ The adapter binary and Cargo `target` directory are intentionally not committed.
 - Browser E2E against local DCFR adapter, including `SOLVER EV` labeling: passed
 - DCFR upstream library tests from the prior integration: 107 passed, 2 ignored
 
+## In-browser solver (2026-10-11, branch fix/solver-quality)
+
+- Heads-up spots solve in the browser via `public/solver/rangelab_dcfr_wasm.wasm` (built by `npm run solver:wasm` from `tools/dcfr-wasm`). See docs/SOLVER_INTEGRATION.md.
+- Local Rust setup on this machine: rustup default host x86_64-pc-windows-msvc (the GNU host fails to link under the non-ASCII user path), VS 2022 Community C++ tools present.
+- Known limits: flop takes one to two minutes single-threaded with wide ranges; re-raises smaller than the bet faced are not in the dcfr-solver tree; the regret arena size is not capped before allocation (very large trees can exhaust tab memory).
+- Next: wasm threads (wasm-bindgen-rayon + COOP/COEP) for flop speed; progress reporting from the worker; CI job that rebuilds the wasm and compares the sha256.
+
 ## Known issues (2026-10-11 solver quality review, branch fix/solver-quality)
 
 Plan (reordered): 2a range weights (done) -> 1 presets/budget (done) -> 4 model EV (done) -> 5 equity perf (done) -> 3 observed bet sizes (done). All planned steps are committed on `fix/solver-quality` (not pushed). See CHANGELOG.md.

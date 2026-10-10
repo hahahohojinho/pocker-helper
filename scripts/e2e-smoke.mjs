@@ -40,16 +40,18 @@ try{
   await page.locator(".board-entry input").nth(0).fill("2c");
   await page.locator(".board-entry input").nth(1).fill("7d");
   await page.locator(".board-entry input").nth(2).fill("Jh");
-  const solverButton=page.getByRole("button",{name:/LOCAL (?:TEXASSOLVER|DCFR EV) 실행/});
-  const expectsSolverEv=(await solverButton.innerText()).includes("DCFR EV");
-  if(!(await solverButton.isEnabled()))throw new Error("Local solver button did not activate for heads-up flop Hero OOP.");
+  const solverButton=page.getByRole("button",{name:/(?:브라우저 SOLVER|LOCAL (?:TEXASSOLVER|DCFR EV)) 실행/});
+  const solverLabel=await solverButton.innerText();
+  const expectsSolverEv=solverLabel.includes("DCFR EV")||solverLabel.includes("브라우저");
+  if(!(await solverButton.isEnabled()))throw new Error("Solver button did not activate for heads-up flop Hero OOP.");
   await solverButton.click();
   await Promise.race([
-    page.getByText("SOLVER STRATEGY",{exact:true}).waitFor({timeout:120000}),
-    page.locator(".validation-message").waitFor({state:"visible",timeout:120000}).then(async()=>{throw new Error(`Local solver failed: ${await page.locator(".validation-message").innerText()}`);}),
+    page.getByText("SOLVER STRATEGY",{exact:true}).waitFor({timeout:240000}),
+    page.locator(".validation-message").waitFor({state:"visible",timeout:240000}).then(async()=>{throw new Error(`Local solver failed: ${await page.locator(".validation-message").innerText()}`);}),
   ]);
   if(!(await page.locator(".equity-result").innerText()).includes("EQUITY"))throw new Error("Local solver did not calculate the range-weighted equity used for model EV.");
   if(expectsSolverEv&&!(await page.locator(".ev-panel").innerText()).includes("SOLVER EV"))throw new Error("DCFR backend result was not labeled as solver EV.");
+  if(solverLabel.includes("브라우저")&&!/EXPLOIT [\d.]+% POT/.test(await page.locator(".ev-panel").innerText()))throw new Error("In-browser solver result did not show convergence.");
   await page.locator(".postflop-actions button").filter({hasText:"Check"}).click();
   await page.locator(".postflop-actions button").filter({hasText:"Check"}).click();
   await page.locator(".advance-street").click();
