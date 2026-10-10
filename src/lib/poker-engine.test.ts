@@ -180,10 +180,26 @@ describe("action inferred ranges",()=>{
   });
   it("aggregates exact suit combos to TexasSolver weighted 169 classes",()=>{
     const range=toTexasSolverRange("AsQh:0.5,AcQd:1,KhKc:0.75",["7s","2h"]);
-    expect(range).toContain("AQo:0.75");
-    expect(range).toContain("KK:0.75");
+    expect(range).toContain("AQo:0.125");
+    expect(range).toContain("KK:0.125");
     expect(range).toContain("72o:0.01");
     expect(range).not.toMatch(/[AKQJT2-9][cdhs][AKQJT2-9][cdhs]/);
+  });
+  it("weights a solver class by the share of its combos present in the range",()=>{
+    expect(toTexasSolverRange("AsQh:1,AcQd:1")).toBe("AQo:0.167");
+    expect(toTexasSolverRange("AQo")).toBe("AQo:1");
+  });
+  it("excludes board-blocked combos from the class denominator",()=>{
+    const unblocked="AcQc,AdQd,AhQh";
+    expect(toTexasSolverRange(unblocked,undefined,0.01,Number.POSITIVE_INFINITY,["Qs","7d","2c"])).toBe("AQs:1");
+    expect(toTexasSolverRange(unblocked)).toBe("AQs:0.75");
+  });
+  it("prunes by expected combo count independent of input order",()=>{
+    const classes="22,33,44,55,66,77,88,99,TT,AKo,AQo,AJo,KQo,KJo,QJo,JTo,T9o,98o,87o";
+    const forward=toTexasSolverRange(classes,undefined,0.01,8);
+    const reversed=toTexasSolverRange(classes.split(",").reverse().join(","),undefined,0.01,8);
+    expect(forward).toBe(reversed);
+    expect(forward.split(",").every(item=>item.slice(0,3).endsWith("o"))).toBe(true);
   });
   it("prunes solver ranges while retaining the required hero class",()=>{
     const range=toTexasSolverRange(allStartingHands.join(","),["7s","2h"],0.01,5);

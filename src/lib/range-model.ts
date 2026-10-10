@@ -117,24 +117,48 @@ export function ensureComboInRange(rangeText:string,holeCards:string[],minimumWe
   return contains?rangeText:`${rangeText},${target.join("")}:${minimumWeight}`;
 }
 
-/** TexasSolver v0.2.0 accepts weighted 169 classes, not exact suit combos. */
-export function toTexasSolverRange(rangeText:string,requiredHoleCards?:string[],minimumWeight=0.01,maxClasses=Number.POSITIVE_INFINITY){
-  const grouped=new Map<string,{weight:number;count:number}>();
+type ParsedCard=NonNullable<ReturnType<typeof parseCard>>;
+
+function startingHandClass(first:ParsedCard,second:ParsedCard){
+  const suffix=first.rank===second.rank?"":first.suit===second.suit?"s":"o";
+  return normalizeStartingHand(`${"--23456789TJQKA"[first.rank]}${"--23456789TJQKA"[second.rank]}${suffix}`)!;
+}
+
+function parseBlockedCards(boardCodes:string[]){
+  const cards=boardCodes.map(parseCard);
+  if(cards.some(card=>!card))throw new Error("Board cards are invalid.");
+  return new Set((cards as ParsedCard[]).map(card=>card.code));
+}
+
+const unblockedComboCount=(hand:string,blocked:Set<string>)=>parseWeightedRange(hand).filter(combo=>combo.cards.every(card=>!blocked.has(card))).length;
+
+/**
+ * TexasSolver v0.2.0 accepts weighted 169 classes, not exact suit combos. A class weight is applied to every
+ * board-compatible combo, so it is the summed combo weight divided by that combo count, and pruning keeps the
+ * classes with the most expected combos.
+ */
+export function toTexasSolverRange(rangeText:string,requiredHoleCards?:string[],minimumWeight=0.01,maxClasses=Number.POSITIVE_INFINITY,boardCodes:string[]=[]){
+  const blocked=parseBlockedCards(boardCodes);
+  const grouped=new Map<string,number>();
   for(const combo of parseWeightedRange(rangeText)){
-    const first=parseCard(combo.cards[0])!;const second=parseCard(combo.cards[1])!;
-    const suffix=first.rank===second.rank?"":first.suit===second.suit?"s":"o";
-    const hand=normalizeStartingHand(`${"--23456789TJQKA"[first.rank]}${"--23456789TJQKA"[second.rank]}${suffix}`)!;
-    const current=grouped.get(hand)??{weight:0,count:0};current.weight+=combo.weight;current.count++;grouped.set(hand,current);
+    if(combo.cards.some(card=>blocked.has(card)))continue;
+    const hand=startingHandClass(parseCard(combo.cards[0])!,parseCard(combo.cards[1])!);
+    grouped.set(hand,(grouped.get(hand)??0)+combo.weight);
   }
   let requiredHand:string|undefined;
   if(requiredHoleCards){
     const cards=requiredHoleCards.map(parseCard);if(cards.length!==2||cards.some(card=>!card))throw new Error("Required hole cards are invalid.");
-    const [first,second]=cards as NonNullable<ReturnType<typeof parseCard>>[];const suffix=first.rank===second.rank?"":first.suit===second.suit?"s":"o";
-    requiredHand=normalizeStartingHand(`${"--23456789TJQKA"[first.rank]}${"--23456789TJQKA"[second.rank]}${suffix}`)!;
-    if(!grouped.has(requiredHand))grouped.set(requiredHand,{weight:minimumWeight,count:1});
+    requiredHand=startingHandClass(cards[0]!,cards[1]!);
+    if(!grouped.has(requiredHand))grouped.set(requiredHand,0);
   }
-  const ranked=[...grouped].map(([hand,value])=>({hand,weight:Math.max(minimumWeight,Math.round(value.weight/value.count*1000)/1000)})).sort((a,b)=>b.weight-a.weight);
+  const ranked=[...grouped].flatMap(([hand,comboWeight])=>{
+    const available=unblockedComboCount(hand,blocked);
+    if(!available)return [];
+    const weight=Math.min(1,Math.max(minimumWeight,Math.round(comboWeight/available*1000)/1000));
+    return [{hand,weight,expectedCombos:weight*available}];
+  }).sort((a,b)=>b.expectedCombos-a.expectedCombos||a.hand.localeCompare(b.hand));
   let selected=ranked.slice(0,Math.max(1,Math.floor(maxClasses)));
-  if(requiredHand&&!selected.some(item=>item.hand===requiredHand))selected=[...selected.slice(0,-1),ranked.find(item=>item.hand===requiredHand)!];
+  const requiredItem=ranked.find(item=>item.hand===requiredHand);
+  if(requiredItem&&!selected.includes(requiredItem))selected=[...selected.slice(0,-1),requiredItem];
   return selected.map(item=>`${item.hand}:${item.weight}`).join(",");
 }

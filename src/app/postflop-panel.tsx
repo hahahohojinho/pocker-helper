@@ -78,10 +78,10 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat}
     runEquity();
     setSolving(true);setMessage("");
     const oopSeat=order.find(seat=>liveSeats.includes(seat))!;const ipSeat=liveSeats.find(seat=>seat!==oopSeat)!;
-    const seatRange=(seat:number)=>toTexasSolverRange(seat===heroSeat?heroInferredRange.text:inferredRanges[seat]?.text??baselineRange,seat===heroSeat?holeCards:undefined,0.01,8);
+    const seatRange=(seat:number)=>toTexasSolverRange(seat===heroSeat?heroInferredRange.text:inferredRanges[seat]?.text??baselineRange,seat===heroSeat?holeCards:undefined,0.01,8,requestNode.board);
     const actionHistory=streetActions.map(action=>({action:action.type,amount:action.amount}));
-    const players=liveSeats.map(seat=>({seat,range:seatRange(seat),stack:context.remainingAtStart[seat]??0}));
     try{
+      const players=liveSeats.map(seat=>({seat,range:seatRange(seat),stack:context.remainingAtStart[seat]??0}));
       const response=await fetch("/api/solver",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({node:requestNode,ranges:{oop:seatRange(oopSeat),ip:seatRange(ipSeat)},tree:{betPercent:[50],raisePercent:[60],includeAllIn:false},accuracy:10,iterations:10,threads:1,actionHistory,players,actorSeat:actor})});
       const raw=await response.text();
       if(!response.ok){let reason="Solver API request failed.";try{reason=(JSON.parse(raw) as {error?:string}).error??reason;}catch{}throw new Error(reason);}
