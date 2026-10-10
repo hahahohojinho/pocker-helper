@@ -37,8 +37,30 @@ export function parseWeightedRange(text:string):WeightedCombo[]{
   return [...merged.values()];
 }
 
-function sampleCombo(combos:WeightedCombo[],blocked:Set<string>,random:()=>number){
-  const available=combos.filter(combo=>combo.cards.every(card=>!blocked.has(card)));
+interface PreparedCombo { codes:[string,string];cards:[Card,Card];weight:number; }
+interface PreparedRange { combos:PreparedCombo[];cumulative:number[];total:number; }
+const MAX_REJECTIONS=32;
+
+function prepareRange(range:WeightedCombo[],known:Set<string>):PreparedRange{
+  const combos=range.filter(combo=>combo.cards.every(card=>!known.has(card))).map(combo=>({codes:combo.cards,cards:[parseCard(combo.cards[0])!,parseCard(combo.cards[1])!] as [Card,Card],weight:combo.weight}));
+  let total=0;const cumulative=combos.map(combo=>(total+=combo.weight));
+  return {combos,cumulative,total};
+}
+
+function pickByWeight(range:PreparedRange,target:number){
+  let low=0,high=range.cumulative.length-1;
+  while(low<high){const middle=(low+high)>>1;if(range.cumulative[middle]<target)low=middle+1;else high=middle;}
+  return range.combos[low];
+}
+
+/** Samples a combo avoiding blocked cards; rejection sampling keeps the exact conditional distribution. */
+function sampleCombo(range:PreparedRange,blocked:Set<string>,random:()=>number){
+  if(range.total<=0)return null;
+  for(let attempt=0;attempt<MAX_REJECTIONS;attempt++){
+    const combo=pickByWeight(range,random()*range.total);
+    if(!blocked.has(combo.codes[0])&&!blocked.has(combo.codes[1]))return combo;
+  }
+  const available=range.combos.filter(combo=>!blocked.has(combo.codes[0])&&!blocked.has(combo.codes[1]));
   const total=available.reduce((sum,combo)=>sum+combo.weight,0);
   if(total<=0)return null;
   let target=random()*total;
@@ -53,15 +75,16 @@ export function calculateRangeEquity(heroCodes:string[],boardCodes:string[],rang
   if(knownCodes.size!==cards.length)throw new Error("같은 카드를 두 번 사용할 수 없습니다.");
   if(rangeTexts.length<1)throw new Error("상대 레인지가 하나 이상 필요합니다.");
   const ranges=rangeTexts.map(parseWeightedRange);
-  const filteredCounts=ranges.map(range=>range.filter(combo=>combo.cards.every(card=>!knownCodes.has(card))).length);
+  const prepared=ranges.map(range=>prepareRange(range,knownCodes));
+  const filteredCounts=prepared.map(range=>range.combos.length);
   if(filteredCounts.some(count=>count===0))throw new Error("공개 카드와 충돌하지 않는 상대 콤보가 없습니다.");
-  const fullDeck:Card[]=[];for(const rank of ranks)for(const suit of suits)fullDeck.push(parseCard(`${rank}${suit}`)!);
+  const unknownDeck:Card[]=[];for(const rank of ranks)for(const suit of suits){const card=parseCard(`${rank}${suit}`)!;if(!knownCodes.has(card.code))unknownDeck.push(card);}
   const missingBoard=5-boardCodes.length;let wins=0,ties=0,losses=0,completed=0;const random=seededRandom(seed);
   for(let run=0;run<iterations;run++){
     const blocked=new Set(knownCodes);const opponents:Card[][]=[];let valid=true;
-    for(const range of ranges){const combo=sampleCombo(range,blocked,random);if(!combo){valid=false;break;}combo.cards.forEach(card=>blocked.add(card));opponents.push(combo.cards.map(card=>parseCard(card)!));}
+    for(const range of prepared){const combo=sampleCombo(range,blocked,random);if(!combo){valid=false;break;}blocked.add(combo.codes[0]);blocked.add(combo.codes[1]);opponents.push(combo.cards);}
     if(!valid)continue;
-    const deck=fullDeck.filter(card=>!blocked.has(card.code));
+    const deck=unknownDeck.filter(card=>!blocked.has(card.code));
     for(let i=0;i<missingBoard;i++){const j=i+Math.floor(random()*(deck.length-i));[deck[i],deck[j]]=[deck[j],deck[i]];}
     const board=[...cards.slice(2),...deck.slice(0,missingBoard)];const heroScore=bestHandScore([...cards.slice(0,2),...board]);const opponentScores=opponents.map(hand=>bestHandScore([...hand,...board]));const bestOpponent=Math.max(...opponentScores);
     if(heroScore>bestOpponent)wins++;else if(heroScore===bestOpponent)ties++;else losses++;completed++;

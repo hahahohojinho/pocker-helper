@@ -16,6 +16,9 @@ import { exploitabilityLevel, getSolverPreset } from "@/lib/solver-presets";
 
 const labels:Record<PostflopActionType,string>={fold:"Fold",check:"Check",bet:"Bet",call:"Call",raise:"Raise"};
 const nextStreet={flop:"turn",turn:"river"} as const;
+// About +-0.65%p Monte Carlo error; a 7-way run of both takes roughly 0.2s on a desktop CPU.
+const EQUITY_ITERATIONS=20_000;
+const CALLED_EQUITY_ITERATIONS=10_000;
 const baselineRange="AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,QJs,QTs,JTs,T9s,98s,87s,76s,65s,54s,AKo,AQo,AJo,KQo";
 
 export default function PostflopPanel({positions,preflopActions,stacks,heroSeat}:{positions:Position[];preflopActions:PlayerAction[];stacks:number[];heroSeat:number}){
@@ -75,12 +78,12 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat}
   const calledEquityKey=JSON.stringify([holeCards,knownBoard,opponentSeats.map(rangeFor),modelSizing]);
   function runEquity(){
     try{
-      setEquity(opponentSeats.length?calculateRangeEquity(holeCards,knownBoard,opponentSeats.map(rangeFor),5000):calculateEquity(holeCards,knownBoard,1,5000));
+      setEquity(opponentSeats.length?calculateRangeEquity(holeCards,knownBoard,opponentSeats.map(rangeFor),EQUITY_ITERATIONS):calculateEquity(holeCards,knownBoard,1,EQUITY_ITERATIONS));
       setMessage("");
     }catch(error){setEquity(null);setCalledEquity(null);setMessage(error instanceof Error?error.message:"Equity 계산에 실패했습니다.");return;}
     try{
       const foldShare=defaultFoldEquity(modelSizing);
-      const value=opponentSeats.length&&foldShare>0&&foldShare<1?estimateEquityWhenCalled(holeCards,knownBoard,opponentSeats.map(rangeFor),foldShare,3000):null;
+      const value=opponentSeats.length&&foldShare>0&&foldShare<1?estimateEquityWhenCalled(holeCards,knownBoard,opponentSeats.map(rangeFor),foldShare,CALLED_EQUITY_ITERATIONS):null;
       setCalledEquity(value===null?null:{value,key:calledEquityKey});
     }catch(error){setCalledEquity(null);setMessage(error instanceof Error?`콜 레인지 Equity 계산 실패: ${error.message}`:"콜 레인지 Equity 계산에 실패했습니다.");}
   }

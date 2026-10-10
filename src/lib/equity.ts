@@ -32,7 +32,50 @@ function fiveCardScore(cards:Card[]){
   return encode(0,groups.map(group=>group[0]));
 }
 
+const SCORE_BASE=15;
+const encodeScore=(category:number,values:number[])=>{let score=category;for(let index=0;index<5;index++)score=score*SCORE_BASE+(values[index]??0);return score;};
+const SUIT_INDEX:Record<string,number>={c:0,d:1,h:2,s:3};
+const suitIndex=(suit:string)=>{const index=SUIT_INDEX[suit];if(index===undefined)throw new Error(`Unknown card suit: ${suit}`);return index;};
+const ACE=14;
+const WHEEL_ACE=1;
+
+function straightHigh(rankMask:number){
+  const mask=rankMask&(1<<ACE)?rankMask|(1<<WHEEL_ACE):rankMask;
+  for(let high=ACE;high>=5;high--)if(((mask>>(high-4))&0b11111)===0b11111)return high;
+  return 0;
+}
+
+function topRanks(rankMask:number,count:number,exclude:number[]=[]){
+  const values:number[]=[];
+  for(let rank=ACE;rank>=2&&values.length<count;rank--)if(rankMask&(1<<rank)&&!exclude.includes(rank))values.push(rank);
+  return values;
+}
+
+/**
+ * Scores the best five-card hand from 5 to 7 cards with rank counts and bitmasks. Returns exactly the same number as
+ * bestHandScoreReference (category first, then base-15 tiebreak ranks) without enumerating 21 combinations.
+ */
 export function bestHandScore(cards:Card[]){
+  if(cards.length<5)return 0;
+  const counts=new Array<number>(15).fill(0);const suitMasks=[0,0,0,0];const suitCounts=[0,0,0,0];let rankMask=0;
+  for(const card of cards){const suit=suitIndex(card.suit);counts[card.rank]++;rankMask|=1<<card.rank;suitMasks[suit]|=1<<card.rank;suitCounts[suit]++;}
+  const flushSuit=suitCounts.findIndex(count=>count>=5);
+  if(flushSuit>=0){const high=straightHigh(suitMasks[flushSuit]);if(high)return encodeScore(8,[high]);}
+  let quad=0;const trips:number[]=[];const pairs:number[]=[];
+  for(let rank=ACE;rank>=2;rank--){if(counts[rank]===4)quad=rank;else if(counts[rank]===3)trips.push(rank);else if(counts[rank]===2)pairs.push(rank);}
+  if(quad)return encodeScore(7,[quad,topRanks(rankMask,1,[quad])[0]]);
+  if(trips.length&&(trips.length>1||pairs.length))return encodeScore(6,[trips[0],Math.max(trips[1]??0,pairs[0]??0)]);
+  if(flushSuit>=0)return encodeScore(5,topRanks(suitMasks[flushSuit],5));
+  const straight=straightHigh(rankMask);
+  if(straight)return encodeScore(4,[straight]);
+  if(trips.length)return encodeScore(3,[trips[0],...topRanks(rankMask,2,[trips[0]])]);
+  if(pairs.length>=2)return encodeScore(2,[pairs[0],pairs[1],topRanks(rankMask,1,[pairs[0],pairs[1]])[0]]);
+  if(pairs.length)return encodeScore(1,[pairs[0],...topRanks(rankMask,3,[pairs[0]])]);
+  return encodeScore(0,topRanks(rankMask,5));
+}
+
+/** Original 21-combination evaluator, kept as the test oracle for bestHandScore. */
+export function bestHandScoreReference(cards:Card[]){
   let best=0;
   for(let a=0;a<cards.length-4;a++)for(let b=a+1;b<cards.length-3;b++)for(let c=b+1;c<cards.length-2;c++)for(let d=c+1;d<cards.length-1;d++)for(let e=d+1;e<cards.length;e++)best=Math.max(best,fiveCardScore([cards[a],cards[b],cards[c],cards[d],cards[e]]));
   return best;
