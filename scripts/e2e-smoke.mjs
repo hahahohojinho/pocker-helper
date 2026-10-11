@@ -40,9 +40,10 @@ try{
   await page.locator(".board-entry input").nth(0).fill("2c");
   await page.locator(".board-entry input").nth(1).fill("7d");
   await page.locator(".board-entry input").nth(2).fill("Jh");
-  const solverButton=page.getByRole("button",{name:/(?:브라우저 SOLVER|LOCAL (?:TEXASSOLVER|DCFR EV)) 실행/});
+  const solverButton=page.getByRole("button",{name:/(?:(?:브라우저|네이티브) SOLVER|LOCAL (?:TEXASSOLVER|DCFR EV)) 실행/});
   const solverLabel=await solverButton.innerText();
-  const expectsSolverEv=solverLabel.includes("DCFR EV")||solverLabel.includes("브라우저");
+  const usesDcfr=solverLabel.includes("브라우저")||solverLabel.includes("네이티브");
+  const expectsSolverEv=solverLabel.includes("DCFR EV")||usesDcfr;
   if(!(await solverButton.isEnabled()))throw new Error("Solver button did not activate for heads-up flop Hero OOP.");
   await solverButton.click();
   if(solverLabel.includes("브라우저"))await page.getByRole("button",{name:/SOLVING \d+\/\d+/}).waitFor({timeout:60000});
@@ -52,13 +53,13 @@ try{
   ]);
   if(!(await page.locator(".equity-result").innerText()).includes("EQUITY"))throw new Error("Local solver did not calculate the range-weighted equity used for model EV.");
   if(expectsSolverEv&&!(await page.locator(".ev-panel").innerText()).includes("SOLVER EV"))throw new Error("DCFR backend result was not labeled as solver EV.");
-  if(solverLabel.includes("브라우저")&&!/EXPLOIT [\d.]+% POT/.test(await page.locator(".ev-panel").innerText()))throw new Error("In-browser solver result did not show convergence.");
+  if(usesDcfr&&!/EXPLOIT [\d.]+% POT/.test(await page.locator(".ev-panel").innerText()))throw new Error("In-browser solver result did not show convergence.");
   await page.locator(".postflop-actions button").filter({hasText:"Check"}).click();
   await page.locator(".postflop-actions button").filter({hasText:"Check"}).click();
   await page.locator(".advance-street").click();
   await page.locator(".board-entry input").nth(3).fill("Kh");
   if(!(await page.locator(".local-solver-button").isEnabled()))throw new Error("Local solver button did not activate for a heads-up turn root.");
-  if(solverLabel.includes("브라우저")){
+  if(usesDcfr){
     await page.locator(".local-solver-button").click();
     await page.locator(".solver-cancel-button").click();
     await page.getByText("Solver 실행을 취소했습니다.").waitFor({timeout:10000});

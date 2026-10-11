@@ -3,27 +3,20 @@
 //! JS calls `alloc`, writes a UTF-8 JSON request, calls `solve`, then reads `result_ptr`/`result_len`.
 //! The result is `{"ok":true,"result":{...}}` or `{"ok":false,"error":"..."}`. Panics trap in wasm.
 
-mod request;
-mod solve;
-
 use std::cell::RefCell;
 
 use serde_json::json;
 
-pub use request::SolveRequest;
+const SOURCE: &str = "dcfr-wasm";
 
 /// Solves a JSON request and returns the JSON envelope; usable natively for tests and benchmarks.
 pub fn solve_json(request_json: &str) -> String {
-    solve_json_with_progress(request_json, &mut |_, _| {})
+    rangelab_dcfr_core::solve_json(request_json, SOURCE)
 }
 
 /// Like `solve_json`, calling `on_progress(completed, total)` as iterations finish.
 pub fn solve_json_with_progress(request_json: &str, on_progress: &mut dyn FnMut(u32, u32)) -> String {
-    let outcome = SolveRequest::parse(request_json).and_then(|request| solve::solve(&request, on_progress));
-    match outcome {
-        Ok(result) => json!({"ok": true, "result": result}).to_string(),
-        Err(error) => json!({"ok": false, "error": error}).to_string(),
-    }
+    rangelab_dcfr_core::solve_json_with_progress(request_json, SOURCE, on_progress)
 }
 
 thread_local! {

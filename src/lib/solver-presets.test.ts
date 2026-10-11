@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { createSolverNode } from "./solver-adapter";
 import { exploitabilityLevel, getSolverPreset, parseTexasSolverLog, resolveSolverThreads, resolveSolverTimeoutMs, type SolverBackend } from "./solver-presets";
-import { clampSolverBudget, isTrustedSolverRequest, tryAcquireSolverSlot } from "./solver-guard";
+import { clampSolverBudget, isTrustedSolverRequest, MAX_SOLVER_BODY_BYTES, nativeJsonSolverEnabled, parseSolverBody, readSolverBody, tryAcquireSolverSlot } from "./solver-guard";
 import { buildTexasSolverCommands, validateTexasSolverJob } from "./texas-solver-config";
 
 const boards={flop:["Js","7d","2c"],turn:["Js","7d","2c","Kh"],river:["Js","7d","2c","Kh","4s"]} as const;
 
 describe("solver presets",()=>{
   it("produces valid jobs for every backend and street",()=>{
-    for(const backend of ["texassolver","dcfr","counterfactual","wasm"] as SolverBackend[])for(const street of ["flop","turn","river"] as const){
+    for(const backend of ["texassolver","dcfr","counterfactual","wasm","native"] as SolverBackend[])for(const street of ["flop","turn","river"] as const){
       const preset=getSolverPreset(backend,street);
       const node=createSolverNode({street,heroHole:["As","Qh"],board:[...boards[street]],pot:10,toCall:0,effectiveStack:90,candidateActions:["check","bet"]});
       expect(()=>validateTexasSolverJob({node,ranges:{oop:"AA",ip:"KK"},tree:preset.tree,accuracy:preset.accuracy,iterations:preset.iterations,threads:preset.threads,useIsomorphism:preset.useIsomorphism})).not.toThrow();
-      expect(preset.iterations).toBeGreaterThanOrEqual(backend==="wasm"?20:100);
+      expect(preset.iterations).toBeGreaterThanOrEqual(backend==="wasm"?20:backend==="native"?60:100);
       expect(preset.accuracy).toBeLessThanOrEqual(2);
       expect(preset.maxClasses).toBe(Number.POSITIVE_INFINITY);
     }
@@ -110,5 +110,36 @@ describe("solver tree size limits",()=>{
     const job={node,ranges:{oop:"AA",ip:"KK"},accuracy:1,iterations:10,threads:1};
     expect(buildTexasSolverCommands({...job,tree:{betPercent:[50],raisePercent:[60],includeAllIn:false,streetBetPercent:[50,120]}})).toContain("set_bet_sizes oop,flop,bet,50,120\n");
     expect(()=>buildTexasSolverCommands({...job,tree:{betPercent:[10,20,30,40,50],raisePercent:[60],includeAllIn:false,streetBetPercent:[60,70,80,90]}})).toThrow(/최대/);
+  });
+});
+
+describe("solver request body",()=>{
+  it("routes dcfr-json bodies and keeps legacy jobs",()=>{
+    expect(parseSolverBody('{"kind":"dcfr-json","request":{"iterations":10}}')).toEqual({kind:"dcfr-json",request:{iterations:10}});
+    expect(parseSolverBody('{"node":{}}')).toEqual({kind:"job",job:{node:{}}});
+  });
+  it("rejects oversized, malformed, and incomplete bodies",()=>{
+    expect(()=>parseSolverBody(`{"x":"${"a".repeat(MAX_SOLVER_BODY_BYTES)}"}`)).toThrow(/exceeds/);
+    expect(()=>parseSolverBody("{")).toThrow(/valid JSON/);
+    expect(()=>parseSolverBody("[1]")).toThrow(/object/);
+    expect(()=>parseSolverBody('{"kind":"dcfr-json","request":{"iterations":"10"}}')).toThrow(/integer iterations/);
+  });
+  it("stops reading a body once it exceeds the limit",async()=>{
+    const small=new Request("http://localhost/api/solver",{method:"POST",body:'{"a":1}'});
+    await expect(readSolverBody(small)).resolves.toBe('{"a":1}');
+    const declared=new Request("http://localhost/api/solver",{method:"POST",body:"x",headers:{"content-length":String(MAX_SOLVER_BODY_BYTES+1)}});
+    await expect(readSolverBody(declared)).rejects.toThrow(/exceeds/);
+    const chunk=new Uint8Array(64*1024);let sent=0;
+    const stream=new ReadableStream<Uint8Array>({pull(controller){sent+=chunk.byteLength;controller.enqueue(chunk);}});
+    const streamed=new Request("http://localhost/api/solver",{method:"POST",body:stream,duplex:"half"} as RequestInit);
+    await expect(readSolverBody(streamed)).rejects.toThrow(/exceeds/);
+    expect(sent).toBeLessThan(MAX_SOLVER_BODY_BYTES+3*chunk.byteLength);
+  });
+  it("advertises the native solver only when it may run",()=>{
+    expect(nativeJsonSolverEnabled({DCFR_ADAPTER_PATH:"x"})).toBe(true);
+    expect(nativeJsonSolverEnabled({})).toBe(false);
+    expect(nativeJsonSolverEnabled({DCFR_ADAPTER_PATH:"x",COUNTERFACTUAL_EV_BACKEND_URL:"https://a"})).toBe(false);
+    expect(nativeJsonSolverEnabled({DCFR_ADAPTER_PATH:"x",NODE_ENV:"production"})).toBe(false);
+    expect(nativeJsonSolverEnabled({DCFR_ADAPTER_PATH:"x",NODE_ENV:"production",ALLOW_LOCAL_SOLVER_API:"1"})).toBe(true);
   });
 });

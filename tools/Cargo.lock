@@ -234,12 +234,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "rangelab-dcfr-wasm"
+name = "rangelab-dcfr-core"
 version = "0.1.0"
 dependencies = [
  "dcfr-solver",
- "getrandom",
  "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "rangelab-dcfr-wasm"
+version = "0.1.0"
+dependencies = [
+ "getrandom",
+ "rangelab-dcfr-core",
  "serde_json",
 ]
 

@@ -70,8 +70,10 @@ The adapter binary and Cargo `target` directory are intentionally not committed.
 
 - Heads-up spots solve in the browser via `public/solver/rangelab_dcfr_wasm.wasm` (built by `npm run solver:wasm` from `tools/dcfr-wasm`). See docs/SOLVER_INTEGRATION.md.
 - Local Rust setup on this machine: rustup default host x86_64-pc-windows-msvc (the GNU host fails to link under the non-ASCII user path), VS 2022 Community C++ tools present.
-- Known limits: flop takes one to two minutes single-threaded with wide ranges; re-raises smaller than the bet faced are not in the dcfr-solver tree; the regret arena size is not capped before allocation (very large trees can exhaust tab memory).
-- Next: wasm threads (wasm-bindgen-rayon + COOP/COEP) for flop speed; progress reporting from the worker; CI job that rebuilds the wasm and compares the sha256.
+- With `DCFR_ADAPTER_PATH` set, heads-up spots solve natively and multi-threaded through the same request (`rangelab-dcfr-adapter --json`); the browser is the fallback.
+- Known limits: browser flop takes one to two minutes single-threaded with wide ranges; re-raises smaller than the bet faced are not in the dcfr-solver tree; the regret arena size is not capped before allocation (very large trees can exhaust tab memory).
+- Done since: solve progress and cancel; reproducible wasm (path remap, strip, tools/ workspace) and CI (`.github/workflows/ci.yml`, not yet run on GitHub).
+- Next: confirm the CI run on GitHub; pin actions to commit SHAs; tree/memory cap (needs an upstream sizing API); wasm threads (COOP/COEP) for browser flop speed; auth/rate limiting before exposing the native API beyond local use.
 
 ## Known issues (2026-10-11 solver quality review, branch fix/solver-quality)
 

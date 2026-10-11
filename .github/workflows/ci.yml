@@ -7,14 +7,20 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   web:
     name: Lint, test, build
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -29,18 +35,23 @@ jobs:
     name: Rebuild solver wasm and compare
     # The published module embeds remapped source paths with Windows separators, so it is rebuilt on Windows.
     runs-on: windows-latest
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Install the pinned Rust toolchain
         working-directory: tools/dcfr-wasm
         run: rustup toolchain install
-      - name: Rust tests
+      - name: Rust tests (dcfr-core, dcfr-wasm)
         working-directory: tools/dcfr-wasm
+        run: cargo test --release --locked --workspace
+      - name: Native adapter tests (real rayon, --json mode)
+        working-directory: tools/dcfr-adapter
         run: cargo test --release --locked
       - name: Rebuild wasm, checksum, and license notices
         run: node scripts/build-solver-wasm.mjs

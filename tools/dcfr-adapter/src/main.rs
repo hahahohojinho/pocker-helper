@@ -5,6 +5,7 @@ use dcfr_solver::range::Range;
 use serde_json::json;
 use std::collections::BTreeMap;
 use std::env;
+use std::io::{Read, Write};
 use std::sync::Arc;
 
 fn option(name: &str) -> Result<String, String> {
@@ -137,8 +138,24 @@ fn run() -> Result<(), String> {
     Ok(())
 }
 
+/// `--json`: reads the same request the in-browser solver takes from stdin and prints its envelope.
+/// Solver errors are reported inside the envelope (exit 0); only I/O failures exit non-zero.
+fn run_json() -> Result<(), String> {
+    let limit = rangelab_dcfr_core::MAX_REQUEST_BYTES;
+    let mut input = String::new();
+    std::io::stdin().take(limit as u64 + 1).read_to_string(&mut input).map_err(|error| format!("failed to read stdin: {error}"))?;
+    let response = if input.len() > limit {
+        serde_json::json!({"ok": false, "error": format!("request exceeds {limit} bytes")}).to_string()
+    } else {
+        rangelab_dcfr_core::solve_json(&input, "dcfr-native")
+    };
+    let mut stdout = std::io::stdout().lock();
+    writeln!(stdout, "{response}").and_then(|_| stdout.flush()).map_err(|error| format!("failed to write stdout: {error}"))
+}
+
 fn main() {
-    if let Err(error) = run() {
+    let result = if env::args().any(|arg| arg == "--json") { run_json() } else { run() };
+    if let Err(error) = result {
         eprintln!("{error}");
         std::process::exit(1);
     }

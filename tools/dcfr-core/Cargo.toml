@@ -1,0 +1,11 @@
+[package]
+name = "rangelab-dcfr-core"
+version = "0.1.0"
+edition = "2021"
+description = "Request parsing and DCFR subgame solving shared by RangeLab's wasm module and native adapter."
+publish = false
+
+[dependencies]
+dcfr-solver = { path = "../dcfr-solver" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

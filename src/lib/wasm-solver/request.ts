@@ -104,12 +104,12 @@ export function buildWasmSolveRequest(input:WasmSolveInput):WasmSolveRequest{
 
 export type WasmSolveResponse={ok:true;result:{source:string;player:Role;best_action:string;exploitability:number;heroUnreached?:boolean;strategy:{action:string;frequency:number;evChips:number}[]}}|{ok:false;error:string};
 
-/** Converts the wasm envelope to RangeLab's normalized solver JSON with EV in BB. */
+/** Converts a dcfr-core envelope (wasm or native adapter) to RangeLab's normalized solver JSON with EV in BB. */
 export function wasmResponseToSolverJson(response:WasmSolveResponse){
   if(!response.ok)throw new Error(`In-browser solver: ${response.error}`);
   const {result}=response;
   return JSON.stringify({
-    source:"dcfr-wasm",
+    source:result.source==="dcfr-native"?"dcfr-native":"dcfr-wasm",
     strategy:result.strategy.map(item=>({action:item.action,frequency:item.frequency,ev:item.evChips/CHIPS_PER_BB})),
     best_action:result.best_action,
     exploitability:result.exploitability,

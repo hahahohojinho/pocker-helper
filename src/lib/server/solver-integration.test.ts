@@ -4,7 +4,9 @@ import type { TexasSolverJob } from "../texas-solver-config";
 import { runTexasSolver } from "./run-texas-solver-core";
 import { afterEach, vi } from "vitest";
 import { runCounterfactualBackend } from "./run-counterfactual-backend";
-import { buildDcfrAdapterArgs, runDcfrAdapter } from "./run-dcfr-adapter";
+import { buildDcfrAdapterArgs, runDcfrAdapter, runDcfrJsonAdapter } from "./run-dcfr-adapter";
+import { buildWasmSolveRequest } from "../wasm-solver/request";
+import { parseSolverResult } from "../solver-adapter";
 
 const solverAvailable=Boolean(process.env.TEXAS_SOLVER_PATH);
 const dcfrAdapterAvailable=Boolean(process.env.DCFR_ADAPTER_PATH);
@@ -70,6 +72,16 @@ describe("Local DCFR counterfactual EV adapter",()=>{
     expect(new Set(result.strategy.map(action=>action.ev)).size).toBe(2);
     expect(result.strategy.find(action=>action.action==="bet")!.ev).toBeGreaterThan(-6);
     expect(Math.abs(result.strategy.find(action=>action.action==="check")!.ev)).toBeLessThan(0.1);
+  },35_000);
+});
+
+describe("Native DCFR adapter --json",()=>{
+  it.skipIf(!dcfrAdapterAvailable)("solves an IP node facing a bet with multi-threaded solver EV",async()=>{
+    const request=buildWasmSolveRequest({board:["Js","Td","7c","2h","3s"],heroHole:["As","Qh"],oopRange:"KK,QQ,T9s",ipRange:"AsQh,AA,JJ",pot:10,stacks:{oop:90,ip:90},history:[{role:"oop",action:"bet",amount:7}],iterations:200,betPercent:[50],raisePercent:[60]});
+    const result=parseSolverResult(await runDcfrJsonAdapter(request,{threads:2,timeoutMs:30_000}));
+    expect(result.source).toBe("dcfr-native");
+    expect(result.evSource).toBe("solver");
+    expect(result.actions.map(action=>action.action)).toEqual(expect.arrayContaining(["fold","call"]));
   },35_000);
 });
 

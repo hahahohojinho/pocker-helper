@@ -87,7 +87,7 @@ const MAX_PROGRESS_REPORTS: u32 = 100;
 
 /// Solves the request, reporting `(completed, total)` iterations: once with 0 before the tree is built, then at
 /// most MAX_PROGRESS_REPORTS more times, always ending with `(total, total)`.
-pub fn solve(request: &SolveRequest, on_progress: &mut dyn FnMut(u32, u32)) -> Result<Value, String> {
+pub fn solve(request: &SolveRequest, source: &str, on_progress: &mut dyn FnMut(u32, u32)) -> Result<Value, String> {
     let total = request.iterations;
     on_progress(0, total);
     let mut solver = SubgameSolver::new(subgame_config(request));
@@ -129,7 +129,7 @@ pub fn solve(request: &SolveRequest, on_progress: &mut dyn FnMut(u32, u32)) -> R
         .map(|(action, _)| *action)
         .unwrap_or("check");
     Ok(json!({
-        "source": "dcfr-wasm",
+        "source": source,
         "player": if player == 0 { "oop" } else { "ip" },
         "strategy": strategy,
         "details": details,

@@ -50,7 +50,7 @@ npm run build
 
 ## 브라우저 Solver
 
-Heads-up 스팟은 별도 설치 없이 브라우저에서 풀립니다(`public/solver/rangelab_dcfr_wasm.wasm`). 모듈을 다시 빌드하려면 Rust와 `wasm32-unknown-unknown` 타깃을 설치한 뒤 `npm run solver:wasm`을 실행합니다. 자세한 내용은 [solver integration 문서](docs/SOLVER_INTEGRATION.md)를 참고하세요.
+Heads-up 스팟은 별도 설치 없이 브라우저에서 풀립니다(`public/solver/rangelab_dcfr_wasm.wasm`). 모듈을 다시 빌드하려면 Rust와 `wasm32-unknown-unknown` 타깃을 설치한 뒤 `npm run solver:wasm`을 실행합니다. `DCFR_ADAPTER_PATH`로 네이티브 adapter를 지정하면 같은 요청을 서버에서 멀티스레드로 풀어 플랍이 수 배 빨라집니다. 자세한 내용은 [solver integration 문서](docs/SOLVER_INTEGRATION.md)를 참고하세요.
 
 ## 로컬 TexasSolver
 

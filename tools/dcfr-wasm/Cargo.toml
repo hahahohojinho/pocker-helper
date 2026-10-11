@@ -9,8 +9,7 @@ publish = false
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-dcfr-solver = { path = "../dcfr-solver" }
-serde = { version = "1", features = ["derive"] }
+rangelab-dcfr-core = { path = "../dcfr-core" }
 serde_json = "1"
 # dcfr-solver pulls rand -> getrandom; wasm32-unknown-unknown needs an explicit backend. Solves use seeded RNGs only.
 getrandom = { version = "0.2", features = ["custom"] }
