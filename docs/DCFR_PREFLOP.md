@@ -86,6 +86,18 @@ Model limits stay the same as upstream: 169 hand classes, sampled-board equity w
 | 100bb | 13.8% | 24.1% | 38.2% | 61.7% | 30.7% | 312 |
 | 150bb | 12.5% | 23.3% | 40.1% | 70.9% | 31.1% | 301 |
 
+### Committed 8-max packs (2026-10-11)
+
+`public/data/preflop/8max-{20,40,60,100,150}bb.json`: 200M iterations each, seed 42, same checks as 6-max. Sizes 0.9-1.1 MB (limit 4M characters). RFI widths:
+
+| Stack | UTG | UTG+1 | MP | HJ | CO | BTN | SB (raise) | Spots |
+|---|---|---|---|---|---|---|---|---|
+| 20bb | 9.4% | 12.1% | 15.1% | 19.3% | 25.1% | 32.7% | 22.1% | 564 |
+| 40bb | 9.3% | 12.2% | 16.8% | 23.4% | 30.5% | 41.2% | 24.2% | 607 |
+| 60bb | 9.0% | 11.9% | 17.2% | 25.7% | 35.5% | 51.7% | 28.5% | 587 |
+| 100bb | 8.5% | 11.4% | 17.2% | 27.0% | 39.2% | 63.1% | 32.4% | 560 |
+| 150bb | 7.8% | 10.4% | 16.2% | 26.8% | 41.8% | 71.0% | 32.5% | 529 |
+
 Model limits to keep in mind when reading these:
 
 - Late-position opens are wider than common full-game solver charts (BTN 100bb ~62% vs ~43%). The upstream model has no postflop play: showdown equity plus a positional pot tax stands in for it, which makes stealing more profitable. Upstream's own 100bb RFI shows the same shape even more strongly (BTN 71.6%, `src/data/dcfr-6max-100bb-rfi-v1.json`).
