@@ -1,0 +1,20 @@
+# Workspace for the wasm build only. The root sits at tools/ so the pinned dcfr-solver path dependency is inside the
+# workspace: Cargo then hashes it by relative path, which keeps symbol hashes, function order, and therefore the
+# published wasm identical wherever the repository is checked out.
+[workspace]
+members = ["dcfr-wasm"]
+# Built separately with real rayon and memmap2 (dcfr-adapter) or upstream's own tooling (dcfr-solver).
+exclude = ["dcfr-adapter", "dcfr-solver"]
+resolver = "2"
+
+# wasm32 has no threads or mmap: swap in sequential rayon and heap-backed memmap2 without editing the submodule.
+[patch.crates-io]
+rayon = { path = "dcfr-wasm/shims/rayon" }
+memmap2 = { path = "dcfr-wasm/shims/memmap2" }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+# Drops the wasm name section so no symbol names or local paths are published.
+strip = true

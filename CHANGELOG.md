@@ -40,3 +40,7 @@
 - Measured (single thread, ~600-combo ranges): river 1000 iterations 0.3s, turn 100 iterations 4s at 0.03% pot exploitability, flop 12 iterations 22s at 1.6%. Presets: river 500, turn 100, flop 20. Browser E2E (Chromium, production build) solved a flop and a turn.
 - Build: `npm run solver:wasm` (`--locked`, pinned Rust 1.99.0, sha256 written, third-party license notices generated from cargo metadata). The prebuilt module is committed so the app runs without Rust.
 - Decided against: wasm threads (needs COOP/COEP headers and nightly build-std); TypeScript CFR rewrite (slower, duplicate of an existing MIT solver).
+
+### Reproducible solver wasm and CI
+- The wasm build remaps source paths (`/rangelab`, `/cargo`), strips the name section, and uses a Cargo workspace rooted at `tools/` (moving `Cargo.lock` to `tools/Cargo.lock`). Why: the module embedded the local user path and its hash changed with the checkout location; two clones now produce the same hash.
+- Added `.github/workflows/ci.yml`: lint, vitest, and build on Ubuntu; Rust tests plus a wasm rebuild that must match the committed `public/solver` on Windows (remapped paths keep Windows separators).

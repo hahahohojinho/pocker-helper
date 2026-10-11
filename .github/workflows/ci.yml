@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Lint, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      # Includes src/lib/wasm-solver/engine.test.ts, which solves real spots with the committed wasm module.
+      - run: npx vitest run
+      - run: npm run build
+
+  solver-wasm:
+    name: Rebuild solver wasm and compare
+    # The published module embeds remapped source paths with Windows separators, so it is rebuilt on Windows.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install the pinned Rust toolchain
+        working-directory: tools/dcfr-wasm
+        run: rustup toolchain install
+      - name: Rust tests
+        working-directory: tools/dcfr-wasm
+        run: cargo test --release --locked
+      - name: Rebuild wasm, checksum, and license notices
+        run: node scripts/build-solver-wasm.mjs
+      - name: Fail if the committed module is stale
+        run: git diff --exit-code -- public/solver

@@ -13,6 +13,13 @@ const cargo=process.env.CARGO??(existsSync(installedCargo)?installedCargo:"cargo
 const output=join(root,"public","solver");
 const wasmName="rangelab_dcfr_wasm.wasm";
 const LICENSE_FILE=/^(licen[cs]e|copying|notice)/i;
+const cargoHome=process.env.CARGO_HOME??join(homedir(),".cargo");
+/**
+ * Panic locations embed source paths; remapping the checkout and cargo home keeps the user's directories out of the
+ * published module and makes the hash independent of where the repo lives. Passed via --config so the target
+ * rustflags in tools/dcfr-wasm/.cargo/config.toml (stack size, simd128) are merged rather than replaced by RUSTFLAGS.
+ */
+const remapConfig=`target.${TARGET}.rustflags=['--remap-path-prefix=${root}=/rangelab','--remap-path-prefix=${cargoHome}=/cargo']`;
 
 /** Crates linked into the wasm: normal (non-build, non-dev) dependencies reachable from the root, minus proc-macros. */
 function linkedPackages(){
@@ -44,11 +51,15 @@ function thirdPartyNotice(){
   return `${header}\n${sections.join(`\n${"=".repeat(72)}\n\n`)}`;
 }
 
-execFileSync(cargo,["build","--release","--locked","--lib","--target",TARGET],{cwd:crate,stdio:"inherit"});
+if([root,cargoHome].some(path=>path.includes("'")))throw new Error("Paths containing a single quote cannot be remapped.");
+execFileSync(cargo,["build","--release","--locked","--lib","--target",TARGET,"--config",remapConfig],{cwd:crate,stdio:"inherit"});
 mkdirSync(output,{recursive:true});
 const wasmPath=join(output,wasmName);
-copyFileSync(join(crate,"target",TARGET,"release",wasmName),wasmPath);
+// The cargo workspace root is tools/, so build output lands in tools/target.
+copyFileSync(join(root,"tools","target",TARGET,"release",wasmName),wasmPath);
 writeFileSync(`${wasmPath}.sha256`,`${createHash("sha256").update(readFileSync(wasmPath)).digest("hex")}  ${wasmName}\n`);
 copyFileSync(join(root,"tools","dcfr-solver","LICENSE"),join(output,"LICENSE-dcfr-solver.txt"));
 writeFileSync(join(output,"THIRD-PARTY-LICENSES.txt"),thirdPartyNotice());
+const leaked=[root,cargoHome].filter(path=>readFileSync(wasmPath).includes(Buffer.from(path)));
+if(leaked.length)throw new Error(`Local paths remain in the wasm module: ${leaked.join(", ")}`);
 console.log(`Published ${wasmPath}`);

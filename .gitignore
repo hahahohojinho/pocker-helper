@@ -47,4 +47,5 @@ next-env.d.ts
 /artifacts/*.png
 /artifacts/dcfr-preflop/
 /tools/dcfr-adapter/target/
-/tools/dcfr-wasm/target/
+/tools/target/
+/tools/*/target/
