@@ -54,3 +54,7 @@
 
 ### CI first run
 - The first run failed in the wasm rebuild: after extracting `dcfr-core`, the license notice generator required a license file for every path crate. Repository crates are now listed as RangeLab code. Local verification had missed it because the build log was filtered for lowercase `error`. The second run passed on Ubuntu and Windows, with the rebuilt wasm identical to the committed one.
+
+### Tree memory limit and pinned CI actions
+- dcfr-core estimates a solve's memory before allocating by walking the same iso-reduced betting tree as dcfr-solver; it rejects trees over 1.5 GiB (browser) / 4 GiB (native) or 3M nodes. Why: a valid request (e.g. three flop sizes, three raises) needed ~1 GB and nothing prevented larger trees from exhausting memory. Review caught that the first version ignored per-node overhead (two-combo ranges were underestimated ~25x) and accepted `nan`/negative weights that skewed the live-combo count; both fixed and covered by tests.
+- GitHub Actions pinned to commit SHAs verified via the GitHub API (checkout v7.0.1, setup-node v7.1.0) with Dependabot for actions.

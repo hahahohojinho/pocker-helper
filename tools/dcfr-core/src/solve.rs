@@ -7,13 +7,17 @@ use dcfr_solver::cfr::{DcfrMode, SubgameConfig, SubgameSolver};
 use dcfr_solver::game::{Action, BetConfig, BetSize};
 use serde_json::{json, Value};
 
+use crate::estimate::{estimate, MAX_TREE_NODES};
 use crate::request::SolveRequest;
+use crate::SolveOptions;
 
-fn subgame_config(request: &SolveRequest) -> SubgameConfig {
+const MIB: u64 = 1024 * 1024;
+
+pub(crate) fn bet_config(request: &SolveRequest) -> Arc<BetConfig> {
     let mut sizes: [Vec<Vec<BetSize>>; 4] = std::array::from_fn(|_| Vec::new());
     sizes[request.street.index()] = request.bet_sizes.clone();
     let history_has_allin = request.history.contains(&Action::AllIn);
-    let bet_config = BetConfig {
+    Arc::new(BetConfig {
         sizes,
         max_raises: request.max_raises,
         // Same collapse rule as the native adapter: only bets that need the whole stack become all-in.
@@ -22,7 +26,10 @@ fn subgame_config(request: &SolveRequest) -> SubgameConfig {
         allin_pot_ratio: if history_has_allin { 0.0 } else { 1.0 },
         no_donk: false,
         geometric_2bets: false,
-    };
+    })
+}
+
+pub fn subgame_config(request: &SolveRequest) -> SubgameConfig {
     SubgameConfig {
         board: request.board,
         pot: request.pot,
@@ -31,7 +38,7 @@ fn subgame_config(request: &SolveRequest) -> SubgameConfig {
         iterations: request.iterations,
         street: request.street,
         warmup_frac: 0.0,
-        bet_config: Some(Arc::new(bet_config)),
+        bet_config: Some(bet_config(request)),
         dcfr: true,
         cfr_plus: true,
         skip_cum_strategy: false,
@@ -87,7 +94,12 @@ const MAX_PROGRESS_REPORTS: u32 = 100;
 
 /// Solves the request, reporting `(completed, total)` iterations: once with 0 before the tree is built, then at
 /// most MAX_PROGRESS_REPORTS more times, always ending with `(total, total)`.
-pub fn solve(request: &SolveRequest, source: &str, on_progress: &mut dyn FnMut(u32, u32)) -> Result<Value, String> {
+pub fn solve(request: &SolveRequest, options: SolveOptions, on_progress: &mut dyn FnMut(u32, u32)) -> Result<Value, String> {
+    // Regret/strategy storage matches dcfr-solver within ~1%; per-node overhead is rounded up from measurements.
+    let tree = estimate(request, options.max_tree_bytes).map_err(|counted| format!(
+        "solver tree needs more than {} MB or {} nodes (limits {} MB, {} nodes); narrow the ranges or use fewer bet sizes and raises",
+        counted.min(options.max_tree_bytes) / MIB, MAX_TREE_NODES, options.max_tree_bytes / MIB, MAX_TREE_NODES
+    ))?;
     let total = request.iterations;
     on_progress(0, total);
     let mut solver = SubgameSolver::new(subgame_config(request));
@@ -129,13 +141,14 @@ pub fn solve(request: &SolveRequest, source: &str, on_progress: &mut dyn FnMut(u
         .map(|(action, _)| *action)
         .unwrap_or("check");
     Ok(json!({
-        "source": source,
+        "source": options.source,
         "player": if player == 0 { "oop" } else { "ip" },
         "strategy": strategy,
         "details": details,
         "best_action": best,
         "exploitability": solver.exploitability_pct(),
         "iterations": request.iterations,
+        "treeBytes": tree.bytes,
         "heroUnreached": hero_unreached,
     }))
 }

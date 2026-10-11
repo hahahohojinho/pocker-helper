@@ -7,16 +7,17 @@ use std::cell::RefCell;
 
 use serde_json::json;
 
-const SOURCE: &str = "dcfr-wasm";
+/// wasm32 memory tops out at 4 GiB and browsers often refuse much more than 2 GiB, so trees stay well below that.
+const OPTIONS: rangelab_dcfr_core::SolveOptions = rangelab_dcfr_core::SolveOptions { source: "dcfr-wasm", max_tree_bytes: 1536 * 1024 * 1024 };
 
 /// Solves a JSON request and returns the JSON envelope; usable natively for tests and benchmarks.
 pub fn solve_json(request_json: &str) -> String {
-    rangelab_dcfr_core::solve_json(request_json, SOURCE)
+    rangelab_dcfr_core::solve_json(request_json, OPTIONS)
 }
 
 /// Like `solve_json`, calling `on_progress(completed, total)` as iterations finish.
 pub fn solve_json_with_progress(request_json: &str, on_progress: &mut dyn FnMut(u32, u32)) -> String {
-    rangelab_dcfr_core::solve_json_with_progress(request_json, SOURCE, on_progress)
+    rangelab_dcfr_core::solve_json_with_progress(request_json, OPTIONS, on_progress)
 }
 
 thread_local! {

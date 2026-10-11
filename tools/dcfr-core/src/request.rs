@@ -108,6 +108,10 @@ impl SolveRequest {
         }
         let oop = Range::parse(&raw.oop_range).ok_or("invalid OOP range")?;
         let ip = Range::parse(&raw.ip_range).ok_or("invalid IP range")?;
+        // Range::parse accepts any f32 (including nan, inf, and negatives); the solver and the memory estimate need 0..=1.
+        if [&oop, &ip].iter().any(|range| range.weights.iter().any(|weight| !(0.0..=1.0).contains(weight))) {
+            return Err("range weights must be between 0 and 1".into());
+        }
         if !(1..=MAX_CHIPS).contains(&raw.pot) || raw.stacks.iter().any(|stack| !(1..=MAX_CHIPS).contains(stack)) {
             return Err(format!("pot and stacks must be 1..={MAX_CHIPS} chips"));
         }

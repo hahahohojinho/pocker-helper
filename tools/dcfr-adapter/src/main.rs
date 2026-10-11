@@ -147,7 +147,8 @@ fn run_json() -> Result<(), String> {
     let response = if input.len() > limit {
         serde_json::json!({"ok": false, "error": format!("request exceeds {limit} bytes")}).to_string()
     } else {
-        rangelab_dcfr_core::solve_json(&input, "dcfr-native")
+        // Native solves may use more memory than the browser, but stay bounded so one request cannot exhaust the host.
+        rangelab_dcfr_core::solve_json(&input, rangelab_dcfr_core::SolveOptions { source: "dcfr-native", max_tree_bytes: 4096 * 1024 * 1024 })
     };
     let mut stdout = std::io::stdout().lock();
     writeln!(stdout, "{response}").and_then(|_| stdout.flush()).map_err(|error| format!("failed to write stdout: {error}"))
