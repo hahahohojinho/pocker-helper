@@ -69,6 +69,22 @@ fn rejects_non_finite_and_out_of_range_weights() {
 }
 
 #[test]
+fn validates_time_budget_fields() {
+    assert!(error_of(json!({"timeBudgetMs": 100})).contains("timeBudgetMs"));
+    assert!(error_of(json!({"timeBudgetMs": 500_000})).contains("timeBudgetMs"));
+    assert!(error_of(json!({"iterationCostNs": -1.0})).contains("iterationCostNs"));
+    assert!(error_of(json!({"iterationCostNs": 1e-300})).contains("iterationCostNs"));
+}
+
+#[test]
+fn reports_iterations_and_stop_reason() {
+    let response: Value = serde_json::from_str(&solve_json(&request(json!({"iterations": 40, "timeBudgetMs": 5000})))).unwrap();
+    assert_eq!(response["result"]["iterations"], 40, "{response}");
+    assert_eq!(response["result"]["stoppedBy"], "iterations");
+    assert!(response["result"]["workUnits"].as_u64().unwrap() > 0);
+}
+
+#[test]
 fn rejects_oversized_requests() {
     let huge = "AA,".repeat(100_000);
     assert!(error_of(json!({"oopRange": huge})).contains("bytes"));

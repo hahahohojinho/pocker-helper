@@ -3,11 +3,13 @@
 
 mod estimate;
 mod request;
+mod run;
 mod solve;
 
 use serde_json::json;
 
 pub use estimate::{estimate, TreeEstimate};
+pub use run::{plan_iterations, MIN_ITERATIONS};
 pub use request::{SolveRequest, MAX_REQUEST_BYTES};
 #[doc(hidden)]
 pub use solve::subgame_config as subgame_config_for;

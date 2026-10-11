@@ -9,6 +9,8 @@ pub const MAX_ITERATIONS: u32 = 5000;
 pub const MAX_RAISES: u8 = 4;
 pub const MAX_SIZES_PER_DEPTH: usize = 6;
 pub const MAX_HISTORY: usize = 20;
+pub const MIN_BUDGET_MS: u32 = 200;
+pub const MAX_BUDGET_MS: u32 = 120_000;
 /// Request JSON limit; exact-combo ranges stay far below this (1326 combos is ~15KB per range).
 pub const MAX_REQUEST_BYTES: usize = 256 * 1024;
 /// Chip limit for pot and stacks.
@@ -34,6 +36,12 @@ pub struct RawRequest {
     pub max_raises: u8,
     #[serde(default)]
     pub history: Vec<RawStep>,
+    /// Wall-clock budget for the solve; `iterations` is then an upper bound.
+    #[serde(default)]
+    pub time_budget_ms: Option<u32>,
+    /// wasm only: measured nanoseconds per work unit (action slot x live combo) per iteration, for planning.
+    #[serde(default)]
+    pub iteration_cost_ns: Option<f64>,
 }
 
 #[derive(Deserialize)]
@@ -56,6 +64,8 @@ pub struct SolveRequest {
     pub bet_sizes: Vec<Vec<BetSize>>,
     pub max_raises: u8,
     pub history: Vec<Action>,
+    pub time_budget_ms: Option<u32>,
+    pub iteration_cost_ns: Option<f64>,
 }
 
 fn fraction(value: [i32; 2], label: &str) -> Result<BetSize, String> {
@@ -124,6 +134,12 @@ impl SolveRequest {
         if raw.bet_sizes.is_empty() || raw.bet_sizes.len() > MAX_RAISES as usize || raw.bet_sizes.iter().any(|sizes| sizes.is_empty() || sizes.len() > MAX_SIZES_PER_DEPTH) {
             return Err(format!("betSizes needs 1..={MAX_RAISES} depths of 1..={MAX_SIZES_PER_DEPTH} sizes"));
         }
+        if raw.time_budget_ms.is_some_and(|budget| !(MIN_BUDGET_MS..=MAX_BUDGET_MS).contains(&budget)) {
+            return Err(format!("timeBudgetMs must be {MIN_BUDGET_MS}..={MAX_BUDGET_MS}"));
+        }
+        if raw.iteration_cost_ns.is_some_and(|cost| !cost.is_finite() || cost < 1.0 || cost > 1e6) {
+            return Err("iterationCostNs must be between 1 and 1e6".into());
+        }
         if raw.history.len() > MAX_HISTORY {
             return Err(format!("history exceeds {MAX_HISTORY} actions"));
         }
@@ -142,6 +158,8 @@ impl SolveRequest {
             bet_sizes,
             max_raises: raw.max_raises,
             history,
+            time_budget_ms: raw.time_budget_ms,
+            iteration_cost_ns: raw.iteration_cost_ns,
         })
     }
 }

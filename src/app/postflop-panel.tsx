@@ -15,6 +15,8 @@ import { conditionRangeOnPostflop, ensureComboInRange, inferRangeFromPreflop, to
 import { isWasmSolverSupported, runWasmSolve } from "@/lib/wasm-solver/client";
 import { NativeSolverUnavailableError, runNativeSolve } from "@/lib/wasm-solver/native-client";
 import { buildWasmSolveRequest } from "@/lib/wasm-solver/request";
+import { loadIterationCost, recordIterationCost } from "@/lib/wasm-solver/cost-model";
+import { timed } from "@/lib/timing";
 import { exploitabilityLevel, getSolverPreset } from "@/lib/solver-presets";
 import { buildSolverTree } from "@/lib/solver-tree";
 
@@ -25,6 +27,11 @@ const EQUITY_ITERATIONS=20_000;
 // The worker is terminated after this; a single-threaded flop solve with ~1000-combo ranges can take over a minute.
 const WASM_SOLVE_TIMEOUT_MS=240_000;
 const subscribeNever=()=>()=>{};
+/** The answer target for a decision; slower solves get a hint to use the native solver. */
+const ANSWER_TARGET_MS=5000;
+const MIN_COST_SAMPLE_ITERATIONS=3;
+/** localStorage can throw (blocked site data, previews); the cost model then uses its defaults. */
+function browserStorage(){try{return window.localStorage;}catch{return undefined;}}
 const CALLED_EQUITY_ITERATIONS=10_000;
 const baselineRange="AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,QJs,QTs,JTs,T9s,98s,87s,76s,65s,54s,AKo,AQo,AJo,KQo";
 
@@ -134,7 +141,8 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat}
       board:knownBoard,heroHole:holeCards,oopRange:streetStartRange(oopSeat),ipRange:streetStartRange(ipSeat),
       pot:context.potBefore,stacks:{oop:context.remainingAtStart[oopSeat]??0,ip:context.remainingAtStart[ipSeat]??0},
       history:streetActions.map(action=>({role:action.seat===oopSeat?"oop":"ip",action:action.type,amount:action.amount})),
-      iterations:preset.iterations,betPercent:preset.tree.betPercent,raisePercent:preset.tree.raisePercent,
+      iterations:preset.iterations,betPercent:preset.tree.betPercent,raisePercent:preset.tree.raisePercent,timeBudgetMs:preset.timeBudgetMs,
+      ...(backend==="wasm"?{iterationCostNs:loadIterationCost(browserStorage(),street)}:{}),
     });
   }
   /** Native first when advertised; falls back to the browser when the server cannot run it. */
@@ -145,14 +153,22 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat}
       catch(error){if(!(error instanceof NativeSolverUnavailableError)||!wasmSupported)throw error;}
     }
     setSolveMode("wasm");
-    return runWasmSolve(dcfrRequest("wasm"),{timeoutMs:WASM_SOLVE_TIMEOUT_MS,signal,onProgress:(done,total)=>setSolveProgress({done,total})});
+    const {value:raw,elapsedMs}=await timed(()=>runWasmSolve(dcfrRequest("wasm"),{timeoutMs:WASM_SOLVE_TIMEOUT_MS,signal,onProgress:(done,total)=>setSolveProgress({done,total})}));
+    // Learn this machine's wasm speed so the next solve plans its iterations within the budget.
+    // Only budget-limited solves with enough iterations reflect per-iteration cost; short capped solves are dominated
+    // by worker start-up and tree building.
+    const {workUnits,iterations,stoppedBy}=JSON.parse(raw) as {workUnits?:number;iterations?:number;stoppedBy?:string};
+    if(workUnits&&iterations&&iterations>MIN_COST_SAMPLE_ITERATIONS&&stoppedBy==="deadline")recordIterationCost(browserStorage(),street,{elapsedMs,workUnits,iterations});
+    return raw;
   }
   async function runWasmSolver(){
     wasmSolveRef.current?.abort();
     const controller=new AbortController();wasmSolveRef.current=controller;
     try{
-      const raw=await solveDcfr(controller.signal);
-      setSolverText(raw);setSolverResult(parseSolverResult(raw));
+      // End-to-end time as the user experiences it, including range building and transport.
+      const {value:raw,elapsedMs}=await timed(()=>solveDcfr(controller.signal));
+      setSolverText(raw);setSolverResult({...parseSolverResult(raw),elapsedMs});
+      if(elapsedMs>ANSWER_TARGET_MS&&!preferNative)setMessage(`브라우저 Solver가 ${(elapsedMs/1000).toFixed(1)}초 걸렸습니다. DCFR_ADAPTER_PATH로 네이티브 Solver를 켜면 5초 안에 답합니다.`);
       const note=(JSON.parse(raw) as {note?:string}).note;
       if(note)setMessage(note);
     }catch(error){if(!controller.signal.aborted)setMessage(error instanceof Error?error.message:"브라우저 Solver 실행에 실패했습니다.");}
@@ -206,7 +222,7 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat}
     {actor===null&&street!=="river"&&<button className="advance-street" onClick={advance}>{street==="flop"?"턴":"리버"}으로 진행 →</button>}
     {actor===null&&street==="river"&&<p className="hand-complete">HAND ACTION COMPLETE</p>}
     <div className="equity-calculator"><div><span><small>HERO CARDS</small><span className="hole-inputs">{holeCards.map((card,index)=><input key={index} value={card} maxLength={2} onChange={event=>setHoleCards(current=>current.map((value,i)=>i===index?event.target.value:value))}/>)}</span></span><button onClick={runEquity}>EQUITY 계산</button></div><details className="opponent-ranges"><summary>상대 가중 레인지 <span>{liveSeats.filter(seat=>seat!==heroSeat).length}명</span></summary>{liveSeats.filter(seat=>seat!==heroSeat).map(seat=><label key={seat}>{positions[seat]} RANGE · ACTION BASELINE ({inferredRanges[seat]?.handCount??169}/169)<textarea value={rangeFor(seat)} onChange={event=>setRangeBySeat(current=>({...current,[seat]:event.target.value}))}/><button type="button" onClick={()=>setRangeBySeat(current=>{const next={...current};delete next[seat];return next;})}>RESET TO INFERRED</button></label>)}</details>{equity&&<div className="equity-result"><strong>{equity.equity}%<small>EQUITY ±{equity.marginOfError}%</small></strong><span><b>{equity.win}%</b><small>WIN</small></span><span><b>{equity.tie}%</b><small>TIE</small></span><span><b>{equity.loss}%</b><small>LOSS</small></span><em>{equity.iterations.toLocaleString()} weighted simulations · seed {equity.seed}{"availableCombos" in equity?` · ${(equity as {availableCombos:number[]}).availableCombos.join("/")} combos`:""}</em></div>}</div>
-    {equity&&<div className="ev-panel"><div className="ev-head"><b>{solverResult?"SOLVER STRATEGY":"ESTIMATED EV"}</b><span className={solverResult?"solver-source":"estimate-source"}>{solverResult?(solverResult.evSource==="solver"?"SOLVER EV":"SOLVER FREQ · MODEL EV"):"NOT GTO"}</span>{solverResult&&<span className={`convergence convergence-${convergence}`}>{solverResult.exploitability===undefined?"수렴도 미확인":`EXPLOIT ${solverResult.exploitability.toFixed(2)}% POT`}{convergence==="warn"&&" · 수렴 부족"}{convergence==="bad"&&" · 미수렴, 신뢰 불가"}</span>}</div>{solverResult?solverActions.map(item=><div className="ev-row" key={item.action}><span>{item.action}</span><i><b style={{width:`${item.frequency}%`}}/></i><strong>{item.frequency.toFixed(1)}% · {item.ev>=0?"+":""}{item.ev.toFixed(2)}BB<small>{item.evSource.toUpperCase()} EV</small></strong></div>):estimatedEvs.map(item=><div className="ev-row" key={item.action}><span>{item.action}</span><small>{item.assumption}</small><strong className={item.ev>=0?"positive":"negative"}>{item.ev>=0?"+":""}{item.ev.toFixed(2)} BB</strong></div>)}{!solverResult&&!estimatedEvs.length&&<small className="ev-note">모델 EV는 Hero 차례에만 표시합니다.</small>}</div>}
+    {equity&&<div className="ev-panel"><div className="ev-head"><b>{solverResult?"SOLVER STRATEGY":"ESTIMATED EV"}</b><span className={solverResult?"solver-source":"estimate-source"}>{solverResult?(solverResult.evSource==="solver"?"SOLVER EV":"SOLVER FREQ · MODEL EV"):"NOT GTO"}</span>{solverResult?.elapsedMs!==undefined&&<span className={`solve-timing${solverResult.elapsedMs>ANSWER_TARGET_MS?" solve-timing-slow":""}`}>{(solverResult.elapsedMs/1000).toFixed(1)}s{solverResult.iterations!==undefined?` · ${solverResult.iterations} iter`:""}{solverResult.stoppedBy==="deadline"?" · 시간 제한":""}{solverResult.elapsedMs>ANSWER_TARGET_MS?" · 5초 초과":""}</span>}{solverResult&&<span className={`convergence convergence-${convergence}`}>{solverResult.exploitability===undefined?"수렴도 미확인":`EXPLOIT ${solverResult.exploitability.toFixed(2)}% POT`}{convergence==="warn"&&" · 수렴 부족"}{convergence==="bad"&&" · 미수렴, 신뢰 불가"}</span>}</div>{solverResult?solverActions.map(item=><div className="ev-row" key={item.action}><span>{item.action}</span><i><b style={{width:`${item.frequency}%`}}/></i><strong>{item.frequency.toFixed(1)}% · {item.ev>=0?"+":""}{item.ev.toFixed(2)}BB<small>{item.evSource.toUpperCase()} EV</small></strong></div>):estimatedEvs.map(item=><div className="ev-row" key={item.action}><span>{item.action}</span><small>{item.assumption}</small><strong className={item.ev>=0?"positive":"negative"}>{item.ev>=0?"+":""}{item.ev.toFixed(2)} BB</strong></div>)}{!solverResult&&!estimatedEvs.length&&<small className="ev-note">모델 EV는 Hero 차례에만 표시합니다.</small>}</div>}
     <button className="local-solver-button" disabled={!solverReady||solving} onClick={runLocalSolver}>{solving?solvingLabel:useDcfr?(preferNative?"네이티브 SOLVER 실행":"브라우저 SOLVER 실행"):solverCapability.backend==="counterfactual"?"COUNTERFACTUAL SOLVER 실행":solverCapability.backend==="dcfr"?"LOCAL DCFR EV 실행":"LOCAL TEXASSOLVER 실행"}</button>{solving&&useDcfr&&<button type="button" className="solver-cancel-button" onClick={cancelWasmSolve}>취소</button>}<small className="local-solver-help">{useDcfr?<>{preferNative?`NATIVE DCFR · 멀티스레드 · Heads-up · 모든 노드 · ${getSolverPreset("native",street).iterations} iterations · `:`IN-BROWSER DCFR · Heads-up · 모든 노드 · ${getSolverPreset("wasm",street).iterations} iterations${street==="flop"?" · flop은 1~2분 소요, 수렴도 확인":""} · `}<a href="/solver/THIRD-PARTY-LICENSES.txt" target="_blank" rel="noreferrer">라이선스</a></>:<>BOUNDED SOLVE · {solverCapability.backend==="counterfactual"?`외부 backend · 최대 ${solverCapability.maxPlayers}명`:solverCapability.backend==="dcfr"?"Heads-up · OOP street root · solver counterfactual EV":"Heads-up · street root 및 중간 액션 노드 · Hero OOP/IP"} · 전체 weighted class · 반복 상한 내 조기 종료.</>}</small>
     <details className="solver-import"><summary>Solver 노드 내보내기 / 결과 가져오기</summary>{solverNode&&<textarea readOnly value={JSON.stringify(solverNode,null,2)}/>}<textarea value={solverText} onChange={event=>setSolverText(event.target.value)} placeholder={'정규화 결과 또는 TexasSolver native strategy node'}/><button onClick={importSolver}>전략 적용</button><small>TexasSolver native 콤보 전략과 RangeLab/OpenSpiel 정규화 JSON을 지원합니다.</small></details>
   </section>;

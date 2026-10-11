@@ -58,3 +58,8 @@
 ### Tree memory limit and pinned CI actions
 - dcfr-core estimates a solve's memory before allocating by walking the same iso-reduced betting tree as dcfr-solver; it rejects trees over 1.5 GiB (browser) / 4 GiB (native) or 3M nodes. Why: a valid request (e.g. three flop sizes, three raises) needed ~1 GB and nothing prevented larger trees from exhausting memory. Review caught that the first version ignored per-node overhead (two-combo ranges were underestimated ~25x) and accepted `nan`/negative weights that skewed the live-combo count; both fixed and covered by tests.
 - GitHub Actions pinned to commit SHAs verified via the GitHub API (checkout v7.0.1, setup-node v7.1.0) with Dependabot for actions.
+
+### 5-second answers (phase 1 of the real-time roadmap)
+- DCFR solves take a `timeBudgetMs`. Natively the solve stops at the deadline by unwinding from dcfr-solver's per-iteration callback (state verified consistent at that point, rayon unaffected); wasm plans iterations from a learned per-street cost model. Why: the goal is a decision within 5 s on the user's PC for every heads-up street.
+- Measured end to end (native): flop <= 4.4 s at 0.13-1.41% exploitability, turn <= 4.3 s, river <= 0.6 s. Browser E2E with the native solver dropped from 52 s to 12 s for the full flow.
+- Roadmap agreed with the user: (1) 5 s answers [done], (2) preflop solve data for 6-max/8-max and multiple stack depths, (3) opponent profiling in a local SQLite DB (`node:sqlite`), (4) tendency-based exploits including isolation raises, (5) multiway approximation and a flop library.

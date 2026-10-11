@@ -63,6 +63,15 @@ Heads-up spots are solved in the browser, with no installed binary, by `public/s
 - Progress: the module imports `env.progress(completed, total)` (at most ~100 reports per solve); the panel shows `SOLVING n/m` and a cancel button that terminates the worker.
 - Multiway spots still use the server backends below.
 
+### Time budget (5 second answers)
+
+DCFR requests carry `timeBudgetMs` (presets: 4500 ms); `iterations` is then a cap (native: flop 300, turn 500, river 1000; wasm: 100/300/500).
+
+- Native: `tools/dcfr-core/src/run.rs` solves with a per-iteration callback and, when one more iteration plus the EV pass would cross the deadline, unwinds with `resume_unwind` (no panic hook output). The callback runs on the calling thread after a completed iteration, outside rayon, so the solver is exactly as if that iteration count had been configured; at least 3 iterations always run. Exploitability is computed only if about half an iteration remains (the pass measured ~1/4 of an iteration). The route subtracts time already spent and adapter overhead before forwarding the budget (`SOLVER_MAX_BUDGET_MS`, default 10000).
+- wasm cannot unwind, so dcfr-core plans iterations from `iterationCostNs` (ns per action slot x live combo per iteration) using 80% of the budget. The panel starts from measured per-street defaults (river 110, turn 300, flop 340 ns) and blends each solve's measured cost into localStorage. Wide-range flops still exceed 5 s in the browser (one iteration is ~2 s); the panel says so and points to the native solver.
+- Responses report `iterations`, `stoppedBy` (`deadline` or `iterations`), `workUnits`, and native `elapsedMs`; the panel shows end-to-end time and iterations.
+- Measured end to end through `/api/solver` (native, 3 runs, max): flop 4.1-4.4 s (13-34 iterations, 0.13-1.41% pot exploitability depending on range width), turn 2.0-4.3 s (500 iterations), river 0.3-0.6 s.
+
 ### Tree size limit
 
 Before solving, `tools/dcfr-core/src/estimate.rs` walks the betting tree with dcfr-solver's public `GameState` API and `canonical_next_cards`, exactly as the solver builds it (decision-node counts matched in calibration). Memory is estimated as action slots x live combos x 6 bytes (i16 regret + f32 cumulative strategy) plus 320 bytes per tree node and 32 MB fixed; `examples/calibrate.rs` measured 205-243 bytes per node and the estimate upper-bounds measured totals (wide flop with three raises: 1077 MB measured, 1176 MB estimated). Requests over 1.5 GiB (browser) or 4 GiB (native), or over 3,000,000 tree nodes, are rejected with a message before anything is allocated; the walk stops at those limits, so rejection is fast. Range weights outside 0..1 (including `nan`) are rejected.

@@ -9,6 +9,7 @@ use serde_json::{json, Value};
 
 use crate::estimate::{estimate, MAX_TREE_NODES};
 use crate::request::SolveRequest;
+use crate::run::{plan_iterations, run, StoppedBy};
 use crate::SolveOptions;
 
 const MIB: u64 = 1024 * 1024;
@@ -89,22 +90,25 @@ fn best_response(action_evs: &[(Action, [f32; dcfr_solver::card::NUM_COMBOS])], 
     action_evs.iter().enumerate().map(|(index, (action, _))| (*action, if Some(index) == best { 1.0 } else { 0.0 })).collect()
 }
 
-/// Upper bound on progress reports per solve, so the browser worker posts at most about this many messages.
-const MAX_PROGRESS_REPORTS: u32 = 100;
-
-/// Solves the request, reporting `(completed, total)` iterations: once with 0 before the tree is built, then at
-/// most MAX_PROGRESS_REPORTS more times, always ending with `(total, total)`.
+/// Solves the request within its optional time budget, reporting `(completed, total)` iterations.
 pub fn solve(request: &SolveRequest, options: SolveOptions, on_progress: &mut dyn FnMut(u32, u32)) -> Result<Value, String> {
     // Regret/strategy storage matches dcfr-solver within ~1%; per-node overhead is rounded up from measurements.
     let tree = estimate(request, options.max_tree_bytes).map_err(|counted| format!(
         "solver tree needs more than {} MB or {} nodes (limits {} MB, {} nodes); narrow the ranges or use fewer bet sizes and raises",
         counted.min(options.max_tree_bytes) / MIB, MAX_TREE_NODES, options.max_tree_bytes / MIB, MAX_TREE_NODES
     ))?;
-    let total = request.iterations;
+    let work_units = tree.action_slots * tree.live_combos;
+    // Natively the deadline stops the run, so `iterations` is only a cap; on wasm the count is planned up front.
+    let total = if cfg!(all(panic = "unwind", not(target_arch = "wasm32"))) {
+        request.iterations
+    } else {
+        plan_iterations(work_units, request.time_budget_ms, request.iteration_cost_ns, request.iterations)
+    };
     on_progress(0, total);
-    let mut solver = SubgameSolver::new(subgame_config(request));
-    let every = total.div_ceil(MAX_PROGRESS_REPORTS).max(1);
-    solver.solve_with_report_interval(every, |done, _| on_progress(done.min(total), total));
+    let mut config = subgame_config(request);
+    config.iterations = total;
+    let mut solver = SubgameSolver::new(config);
+    let report = run(&mut solver, total, request.time_budget_ms, on_progress);
     let history = &request.history;
     let player = solver.get_player(history).ok_or("history does not reach a decision node in the solver tree")?;
     let node_strategy = solver.get_strategy(history).ok_or("strategy is unavailable at the history node")?;
@@ -146,8 +150,13 @@ pub fn solve(request: &SolveRequest, options: SolveOptions, on_progress: &mut dy
         "strategy": strategy,
         "details": details,
         "best_action": best,
-        "exploitability": solver.exploitability_pct(),
-        "iterations": request.iterations,
+        // Skipped when the extra traversal would overrun the budget; the UI then shows convergence as unknown.
+        "exploitability": report.room_for_extra_pass.then(|| solver.exploitability_pct()),
+        "iterations": report.iterations,
+        // On wasm a budget-planned count below the cap is the budget stopping the solve, as the deadline does natively.
+        "stoppedBy": if total < request.iterations { StoppedBy::Deadline.as_str() } else { report.stopped_by.as_str() },
+        "elapsedMs": report.elapsed_ms,
+        "workUnits": work_units,
         "treeBytes": tree.bytes,
         "heroUnreached": hero_unreached,
     }))

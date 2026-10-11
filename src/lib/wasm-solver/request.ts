@@ -18,9 +18,11 @@ export interface WasmSolveInput {
   /** Current-street actions; `amount` is the actor's street-total commitment in BB. */
   history:WasmHistoryStep[];
   iterations:number;betPercent:number[];raisePercent:number[];
+  /** Wall-clock budget; `iterations` becomes a cap. wasm also needs `iterationCostNs` to plan within it. */
+  timeBudgetMs?:number;iterationCostNs?:number;
 }
 export type WasmHistoryAction={action:"check"|"call"|"fold"|"allin"}|{action:"bet"|"raise";size:Fraction};
-export interface WasmSolveRequest { board:string;hero:string;oopRange:string;ipRange:string;pot:number;stacks:[number,number];iterations:number;betSizes:Fraction[][];maxRaises:number;history:WasmHistoryAction[]; }
+export interface WasmSolveRequest { board:string;hero:string;oopRange:string;ipRange:string;pot:number;stacks:[number,number];iterations:number;betSizes:Fraction[][];maxRaises:number;history:WasmHistoryAction[];timeBudgetMs?:number;iterationCostNs?:number; }
 
 const toChips=(bb:number)=>Math.round(bb*CHIPS_PER_BB);
 const greatestCommonDivisor=(left:number,right:number):number=>right===0?left:greatestCommonDivisor(right,left%right);
@@ -99,10 +101,12 @@ export function buildWasmSolveRequest(input:WasmSolveInput):WasmSolveRequest{
     // One more bet level than observed so the acting player can still raise.
     maxRaises:Math.min(MAX_RAISES,Math.max(2,aggressions+1)),
     history,
+    ...(input.timeBudgetMs===undefined?{}:{timeBudgetMs:Math.round(input.timeBudgetMs)}),
+    ...(input.iterationCostNs===undefined?{}:{iterationCostNs:input.iterationCostNs}),
   };
 }
 
-export type WasmSolveResponse={ok:true;result:{source:string;player:Role;best_action:string;exploitability:number;heroUnreached?:boolean;strategy:{action:string;frequency:number;evChips:number}[]}}|{ok:false;error:string};
+export type WasmSolveResponse={ok:true;result:{source:string;player:Role;best_action:string;exploitability:number|null;heroUnreached?:boolean;iterations?:number;stoppedBy?:"deadline"|"iterations";elapsedMs?:number|null;workUnits?:number;strategy:{action:string;frequency:number;evChips:number}[]}}|{ok:false;error:string};
 
 /** Converts a dcfr-core envelope (wasm or native adapter) to RangeLab's normalized solver JSON with EV in BB. */
 export function wasmResponseToSolverJson(response:WasmSolveResponse){
@@ -112,7 +116,9 @@ export function wasmResponseToSolverJson(response:WasmSolveResponse){
     source:result.source==="dcfr-native"?"dcfr-native":"dcfr-wasm",
     strategy:result.strategy.map(item=>({action:item.action,frequency:item.frequency,ev:item.evChips/CHIPS_PER_BB})),
     best_action:result.best_action,
-    exploitability:result.exploitability,
+    // Omitted when the solver skipped the extra traversal to stay within its time budget.
+    ...(typeof result.exploitability==="number"?{exploitability:result.exploitability}:{}),
+    iterations:result.iterations,stoppedBy:result.stoppedBy,workUnits:result.workUnits,
     ...(result.heroUnreached?{note:"균형 전략에서 Hero 핸드는 이 라인에 도달하지 않습니다. 빈도 대신 EV가 가장 높은 액션을 표시합니다."}:{}),
   });
 }

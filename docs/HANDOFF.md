@@ -66,6 +66,15 @@ The adapter binary and Cargo `target` directory are intentionally not committed.
 - Browser E2E against local DCFR adapter, including `SOLVER EV` labeling: passed
 - DCFR upstream library tests from the prior integration: 107 passed, 2 ignored
 
+## Real-time roadmap (agreed 2026-10-11)
+
+Goal: on the user's PC, answer each decision in 6-max/8-max within 5 s from board, hero cards, and opponent actions; record opponent tendencies and adjust (including isolation raises). For study use.
+1. 5 s answers: done (native deadline solve, wasm cost model). See docs/SOLVER_INTEGRATION.md "Time budget".
+2. Next: preflop solve data for 6-max and 8-max across stack depths (vs open, 3-bet, 4-bet, squeeze, limp/iso), generated offline with DCFR-SOLVER; the lookup already picks the nearest stack bucket.
+3. Opponent profiling in a local SQLite DB via `node:sqlite` (verified available on Node 22; experimental warning).
+4. Tendency-based exploits (range widening/tightening, iso raises, postflop adjustments), shown separately from GTO.
+5. Multiway approximation; flop library for instant flops.
+
 ## In-browser solver (2026-10-11, branch fix/solver-quality)
 
 - Heads-up spots solve in the browser via `public/solver/rangelab_dcfr_wasm.wasm` (built by `npm run solver:wasm` from `tools/dcfr-wasm`). See docs/SOLVER_INTEGRATION.md.

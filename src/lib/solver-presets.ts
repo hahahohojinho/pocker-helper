@@ -5,7 +5,8 @@ export type SolverBackend="texassolver"|"dcfr"|"counterfactual"|"wasm"|"native";
 export type SolverStreet="flop"|"turn"|"river";
 export type ExploitabilityLevel="ok"|"warn"|"bad"|"unknown";
 
-export interface SolverPreset { iterations:number;accuracy:number;threads:number;tree:TexasSolverTree;useIsomorphism:boolean;maxClasses:number; }
+/** For DCFR backends `timeBudgetMs` bounds wall-clock time and `iterations` is only a cap. */
+export interface SolverPreset { iterations:number;accuracy:number;timeBudgetMs?:number;threads:number;tree:TexasSolverTree;useIsomorphism:boolean;maxClasses:number; }
 export interface SolverLogSummary { exploitability?:number;iteration?:number;timeMs?:number; }
 
 /** Requests every thread the server allows; the API clamps it with resolveSolverThreads. */
@@ -21,15 +22,17 @@ const WARN_EXPLOITABILITY=5;
  * Iterations are an upper bound: TexasSolver stops early once exploitability reaches `accuracy` percent of the pot.
  * Budgets are uncalibrated against real solve times; tune them with SOLVER_TIMEOUT_MS after a local benchmark.
  */
-const budgets:Record<SolverBackend,Record<SolverStreet,{iterations:number;accuracy:number}>>={
+/** Leaves headroom inside the 5 s answer target for range building, the request, and rendering. */
+const DCFR_TIME_BUDGET_MS=4500;
+const budgets:Record<SolverBackend,Record<SolverStreet,{iterations:number;accuracy:number;timeBudgetMs?:number}>>={
   texassolver:{flop:{iterations:200,accuracy:1},turn:{iterations:300,accuracy:0.5},river:{iterations:500,accuracy:0.5}},
   dcfr:{flop:{iterations:300,accuracy:1},turn:{iterations:500,accuracy:0.5},river:{iterations:1000,accuracy:0.5}},
   counterfactual:{flop:{iterations:1000,accuracy:0.5},turn:{iterations:1000,accuracy:0.5},river:{iterations:1000,accuracy:0.3}},
   // Single-threaded in the browser; measured with ~600-combo ranges: river 1000 iterations 0.3s; turn 100 iterations
   // 4s at 0.03% pot exploitability; flop 12 iterations 22s at 1.6%. DCFR has no early stop, so accuracy is informational.
-  wasm:{flop:{iterations:20,accuracy:1},turn:{iterations:100,accuracy:0.5},river:{iterations:500,accuracy:0.3}},
+  wasm:{flop:{iterations:100,accuracy:1,timeBudgetMs:DCFR_TIME_BUDGET_MS},turn:{iterations:300,accuracy:0.5,timeBudgetMs:DCFR_TIME_BUDGET_MS},river:{iterations:500,accuracy:0.3,timeBudgetMs:DCFR_TIME_BUDGET_MS}},
   // Native adapter --json with rayon, same ranges: river 1000 in 0.5s; turn 200 in 1.3s at 0.008%; flop 60 in 14s at 0.04%.
-  native:{flop:{iterations:60,accuracy:0.5},turn:{iterations:200,accuracy:0.3},river:{iterations:1000,accuracy:0.3}},
+  native:{flop:{iterations:300,accuracy:0.5,timeBudgetMs:DCFR_TIME_BUDGET_MS},turn:{iterations:500,accuracy:0.3,timeBudgetMs:DCFR_TIME_BUDGET_MS},river:{iterations:1000,accuracy:0.3,timeBudgetMs:DCFR_TIME_BUDGET_MS}},
 };
 
 export function getSolverPreset(backend:SolverBackend,street:SolverStreet):SolverPreset{

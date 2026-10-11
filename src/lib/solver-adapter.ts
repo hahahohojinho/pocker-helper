@@ -3,7 +3,8 @@ import { roundToSolverUnit } from "./solver-tree";
 
 export interface SolverNodeV1 { contract:"rangelab.solver_node.v1";street:"flop"|"turn"|"river";heroHole:string[];board:string[];pot:number;toCall:number;effectiveStack:number;candidateActions:PostflopActionType[]; }
 export interface SolverActionResult { action:PostflopActionType;frequency:number;ev?:number; }
-export interface SolverResult { source:"texassolver"|"openspiel"|"dcfr-wasm"|"dcfr-native"|"imported";actions:SolverActionResult[];bestAction:PostflopActionType;exploitability?:number;evSource:"solver"|"unavailable"; }
+/** `iterations`, `stoppedBy`, `elapsedMs`, and `workUnits` describe how a time-budgeted DCFR solve ran. */
+export interface SolverResult { iterations?:number;stoppedBy?:"deadline"|"iterations";elapsedMs?:number;workUnits?:number;source:"texassolver"|"openspiel"|"dcfr-wasm"|"dcfr-native"|"imported";actions:SolverActionResult[];bestAction:PostflopActionType;exploitability?:number;evSource:"solver"|"unavailable"; }
 export interface SolverHistoryAction { action:PostflopActionType;amount?:number; }
 
 const validActions=new Set<PostflopActionType>(["fold","check","bet","call","raise"]);
@@ -84,6 +85,10 @@ export function parseTexasSolverNodeAtHistory(raw:string,heroCombo:string,histor
   }
   return parseTexasSolverNode(JSON.stringify(node),heroCombo);
 }
+const finiteNumber=(value:unknown)=>typeof value==="number"&&Number.isFinite(value)?value:undefined;
+function solveTiming(data:Record<string,unknown>):Pick<SolverResult,"iterations"|"stoppedBy"|"elapsedMs"|"workUnits">{
+  return {iterations:finiteNumber(data.iterations),stoppedBy:data.stoppedBy==="deadline"||data.stoppedBy==="iterations"?data.stoppedBy:undefined,elapsedMs:finiteNumber(data.elapsedMs),workUnits:finiteNumber(data.workUnits)};
+}
 export function parseSolverResult(raw:string):SolverResult{
   const value:unknown=JSON.parse(raw);
   if(!value||typeof value!=="object")throw new Error("Solver JSON 객체가 필요합니다.");
@@ -99,5 +104,5 @@ export function parseSolverResult(raw:string):SolverResult{
   actions=actions.map(item=>({...item,frequency:item.frequency/total*100}));
   const requested=typeof data.best_action==="string"?data.best_action:typeof data.bestAction==="string"?data.bestAction:null;
   const bestAction=(requested&&validActions.has(requested as PostflopActionType)?requested:actions.toSorted((a,b)=>b.frequency-a.frequency)[0].action) as PostflopActionType;
-  return {source:data.source==="texassolver"||data.source==="openspiel"||data.source==="dcfr-wasm"||data.source==="dcfr-native"?data.source:"imported",actions,bestAction,exploitability:typeof data.exploitability==="number"?data.exploitability:undefined,evSource:actions.every(action=>typeof action.ev==="number")?"solver":"unavailable"};
+  return {source:data.source==="texassolver"||data.source==="openspiel"||data.source==="dcfr-wasm"||data.source==="dcfr-native"?data.source:"imported",actions,bestAction,exploitability:typeof data.exploitability==="number"?data.exploitability:undefined,evSource:actions.every(action=>typeof action.ev==="number")?"solver":"unavailable",...solveTiming(data)};
 }

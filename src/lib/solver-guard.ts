@@ -76,3 +76,20 @@ export async function readSolverBody(request:Request){
   }
   return new TextDecoder().decode(Buffer.concat(chunks));
 }
+
+const DEFAULT_MAX_BUDGET_MS=10_000;
+/** dcfr-core rejects budgets below this. */
+const MIN_NATIVE_BUDGET_MS=200;
+/** Process start, stdin, and JSON output around the solve. */
+const ADAPTER_OVERHEAD_MS=150;
+
+/**
+ * Time budget passed to the native adapter: the client's request (or the maximum when it sent none) capped by
+ * SOLVER_MAX_BUDGET_MS, minus the time already spent in the route and the adapter's own overhead. Always defined, so
+ * omitting the field cannot escape the server's cap.
+ */
+export function nativeTimeBudget(requested:unknown,configuredMax:string|undefined,elapsedMs:number){
+  const maximum=positiveInteger(configuredMax)??DEFAULT_MAX_BUDGET_MS;
+  const wanted=typeof requested==="number"&&Number.isFinite(requested)?requested:maximum;
+  return Math.max(MIN_NATIVE_BUDGET_MS,Math.round(Math.min(wanted,maximum)-elapsedMs-ADAPTER_OVERHEAD_MS));
+}
