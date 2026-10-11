@@ -4,8 +4,9 @@ import { useMemo, useRef, useState } from "react";
 import type { PlayerAction } from "@/lib/game-state";
 import type { PostflopAction } from "@/lib/postflop-machine";
 import type { Position } from "@/lib/preflop";
-import { buildHandRecord } from "@/lib/profiling/build-record";
-import { parseHandRecord, type ProfileTableSize } from "@/lib/profiling/hand-record";
+import { buildHandRecord, newRecordId } from "@/lib/profiling/build-record";
+import { comboToClass, parseHandRecord, type ProfileTableSize } from "@/lib/profiling/hand-record";
+import { normalizeStartingHand } from "@/lib/strategy-data";
 import { replayHandRecord } from "@/lib/profiling/hand-replay";
 import { saveHandRecord } from "./use-profile";
 
@@ -14,7 +15,7 @@ const pendingLabels: Record<string, string> = {
   "the hand has not reached showdown": "아직 쇼다운 전입니다",
   "the board needs five cards for showdown": "쇼다운하려면 보드 5장을 입력하세요",
 };
-const splitCards = (text: string) => text.replace(/[^2-9TJQKAcdhsCDHS]/g, "").match(/.{1,2}/g)?.slice(0, 2) ?? [];
+const splitCards = (text: string) => (text.match(/[2-9TJQKA][cdhs]/gi) ?? []).slice(0, 2);
 
 /** Shows whether the hand is over, collects shown cards and winners, and saves the hand to the profile database. */
 export default function HandRecorderPanel({ tableSize, positions, stacks, heroSeat, heroHand, heroCards, seatPlayers, preflopActions, postflopActions, board, profileEnabled, onSaved, onNextHand }: {
@@ -27,8 +28,8 @@ export default function HandRecorderPanel({ tableSize, positions, stacks, heroSe
   const [message, setMessage] = useState("");
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-  // One id per hand, kept across retries so a repeated save is recognized as the same hand.
-  const recordId = useRef<string | null>(null);
+  // Id and time are fixed at the first save attempt: a retry must send the identical record to be a duplicate.
+  const recordMeta = useRef<{ id: string; playedAt: string } | null>(null);
 
   const evaluation = useMemo(() => {
     const holeCards: Record<number, string[]> = { [heroSeat]: [...heroCards] };
@@ -40,13 +41,15 @@ export default function HandRecorderPanel({ tableSize, positions, stacks, heroSe
     return { error: "", end: probe.end, draft };
   }, [shown, heroSeat, heroCards, tableSize, heroHand, stacks, seatPlayers, preflopActions, postflopActions, board]);
   const end = evaluation.end;
+  const incompleteShown = Object.values(shown).some(text => text.trim() !== "" && splitCards(text).length !== 2);
+  const heroMismatch = heroCards.length === 2 && comboToClass(heroCards[0], heroCards[1]) !== normalizeStartingHand(heroHand);
   const chosenWinners = end && !end.showdown ? end.liveSeats : winners.filter(seat => end?.liveSeats.includes(seat));
 
   async function save() {
-    recordId.current ??= crypto.randomUUID();
     setSaving(true);
     try {
-      const record = parseHandRecord(evaluation.draft({ id: recordId.current, playedAt: new Date().toISOString() }, chosenWinners));
+      recordMeta.current ??= { id: newRecordId(), playedAt: new Date().toISOString() };
+      const record = parseHandRecord(evaluation.draft(recordMeta.current, chosenWinners));
       const replay = replayHandRecord(record);
       if (!replay.ok) throw new Error(replay.message);
       const result = await saveHandRecord(record);
@@ -73,9 +76,11 @@ export default function HandRecorderPanel({ tableSize, positions, stacks, heroSe
       </label>)}
     </div>}
     <div className="recorder-buttons">
-      {profileEnabled && <button type="button" disabled={!end?.finished || saving || saved || chosenWinners.length === 0} onClick={() => void save()}>{saved ? "저장됨" : "핸드 저장"}</button>}
+      {profileEnabled && <button type="button" disabled={!end?.finished || saving || saved || chosenWinners.length === 0 || incompleteShown} onClick={() => void save()}>{saved ? "저장됨" : "핸드 저장"}</button>}
       <button type="button" onClick={onNextHand}>다음 핸드 →</button>
     </div>
+    {incompleteShown && <small className="profile-message">공개 카드는 2장을 입력하세요 (예: AhKd).</small>}
+    {heroMismatch && <small className="profile-message">Hero 카드({heroCards.join(" ")})가 내 핸드({heroHand})와 달라 Hero 카드는 저장하지 않습니다.</small>}
     {message && <small className="profile-message">{message}</small>}
   </section>;
 }

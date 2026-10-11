@@ -35,14 +35,16 @@ export function useProfile(tableSize: ProfileTableSize | null, seatedIds: readon
         setEnabled(status.enabled);
         return status.enabled ? requestJson<{ players: ProfilePlayer[] }>("/api/profile/players", { signal: controller.signal }) : null;
       })
-      .then(list => { if (list) setPlayers(list.players); })
+      .then(list => { if (list) setPlayers(list.players); setError(""); })
       .catch(reason => { if (!controller.signal.aborted) { setEnabled(false); setError(reason instanceof Error ? reason.message : String(reason)); } });
     return () => controller.abort();
   }, [revision]);
 
   useEffect(() => {
-    if (!enabled || !tableSize || !idsKey) return;
     const controller = new AbortController();
+    // Stats are per table size, so nothing from the previous table or seating may linger.
+    queueMicrotask(() => { if (!controller.signal.aborted) setStats({}); });
+    if (!enabled || !tableSize || !idsKey) return () => controller.abort();
     requestJson<{ stats: Record<string, ProfileStats> }>(`/api/profile/stats?tableSize=${tableSize}&ids=${encodeURIComponent(idsKey)}`, { signal: controller.signal })
       .then(body => setStats(body.stats))
       .catch(reason => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : String(reason)); });

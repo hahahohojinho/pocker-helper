@@ -64,6 +64,15 @@ npm run dev
 
 자세한 계약과 제한은 [solver integration 문서](docs/SOLVER_INTEGRATION.md)를 참고하세요.
 
+## 상대 성향 기록 (로컬 SQLite)
+
+`npm run dev`로 실행하면 테이블 화면에 "상대 플레이어 배정" 패널이 나타납니다. 좌석에 상대를 지정하고 핸드를 끝까지 입력한 뒤 "핸드 저장"을 누르면, 액션과 쇼다운 결과가 로컬 DB에 쌓이고 좌석마다 성향(VPIP/PFR/3-bet, TAG/LAG/니트 등)이 표시됩니다. "다음 핸드"를 누르면 버튼과 함께 배정이 한 칸 회전합니다.
+
+- Node 22.5 이상의 내장 `node:sqlite`를 씁니다. 실행 시 `ExperimentalWarning`이 한 번 출력되며, 숨기려면 `$env:NODE_OPTIONS='--disable-warning=ExperimentalWarning'`.
+- DB 위치: 기본 `%LOCALAPPDATA%\RangeLab\rangelab.sqlite` (저장소 밖). `RANGELAB_DB_PATH`로 변경.
+- `npm run dev` / `npm start`는 `127.0.0.1`에만 바인딩합니다. 같은 네트워크의 다른 기기에서 접속하려면 `npm run dev:lan`을 쓰고 `RANGELAB_ALLOWED_HOSTS`(쉼표 구분, 예: PC의 LAN IP)를 지정하세요. 이 경우 같은 네트워크의 누구나 기록 API에 접근할 수 있습니다.
+- 프로덕션 빌드(`npm start`)에서는 `$env:ALLOW_LOCAL_PROFILE_API='1'`이 필요합니다.
+
 ## 현재 남은 GTO 정확도 작업
 
 - `baseline-v1`을 자체 solve 또는 정식 라이선스의 6-max 프리플랍 데이터로 교체

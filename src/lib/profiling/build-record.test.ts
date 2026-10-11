@@ -33,3 +33,13 @@ describe("seat rotation", () => {
     expect(parseSeatPlayers("{")[6]).toEqual(Array(6).fill(null));
   });
 });
+
+describe("newRecordId", () => {
+  it("makes v4 UUIDs the record parser accepts", async () => {
+    const { ID_PATTERN } = await import("./hand-record");
+    const { newRecordId } = await import("./build-record");
+    const ids = Array.from({ length: 20 }, newRecordId);
+    expect(ids.every(id => ID_PATTERN.test(id) && id[14] === "4")).toBe(true);
+    expect(new Set(ids).size).toBe(20);
+  });
+});

@@ -5,6 +5,15 @@ import { comboToClass, HAND_RECORD_VERSION, ID_PATTERN, TABLE_SLOT_POSITIONS, ty
 
 const SEAT_PLAYERS_KEY = "rangelab.seat-players.v1";
 
+/** A v4 UUID; crypto.randomUUID only exists in secure contexts, and a LAN address over http is not one. */
+export function newRecordId() {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map(byte => byte.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 /** Assembles a record from the table helper's state. Validate it with parseHandRecord and replayHandRecord. */
 export function buildHandRecord(input: {
   id: string; playedAt: string; tableSize: ProfileTableSize; heroSeat: number; heroHand: string; stacks: readonly number[];

@@ -71,7 +71,7 @@ The adapter binary and Cargo `target` directory are intentionally not committed.
 Goal: on the user's PC, answer each decision in 6-max/8-max within 5 s from board, hero cards, and opponent actions; record opponent tendencies and adjust (including isolation raises). For study use.
 1. 5 s answers: done (native deadline solve, wasm cost model). See docs/SOLVER_INTEGRATION.md "Time budget".
 2. Preflop packs: solver, exporter, runner, and app loading done and pushed (commits 2288350, 8d0ba21; docs/DCFR_PREFLOP.md). Remaining: finish the matrix, re-export, validate (AA continues everywhere, RFI width grows UTG -> BTN), commit `public/data/preflop/*.json`, then set `MAX_PACK_CHARS` in `src/lib/preflop-packs.ts` to about 2x the largest real pack (security review MEDIUM; currently 20M chars). Generation runs detached via `node scripts/run-preflop-matrix.mjs ...`; logs in `artifacts/preflop/logs`. Re-running the same command resumes. After it finishes, re-export all packs with the current binary if the running matrix started before the latest export fixes (the matrix was restarted 2026-10-11 ~04:20 UTC with the all-in position-tax fix, so its own exports are current).
-3. Opponent profiling in a local SQLite DB via `node:sqlite` (verified available on Node 22; experimental warning).
+3. Opponent profiling: done (commits 4045bb7, 3f61203, 43e5f4c; README "상대 성향 기록"). Records, stats, tendencies, SQLite store, `/api/profile/*`, seat assignment and hand recorder UI. Phase 4 should read `getPlayerStats` totals ({n,x} pairs) and shrink toward the solved strategy with `posteriorMean`.
 4. Tendency-based exploits (range widening/tightening, iso raises, postflop adjustments), shown separately from GTO.
 5. Multiway approximation; flop library for instant flops.
 

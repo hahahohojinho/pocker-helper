@@ -36,6 +36,7 @@ export default function TableHelperV2(){
   const [datasetRevision,setDatasetRevision]=useState(0);
   const [datasetMessage,setDatasetMessage]=useState("");
   const [seatPlayersBySize,setSeatPlayersBySize]=useState<SeatPlayers>(()=>parseSeatPlayers(null));
+  const [seatPlayersLoaded,setSeatPlayersLoaded]=useState(false);
   // Remounts the postflop panel (and its recorder) for each new hand.
   const [handNumber,setHandNumber]=useState(0);
   const [profileRevision,setProfileRevision]=useState(0);
@@ -71,9 +72,22 @@ export default function TableHelperV2(){
 
   useEffect(()=>{
     let active=true;
-    queueMicrotask(()=>{if(active)setSeatPlayersBySize(loadSeatPlayers());});
+    queueMicrotask(()=>{if(!active)return;setSeatPlayersBySize(loadSeatPlayers());setSeatPlayersLoaded(true);});
     return()=>{active=false;};
   },[]);
+  // Saved only after the first load, so the empty initial state never overwrites stored assignments.
+  useEffect(()=>{if(seatPlayersLoaded)saveSeatPlayers(seatPlayersBySize);},[seatPlayersBySize,seatPlayersLoaded]);
+  // Assignments pointing at players the database no longer has (e.g. a replaced DB file) would make every save fail.
+  const playerIdsKey=profile.enabled?profile.players.map(player=>player.id).sort().join(","):null;
+  useEffect(()=>{
+    if(playerIdsKey===null||!seatPlayersLoaded)return;
+    const known=new Set(playerIdsKey.split(",").filter(Boolean));
+    queueMicrotask(()=>setSeatPlayersBySize(current=>{
+      const prune=(list:(string|null)[])=>list.map(id=>id&&known.has(id)?id:null);
+      const next={6:prune(current[6]),8:prune(current[8])};
+      return JSON.stringify(next)===JSON.stringify(current)?current:next;
+    }));
+  },[playerIdsKey,seatPlayersLoaded]);
 
   useEffect(()=>{
     let active=true;
@@ -93,7 +107,7 @@ export default function TableHelperV2(){
 
   function updateSeatPlayers(next:(current:(string|null)[])=>(string|null)[]){
     if(!tableSize)return;
-    setSeatPlayersBySize(current=>{const updated={...current,[tableSize]:next(current[tableSize])};saveSeatPlayers(updated);return updated;});
+    setSeatPlayersBySize(current=>({...current,[tableSize]:next(current[tableSize])}));
   }
   /** One player per seat: assigning a player already seated elsewhere moves them. */
   function assignPlayer(seat:number,playerId:string|null){updateSeatPlayers(current=>current.map((value,index)=>index===seat?playerId:playerId!==null&&value===playerId?null:value));}
@@ -149,7 +163,7 @@ export default function TableHelperV2(){
           <div className="poker-table"><div className="felt-mark"><b>RANGE<span>LAB</span></b><small>ACTION BUILDER</small></div><div className="pot-chip">POT<br/><b>{accounting.pot.toFixed(1)} BB</b></div></div>
           {coordinates[tableSize].map((point,index)=>{const last=[...actions].reverse().find(a=>a.seat===index);return <button key={index} className={`seat ${index===heroSeat?"hero":""} ${index===selectedSeat?"selected":""} ${index===currentSeat?"current-turn":""} ${last?.type??(!last&&index!==heroSeat?"auto-fold":"")}`} style={{left:`${point.left}%`,top:`${point.top}%`}} onClick={()=>selectActingSeat(index)}><span className="avatar">{index===heroSeat?"YOU":index+1}</span><span className="seat-info"><b>{positions[index]}</b><small>{index===currentSeat?"현재 차례":last?`${actionLabels[last.type]} ${last.amount||""}`:index===heroSeat?hand:"Fold · 자동"}</small>{index!==heroSeat&&playerName(index)&&<small className="seat-profile" title={playerName(index)}>{playerName(index)}{profile.stats[seatPlayers[index]??""]?` · ${tendencySummary(profile.stats[seatPlayers[index]??""].classification)}`:""}</small>}</span>{positions[index]==="BTN"&&<i className="dealer">D</i>}</button>})}
         </div>
-        <div className="hero-seat-row"><span>내 좌석</span>{positions.map((p,i)=><button key={p} className={heroSeat===i?"active":""} onClick={()=>{setHeroSeat(i);setActions(a=>a.filter(x=>x.seat!==i))}}>{p}</button>)}</div>
+        <div className="hero-seat-row"><span>내 좌석</span>{positions.map((p,i)=><button key={p} className={heroSeat===i?"active":""} onClick={()=>{setHeroSeat(i);setActions(a=>a.filter(x=>x.seat!==i));updateSeatPlayers(current=>current.map((id,seat)=>seat===i?null:id))}}>{p}</button>)}</div>
       </section>
       <aside className="action-dock action-builder">
         <div className="selected-player"><small>현재 액션 차례</small><b>{currentPosition?`SEAT ${currentSeat+1} · ${currentPosition}${currentSeat===heroSeat?" · HERO":""}`:"BETTING ROUND COMPLETE"}</b></div>

@@ -41,7 +41,7 @@ export default function SeatPlayersPanel({ positions, heroSeat, seatPlayers, pla
           ? <span className="profile-create"><input value={name} maxLength={40} placeholder="이름" onChange={event => setName(event.target.value)} onKeyDown={event => { if (event.key === "Enter") void create(seat); }} /><button type="button" onClick={() => void create(seat)}>추가</button><button type="button" onClick={() => setCreatingSeat(null)}>취소</button></span>
           : <select value={playerId ?? ""} onChange={event => event.target.value === NEW_PLAYER ? setCreatingSeat(seat) : onAssign(seat, event.target.value || null)}>
             <option value="">미지정</option>
-            {players.filter(player => !player.archived && (player.id === playerId || !taken.has(player.id))).map(player => <option key={player.id} value={player.id}>{player.name}</option>)}
+            {players.filter(player => player.id === playerId || (!player.archived && !taken.has(player.id))).map(player => <option key={player.id} value={player.id}>{player.name}</option>)}
             <option value={NEW_PLAYER}>+ 새 플레이어</option>
           </select>}
         {classification && <small title={classification.tags.map(tag => tagLabels[tag]).join(", ")}>{tendencySummary(classification)}{classification.tags.length ? ` · ${classification.tags.map(tag => tagLabels[tag]).join(", ")}` : ""}</small>}
