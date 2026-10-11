@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 
 const TARGET="wasm32-unknown-unknown";
 const root=resolve(import.meta.dirname,"..");
@@ -43,6 +43,9 @@ function thirdPartyNotice(){
     const directory=dirname(item.manifest_path);
     const isShim=item.source===null&&directory.startsWith(join(crate,"shims"));
     if(isShim)return `${item.name} ${item.version} (RangeLab shim in tools/dcfr-wasm/shims, not the upstream crate)\n`;
+    // Path crates in this repository other than the dcfr-solver submodule are RangeLab's own code.
+    const isFirstParty=item.source===null&&directory.startsWith(join(root,"tools"))&&!directory.startsWith(join(root,"tools","dcfr-solver"));
+    if(isFirstParty)return `${item.name} ${item.version} (RangeLab code in ${relative(root,directory).split(sep).join("/")})\n`;
     const texts=readdirSync(directory).filter(name=>LICENSE_FILE.test(name)).sort().map(name=>`--- ${name} ---\n${readFileSync(join(directory,name),"utf8").trim()}\n`);
     if(!texts.length)throw new Error(`${item.name} ${item.version} ships no license file; add its notice manually.`);
     return `${item.name} ${item.version} - ${item.license??"see files"}\n${item.repository??""}\n${texts.join("\n")}`;
