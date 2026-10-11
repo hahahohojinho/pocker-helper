@@ -47,9 +47,11 @@ function preflopEvents(record: HandRecordV1, sink: EventSink) {
     const { seat, type } = action;
     if (!acted.has(seat) && raiseCount === 0 && positions[seat] !== "BB") sink.first(seat, "limp", type === "limp");
     if (raiseCount === 1 && availableActions(prior, positions, seat, stacks).includes("3bet")) sink.first(seat, "three_bet", type === "3bet");
-    if (raiseCount >= 1 && !putIn.has(seat)) sink.first(seat, "cold_call", type === "call");
+    // Blinds defending already have chips in, so their calls are not cold calls.
+    if (raiseCount >= 1 && !putIn.has(seat) && positions[seat] !== "SB" && positions[seat] !== "BB") sink.first(seat, "cold_call", type === "call");
     if (raiseCount === 2 && opener === seat) sink.first(seat, "fold_to_three_bet", type === "fold");
-    if (raiseCount >= 1 && limped.has(seat)) {
+    // Only the response to the isolation raise itself; facing a later 3-bet squeeze is a different spot.
+    if (raiseCount === 1 && limped.has(seat)) {
       sink.first(seat, "limp_fold_to_raise", type === "fold");
       sink.first(seat, "limp_call_raise", type === "call");
       sink.first(seat, "limp_reraise", raises.includes(type));

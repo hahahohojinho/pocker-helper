@@ -9,6 +9,10 @@ import { bucketOrder, loadPreflopPack } from "@/lib/preflop-packs";
 import PostflopPanel from "./postflop-panel";
 import { calculatePokerPots } from "@/lib/pots";
 import { deriveBettingState } from "@/lib/preflop-machine";
+import { loadSeatPlayers, parseSeatPlayers, rotateForNextHand, rotateHeroSeat, saveSeatPlayers, type SeatPlayers } from "@/lib/profiling/build-record";
+import SeatPlayersPanel from "./profiling/seat-players-panel";
+import { tendencySummary } from "./profiling/tendency-labels";
+import { useProfile } from "./profiling/use-profile";
 
 type TableSize = 6 | 8;
 const packErrorPrefix="프리플랍 솔브 데이터를 불러오지 못했습니다";
@@ -31,7 +35,14 @@ export default function TableHelperV2(){
   const [validationMessage,setValidationMessage]=useState("");
   const [datasetRevision,setDatasetRevision]=useState(0);
   const [datasetMessage,setDatasetMessage]=useState("");
+  const [seatPlayersBySize,setSeatPlayersBySize]=useState<SeatPlayers>(()=>parseSeatPlayers(null));
+  // Remounts the postflop panel (and its recorder) for each new hand.
+  const [handNumber,setHandNumber]=useState(0);
+  const [profileRevision,setProfileRevision]=useState(0);
   const positions=positionSets[tableSize??6];
+  const seatPlayers=seatPlayersBySize[tableSize??6];
+  const profile=useProfile(tableSize,seatPlayers,profileRevision);
+  const playerName=(seat:number)=>profile.players.find(player=>player.id===seatPlayers[seat])?.name;
   const heroStack=stacks[heroSeat]??100;
   // datasetRevision re-runs the lookup once an imported dataset or a solved pack has been installed into the
   // module-level strategy registry, which React cannot observe.
@@ -60,6 +71,12 @@ export default function TableHelperV2(){
 
   useEffect(()=>{
     let active=true;
+    queueMicrotask(()=>{if(active)setSeatPlayersBySize(loadSeatPlayers());});
+    return()=>{active=false;};
+  },[]);
+
+  useEffect(()=>{
+    let active=true;
     queueMicrotask(()=>{if(!active)return;const saved=localStorage.getItem(strategyStorageKey);if(!saved)return;
       try{const dataset=parseStrategyDatasetJson(saved);setDatasetRevision(value=>value+1);setDatasetMessage(`${dataset.id} 자동 복원 · ${activeStrategyDataset()?.spots} spots · ${dataset.license}`);}
       catch{localStorage.removeItem(strategyStorageKey);clearStrategyDataset();setDatasetMessage("저장된 전략 데이터가 유효하지 않아 내장 DCFR 데이터로 복원했습니다.");}
@@ -74,6 +91,20 @@ export default function TableHelperV2(){
   }
   function resetDataset(){clearStrategyDataset();localStorage.removeItem(strategyStorageKey);setDatasetRevision(value=>value+1);setDatasetMessage("내장 DCFR 데이터로 복원하고 저장된 데이터셋을 삭제했습니다.");}
 
+  function updateSeatPlayers(next:(current:(string|null)[])=>(string|null)[]){
+    if(!tableSize)return;
+    setSeatPlayersBySize(current=>{const updated={...current,[tableSize]:next(current[tableSize])};saveSeatPlayers(updated);return updated;});
+  }
+  /** One player per seat: assigning a player already seated elsewhere moves them. */
+  function assignPlayer(seat:number,playerId:string|null){updateSeatPlayers(current=>current.map((value,index)=>index===seat?playerId:playerId!==null&&value===playerId?null:value));}
+  /** The button moves one seat: players, the hero, and stacks all shift one slot, and the hand starts over. */
+  function startNextHand(){
+    if(!tableSize)return;
+    updateSeatPlayers(rotateForNextHand);
+    setHeroSeat(seat=>rotateHeroSeat(seat,tableSize));
+    setStacks(current=>rotateForNextHand(current.slice(0,tableSize)));
+    setActions([]);setSelectedSeat(3);setValidationMessage("");setHandNumber(value=>value+1);
+  }
   function enter(size:TableSize){setTableSize(size);setHeroSeat(0);setSelectedSeat(3);setActions([]);setStacks(Array(size).fill(100))}
   function selectActingSeat(seat:number){
     if(!currentPosition){setValidationMessage("프리플랍 베팅 라운드가 종료되었습니다.");return;}
@@ -116,7 +147,7 @@ export default function TableHelperV2(){
         <div className="instruction"><span>{currentPosition?"CURRENT SCENARIO":"ROUND COMPLETE"}</span><b>{currentPosition?result.scenarioLabel:"프리플랍 액션 완료"}</b><small>{currentPosition?"액션을 순서대로 입력하세요. Hero 액션도 기록하면 다음 차례로 진행됩니다.":"모든 활성 플레이어가 현재 베팅 금액을 맞췄습니다."}</small></div>
         <div className="poker-scene">
           <div className="poker-table"><div className="felt-mark"><b>RANGE<span>LAB</span></b><small>ACTION BUILDER</small></div><div className="pot-chip">POT<br/><b>{accounting.pot.toFixed(1)} BB</b></div></div>
-          {coordinates[tableSize].map((point,index)=>{const last=[...actions].reverse().find(a=>a.seat===index);return <button key={index} className={`seat ${index===heroSeat?"hero":""} ${index===selectedSeat?"selected":""} ${index===currentSeat?"current-turn":""} ${last?.type??(!last&&index!==heroSeat?"auto-fold":"")}`} style={{left:`${point.left}%`,top:`${point.top}%`}} onClick={()=>selectActingSeat(index)}><span className="avatar">{index===heroSeat?"YOU":index+1}</span><span className="seat-info"><b>{positions[index]}</b><small>{index===currentSeat?"현재 차례":last?`${actionLabels[last.type]} ${last.amount||""}`:index===heroSeat?hand:"Fold · 자동"}</small></span>{positions[index]==="BTN"&&<i className="dealer">D</i>}</button>})}
+          {coordinates[tableSize].map((point,index)=>{const last=[...actions].reverse().find(a=>a.seat===index);return <button key={index} className={`seat ${index===heroSeat?"hero":""} ${index===selectedSeat?"selected":""} ${index===currentSeat?"current-turn":""} ${last?.type??(!last&&index!==heroSeat?"auto-fold":"")}`} style={{left:`${point.left}%`,top:`${point.top}%`}} onClick={()=>selectActingSeat(index)}><span className="avatar">{index===heroSeat?"YOU":index+1}</span><span className="seat-info"><b>{positions[index]}</b><small>{index===currentSeat?"현재 차례":last?`${actionLabels[last.type]} ${last.amount||""}`:index===heroSeat?hand:"Fold · 자동"}</small>{index!==heroSeat&&playerName(index)&&<small className="seat-profile" title={playerName(index)}>{playerName(index)}{profile.stats[seatPlayers[index]??""]?` · ${tendencySummary(profile.stats[seatPlayers[index]??""].classification)}`:""}</small>}</span>{positions[index]==="BTN"&&<i className="dealer">D</i>}</button>})}
         </div>
         <div className="hero-seat-row"><span>내 좌석</span>{positions.map((p,i)=><button key={p} className={heroSeat===i?"active":""} onClick={()=>{setHeroSeat(i);setActions(a=>a.filter(x=>x.seat!==i))}}>{p}</button>)}</div>
       </section>
@@ -129,9 +160,10 @@ export default function TableHelperV2(){
         <label className="amount-field">액션 후 총 투입액<div><input type="number" min="0" max={currentSeat>=0?stacks[currentSeat]:heroStack} step="0.5" value={amount} onChange={e=>setAmount(Number(e.target.value))}/><b>BB</b></div><span className="amount-presets"><button onClick={()=>setAmount(accounting.currentBet)}>Call {accounting.currentBet}BB</button><button onClick={()=>setAmount(accounting.minimumRaiseTo)}>Min {accounting.minimumRaiseTo}BB</button><button onClick={()=>setAmount(currentSeat>=0?stacks[currentSeat]:heroStack)}>All-in {currentSeat>=0?stacks[currentSeat]:heroStack}BB</button></span></label>
         <div className="hero-inputs"><label>내 핸드<input value={hand} maxLength={3} onChange={e=>setHand(e.target.value)}/></label><label>{currentSeat>=0?`${positions[currentSeat]} 시작 스택`:"Hero 시작 스택"}<input type="number" min="1" value={currentSeat>=0?stacks[currentSeat]:heroStack} onChange={e=>{const seat=currentSeat>=0?currentSeat:heroSeat;setStacks(current=>current.map((value,index)=>index===seat?Number(e.target.value):value))}}/></label></div>
         {currentPosition?<><div className="action-result compact"><p>{currentSeat===heroSeat?"RECOMMENDED ACTION":"HERO DECISION PREVIEW"} <span>신뢰도 {result.confidence}</span></p><h2>{result.primaryDisplay}</h2><p>{currentSeat===heroSeat?result.summary:"상대 액션을 계속 입력하면 Hero 차례에 최종 추천을 표시합니다."}</p></div><div className="frequency-list">{result.displayFrequencies.map(item=><div key={item.action}><span>{item.action}</span><i><b style={{width:`${item.frequency}%`}}/></i><strong>{item.frequency}%</strong></div>)}</div><details className="range-matrix"><summary>169 핸드 전략표 보기 <span>{positions[heroSeat]} · {nearestStackBucket(heroStack)}BB</span></summary><div>{strategyMatrix.map(cell=><span key={cell.hand} className={cell.aggressive>=50?"range-aggressive":cell.passive>=40?"range-passive":"range-fold"} title={`Fold ${cell.fold}% / Passive ${cell.passive}% / Aggressive ${cell.aggressive}%`}>{cell.hand}</span>)}</div><p><i/>공격적 액션 <i/>패시브 액션 <i/>Fold</p></details></>:<div className="preflop-complete-card"><small>PREFLOP COMPLETE</small><b>{accounting.pot.toFixed(1)} BB POT</b><span>아래에서 플랍 보드와 액션을 입력하세요.</span></div>}
+        {profile.enabled&&<SeatPlayersPanel positions={positions} heroSeat={heroSeat} seatPlayers={seatPlayers} players={profile.players} stats={profile.stats} onAssign={assignPlayer} onCreate={profile.createPlayer}/>}
         <p className="solver-note">CURRENT SOURCE · {result.strategySource}{result.strategySource==="baseline-v1"?" · NOT GTO FALLBACK":result.strategySource.startsWith("pack:")?" · SOLVED PACK (rangelab-preflop MCCFR)":" · LICENSED DATASET"}</p>
         <details className="strategy-import"><summary>STRATEGY DATA · {datasetInfo?.id}</summary><label>검증된 JSON 데이터셋 불러오기<input type="file" accept="application/json,.json" onChange={event=>void importDataset(event.target.files?.[0])}/></label>{datasetInfo?.id!==bundledStrategyDatasetId&&<button type="button" onClick={resetDataset}>기본 DCFR로 복원</button>}{datasetInfo&&<small>{datasetInfo.contract} · {datasetInfo.spots} spots · {datasetInfo.license}</small>}{datasetInfo?.provenance&&<small>{datasetInfo.provenance.generator} · {datasetInfo.provenance.revision.slice(0,12)} · {datasetInfo.provenance.iterations.toLocaleString()} iterations · seed {datasetInfo.provenance.seed}</small>}{datasetMessage&&<small>{datasetMessage}</small>}<p>각 spot은 169핸드 전체, 빈도 합 100%, 라이선스 메타데이터가 필요합니다. 검증된 데이터는 이 브라우저에 저장됩니다.</p></details>
-        {!currentPosition&&<PostflopPanel positions={positions} preflopActions={actions} stacks={stacks} heroSeat={heroSeat}/>} 
+        {!currentPosition&&<PostflopPanel key={handNumber} positions={positions} preflopActions={actions} stacks={stacks} heroSeat={heroSeat} recorder={{tableSize,heroHand:hand,seatPlayers,profileEnabled:profile.enabled,onSaved:()=>setProfileRevision(value=>value+1),onNextHand:startNextHand}}/>} 
       </aside>
     </div>
   </main>;

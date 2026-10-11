@@ -22,7 +22,8 @@ describe("computeStatEvents", () => {
     const seat = events(srpToShowdown());
     expect(seat(5)).toMatchObject({ vpip: [1, 1], pfr: [1, 1], limp: [1, 0], flop_cbet: [1, 1], af_aggr: [1, 1], saw_flop: [1, 1], wtsd: [1, 1], wsd: [1, 0] });
     expect(seat(0)).toMatchObject({ vpip: [1, 1], pfr: [1, 0], three_bet: [1, 0], cold_call: [1, 1], fold_to_flop_cbet: [1, 0], af_call: [1, 1], wsd: [1, 1] });
-    expect(seat(1)).toMatchObject({ vpip: [1, 0], three_bet: [1, 0], cold_call: [1, 0] });
+    expect(seat(1)).toMatchObject({ vpip: [1, 0], three_bet: [1, 0] });
+    expect(seat(1).cold_call).toBeUndefined();
     expect(seat(3)).toEqual({ limp: [1, 0], vpip: [1, 0], pfr: [1, 0] });
   });
   it("gives a big blind walk no VPIP opportunity", () => {
@@ -33,6 +34,17 @@ describe("computeStatEvents", () => {
     const seat = events(makeHand({ preflop: [[3, "limp", 1], [4, "open", 4], [5, "fold"], [0, "fold"], [1, "fold"], [2, "fold"], [3, "fold"]], winners: [4] }));
     expect(seat(3)).toMatchObject({ limp: [1, 1], vpip: [1, 1], limp_fold_to_raise: [1, 1], limp_call_raise: [1, 0], limp_reraise: [1, 0], three_bet: [1, 0] });
     expect(seat(3).cold_call).toBeUndefined();
+  });
+  it("does not count a blind defense as a cold call", () => {
+    const seat = events(makeHand({ heroSeat: 0, preflop: [[3, "open", 2.5], [4, "fold"], [5, "fold"], [0, "fold"], [1, "fold"], [2, "call", 2.5]],
+      postflop: [["flop", 2, "check"], ["flop", 3, "check"], ["turn", 2, "check"], ["turn", 3, "check"], ["river", 2, "check"], ["river", 3, "check"]],
+      board: ["2c", "7d", "9h", "Ts", "3c"], winners: [2], holeCards: { 2: ["Ah", "Ad"], 3: ["Ks", "Kd"] } }));
+    expect(seat(2).cold_call).toBeUndefined();
+    expect(seat(3)).toMatchObject({ flop_cbet: [1, 0] });
+  });
+  it("counts only the response to the isolation raise, not to a squeeze", () => {
+    const seat = events(makeHand({ preflop: [[3, "limp", 1], [4, "open", 4], [5, "3bet", 12], [0, "fold"], [1, "fold"], [2, "fold"], [3, "fold"], [4, "fold"]], winners: [5] }));
+    expect(seat(3).limp_fold_to_raise).toBeUndefined();
   });
   it("tracks folding to a 3-bet", () => {
     const seat = events(makeHand({ preflop: [[3, "fold"], [4, "fold"], [5, "open", 2.5], [0, "3bet", 8], [1, "fold"], [2, "fold"], [5, "fold"]], winners: [0] }));

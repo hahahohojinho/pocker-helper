@@ -40,6 +40,9 @@ describe("replayHandRecord", () => {
     const record = srpToShowdown();
     expect(replayHandRecord({ ...record, postflop: [record.postflop[1], ...record.postflop] })).toMatchObject({ ok: false, message: "postflop[0] is out of turn" });
   });
+  it("can report who is still in before winners are chosen", () => {
+    expect(replayHandRecord({ ...srpToShowdown(), winners: [] }, { checkWinners: false })).toMatchObject({ ok: true, end: { liveSeats: [0, 5] } });
+  });
   it("reports a hand still in progress", () => {
     const record = srpToShowdown();
     const result = replayHandRecord({ ...record, postflop: record.postflop.slice(0, 5) });
@@ -52,6 +55,25 @@ describe("replayHandRecord", () => {
     });
     expect(replayHandRecord(record)).toMatchObject({ ok: true, end: { finished: true, showdown: true, liveSeats: [0, 5] } });
     expect(replayHandRecord({ ...record, board: ["2c", "7d", "9h"] })).toMatchObject({ ok: true, end: { finished: false, pending: "the board needs five cards for showdown" } });
+  });
+  it("rejects actions after the betting is over", () => {
+    const folded = makeHand({
+      preflop: [[3, "fold"], [4, "fold"], [5, "open", 2.5], [0, "call", 2.5], [1, "fold"], [2, "fold"]],
+      postflop: [["flop", 5, "bet", 3], ["flop", 0, "fold"], ["turn", 5, "bet", 5]], board: ["2c", "7d", "9h", "Ts"], winners: [5],
+    });
+    expect(replayHandRecord(folded)).toEqual({ ok: false, message: "postflop[2] acts after the betting is over" });
+    const shoved = makeHand({
+      stack: 20, preflop: [[3, "fold"], [4, "fold"], [5, "open", 20], [0, "call", 20], [1, "fold"], [2, "fold"]],
+      postflop: [["flop", 5, "check"]], board: ["2c", "7d", "9h"], winners: [5],
+    });
+    expect(replayHandRecord(shoved)).toMatchObject({ ok: false, message: "postflop[0] acts after the betting is over" });
+  });
+  it("requires exactly the best hands as winners when they covered everyone", () => {
+    expect(replayHandRecord(srpToShowdown([0, 5]))).toEqual({ ok: false, message: "winners must be exactly the best shown hands" });
+    expect(replayHandRecord(srpToShowdown()).ok).toBe(true);
+  });
+  it("normalizes the played-at time", () => {
+    expect(parseHandRecord({ ...srpToShowdown(), playedAt: "2026-10-11T09:00:00+09:00" }).playedAt).toBe("2026-10-11T00:00:00.000Z");
   });
   it("requires the last player left to be the winner of an uncontested pot", () => {
     expect(replayHandRecord(makeHand({ preflop: [[3, "fold"], [4, "fold"], [5, "open", 2.5], [0, "fold"], [1, "fold"], [2, "fold"]], winners: [2] })))

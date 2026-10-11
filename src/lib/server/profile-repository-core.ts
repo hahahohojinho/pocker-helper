@@ -16,6 +16,8 @@ export interface PlayerStats { hands: number; totals: StatTotals; classification
 const MAX_NAME = 40;
 const MAX_NOTE = 500;
 export const MAX_STATS_PLAYERS = 8;
+/** Generous for one person's study notes; stops a runaway client from filling the disk with players. */
+const MAX_PLAYERS = 2000;
 const MAX_SHOWDOWN_LIMIT = 200;
 
 const now = () => new Date().toISOString();
@@ -36,6 +38,8 @@ export function createPlayer(db: DatabaseSync, input: { name: unknown; note?: un
   const name = checkedName(input.name);
   const note = input.note === undefined ? "" : checkedNote(input.note);
   const id = randomUUID(), stamp = now();
+  const { count } = db.prepare("SELECT COUNT(*) AS count FROM players").get() as { count: number };
+  if (Number(count) >= MAX_PLAYERS) throw new ProfileInputError(`플레이어는 최대 ${MAX_PLAYERS}명까지 등록할 수 있습니다.`);
   try {
     db.prepare("INSERT INTO players(id, name, name_norm, note, archived, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?)")
       .run(id, name, name.toLowerCase(), note, stamp, stamp);
@@ -129,8 +133,10 @@ export function getPlayerStats(db: DatabaseSync, ids: string[], tableSize: Profi
   if (wanted.length > MAX_STATS_PLAYERS) throw new ProfileInputError(`한 번에 최대 ${MAX_STATS_PLAYERS}명까지 조회할 수 있습니다.`);
   const totals = new Map<string, StatTotals>(wanted.map(id => [id, {}]));
   if (wanted.length) {
-    const rows = db.prepare(`SELECT player_id, stat, SUM(n) AS n, SUM(x) AS x FROM player_stat_events WHERE player_id IN (${wanted.map(() => "?").join(",")})
-      GROUP BY player_id, stat`).all(...wanted) as { player_id: string; stat: string; n: number; x: number }[];
+    // Only hands at this table size: 6-max and 8-max tendencies differ, and the prior is per table size.
+    const rows = db.prepare(`SELECT e.player_id, e.stat, SUM(e.n) AS n, SUM(e.x) AS x FROM player_stat_events e
+      JOIN hands h ON h.id = e.hand_id AND h.table_size = ? WHERE e.player_id IN (${wanted.map(() => "?").join(",")})
+      GROUP BY e.player_id, e.stat`).all(tableSize, ...wanted) as { player_id: string; stat: string; n: number; x: number }[];
     for (const row of rows) {
       if (STAT_KEYS.includes(row.stat as StatKey)) totals.get(row.player_id)![row.stat as StatKey] = { n: Number(row.n), x: Number(row.x) };
     }
@@ -146,7 +152,7 @@ export function listShowdowns(db: DatabaseSync, playerId: string, options: { pot
   const limit = Math.min(MAX_SHOWDOWN_LIMIT, Math.max(1, Math.trunc(options.limit ?? 50)));
   const rows = db.prepare(`SELECT s.seat, s.position, s.cards, s.hand_class, s.pot_type, s.line_key, s.is_pf_aggressor, s.board, s.won
     FROM showdown_hands s JOIN hands h ON h.id = s.hand_id WHERE s.player_id = ? AND (? IS NULL OR s.pot_type = ?)
-    ORDER BY h.played_at DESC LIMIT ?`).all(playerId, options.potType ?? null, options.potType ?? null, limit) as Record<string, string | number>[];
+    ORDER BY h.played_at DESC, h.id LIMIT ?`).all(playerId, options.potType ?? null, options.potType ?? null, limit) as Record<string, string | number>[];
   return rows.map(row => ({
     seat: Number(row.seat), position: String(row.position), cards: String(row.cards), handClass: String(row.hand_class),
     potType: row.pot_type as ShowdownHand["potType"], lineKey: String(row.line_key), isPfAggressor: row.is_pf_aggressor === 1,
@@ -161,11 +167,15 @@ export function ensureDerivedCurrent(db: DatabaseSync) {
   withTransaction(db, () => {
     db.exec("DELETE FROM player_stat_events; DELETE FROM showdown_hands;");
     const records = db.prepare("SELECT id, record_json FROM hands").all() as { id: string; record_json: string }[];
+    const updateEnd = db.prepare("UPDATE hands SET end_street = ?, showdown = ? WHERE id = ?");
     for (const { id, record_json } of records) {
-      // A record the current rules reject stays stored (it is the source of truth) but contributes no stats.
+      // A record the current rules reject stays stored (it is the source of truth) but contributes no stats;
+      // its end street is cleared so it can be found.
       try {
-        writeDerived(db, parseHandRecord(JSON.parse(record_json)));
+        const end = writeDerived(db, parseHandRecord(JSON.parse(record_json)));
+        updateEnd.run(end.endStreet, Number(end.showdown), id);
       } catch (error) {
+        updateEnd.run("", 0, id);
         console.error(`Profile rebuild skipped hand ${id}:`, error);
       }
     }

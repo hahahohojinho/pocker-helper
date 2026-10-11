@@ -128,5 +128,6 @@ export function parseHandRecord(value: unknown): HandRecordV1 {
   if (hero.holeCards && comboToClass(...hero.holeCards) !== heroHand) throw fail("heroHand", "does not match the hero's cards");
   if (!Array.isArray(value.winners) || value.winners.length === 0 || value.winners.some(seat => !Number.isInteger(seat) || seat < 0 || seat >= tableSize)) throw fail("winners");
   const winners = [...new Set(value.winners as number[])].sort((left, right) => left - right);
-  return { version: 1, id: value.id, playedAt: value.playedAt, tableSize, heroHand, seats, preflop, postflop, board, winners };
+  // Stored in one canonical form so time ordering in the database is lexical ordering.
+  return { version: 1, id: value.id, playedAt: new Date(value.playedAt).toISOString(), tableSize, heroHand, seats, preflop, postflop, board, winners };
 }

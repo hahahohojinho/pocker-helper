@@ -1,17 +1,21 @@
 /** Hosts a local-only API answers on; anything else (e.g. a rebinding attacker's domain) is refused. */
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
+/** The host name of a Host header ("[::1]:3000" -> "[::1]"), or null when the header is malformed. */
 function hostname(host: string) {
-  return host.startsWith("[") ? host.slice(0, host.indexOf("]") + 1).toLowerCase() : host.split(":")[0].toLowerCase();
+  const match = /^(\[[0-9a-f:.]+\]|[^:[\]]+)(:\d{1,5})?$/i.exec(host.trim());
+  return match ? match[1].toLowerCase() : null;
 }
 
 /**
  * True for loopback hosts and for names listed in RANGELAB_ALLOWED_HOSTS (comma separated, e.g. a LAN address).
- * Comparing Origin with Host alone does not stop DNS rebinding, where both carry the attacker's domain.
+ * Comparing Origin with Host alone does not stop DNS rebinding, where both carry the attacker's domain. This only
+ * protects a loopback-bound server (`npm run dev` binds 127.0.0.1): a client on the LAN can send any Host header.
  */
 export function isAllowedLocalHost(host: string | null, env: Record<string, string | undefined>) {
   if (!host) return false;
   const name = hostname(host);
+  if (!name) return false;
   const extra = (env.RANGELAB_ALLOWED_HOSTS ?? "").split(",").map(value => value.trim().toLowerCase()).filter(Boolean);
   return LOOPBACK_HOSTS.has(name) || extra.includes(name);
 }

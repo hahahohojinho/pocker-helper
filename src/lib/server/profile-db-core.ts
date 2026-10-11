@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
@@ -59,28 +59,46 @@ export function withTransaction<T>(db: DatabaseSync, fn: () => T): T {
     db.exec("COMMIT");
     return result;
   } catch (error) {
-    db.exec("ROLLBACK");
+    try {
+      db.exec("ROLLBACK");
+    } catch {
+      // Keep the original error; a failed rollback means SQLite already ended the transaction.
+    }
     throw error;
   }
 }
 
+const userVersion = (db: DatabaseSync) => Number((db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version);
+
 function migrate(db: DatabaseSync, file: string) {
-  const version = Number((db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version);
+  const version = userVersion(db);
   if (version > MIGRATIONS.length) throw new ProfileUnavailableError(`Profile database schema ${version} is newer than this app (${MIGRATIONS.length}).`);
   for (let step = version; step < MIGRATIONS.length; step++) {
     // An existing database is copied before it is changed.
-    if (step > 0) db.exec(`VACUUM INTO '${`${file}.bak-v${step}`.replaceAll("'", "''")}'`);
+    if (step > 0) {
+      // VACUUM INTO refuses an existing file, so a leftover backup from an interrupted upgrade gets a new name.
+      const backup = `${file}.bak-v${step}-${Date.now()}`;
+      db.exec(`VACUUM INTO '${backup.replaceAll("'", "''")}'`);
+      restrictToOwner(backup);
+    }
     withTransaction(db, () => {
+      // Another process may have run this step while this one waited for the write lock.
+      if (userVersion(db) > step) return;
       db.exec(MIGRATIONS[step]);
       db.exec(`PRAGMA user_version = ${step + 1}`);
     });
   }
 }
 
+/** Opponent notes are private: on POSIX systems only the owner may read the database (Windows app data already is). */
+function restrictToOwner(file: string) {
+  if (process.platform !== "win32" && existsSync(file)) chmodSync(file, 0o600);
+}
+
 export function openProfileDb(file: string): DatabaseSync {
   const { DatabaseSync } = loadSqlite();
   const directory = path.dirname(file);
-  if (!existsSync(directory)) mkdirSync(directory, { recursive: true });
+  if (!existsSync(directory)) mkdirSync(directory, { recursive: true, mode: 0o700 });
   let db: DatabaseSync;
   try {
     db = new DatabaseSync(file);
@@ -88,6 +106,7 @@ export function openProfileDb(file: string): DatabaseSync {
     throw new ProfileUnavailableError(`Profile database cannot be opened: ${error instanceof Error ? error.message : String(error)}`);
   }
   db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON; PRAGMA synchronous = NORMAL;");
+  restrictToOwner(file);
   try {
     migrate(db, file);
   } catch (error) {

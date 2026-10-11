@@ -56,6 +56,9 @@ function replayPostflop(record: HandRecordV1, setup: ReturnType<typeof postflopS
     }
     if (record.board.length < 3 + street) return { error: `postflop[${index}] is on ${action.street} without its board cards` };
     const context = setup.contextAt(prior, streets[street]);
+    // The table helper still offers a lone player (or the only one with chips) an action; the hand is already over.
+    const live = setup.activeSeats.filter(seat => !context.foldedSeats.has(seat));
+    if (live.length <= 1 || isRunout(context, live)) return { error: `postflop[${index}] acts after the betting is over` };
     if (nextPostflopActor(context, setup.order) !== action.seat) return { error: `postflop[${index}] is out of turn` };
     const result = validatePostflopActionV2(context, action.seat, action.type, action.amount);
     if (!result.valid) return { error: `postflop[${index}]: ${result.message}` };
@@ -69,6 +72,17 @@ function isRunout(context: PostflopContext, liveSeats: number[]) {
   return actionable.length <= 1 && liveSeats.every(seat => context.allInSeats.has(seat) || (context.contributions.get(seat) ?? 0) === context.currentBet);
 }
 
+/** Chips each seat put in over the whole hand: preflop plus the final amount on each postflop street. */
+function totalContributions(record: HandRecordV1, preflopState: BettingState) {
+  const totals = record.seats.map(seat => preflopState.contributions.get(seat.seat) ?? 0);
+  for (const street of streets) {
+    const final = new Map<number, number>();
+    for (const action of record.postflop) if (action.street === street && action.type !== "fold" && action.type !== "check") final.set(action.seat, action.amount);
+    for (const [seat, amount] of final) totals[seat] += amount;
+  }
+  return totals;
+}
+
 function bestHolders(record: HandRecordV1, liveSeats: number[]): number[] | null {
   const board = record.board.map(parseCard) as Card[];
   const scores = liveSeats.map(seat => {
@@ -80,20 +94,27 @@ function bestHolders(record: HandRecordV1, liveSeats: number[]): number[] | null
   return liveSeats.filter((_, index) => scores[index] === best);
 }
 
-function checkWinners(record: HandRecordV1, end: HandEnd): string | null {
+function checkWinners(record: HandRecordV1, end: HandEnd, preflopState: BettingState): string | null {
   if (!end.finished) return null;
   if (record.winners.some(seat => !end.liveSeats.includes(seat))) return "winners include a seat that folded";
   if (!end.showdown) return record.winners.length === 1 && record.winners[0] === end.liveSeats[0] ? null : "winners must be the last player left";
-  // The best hand always wins at least part of the main pot, which every live player is in.
   const best = bestHolders(record, end.liveSeats);
-  return best && !best.some(seat => record.winners.includes(seat)) ? "winners leave out the best shown hand" : null;
+  if (!best) return null;
+  // The best hand always wins at least part of the main pot, which every live player is in.
+  if (!best.some(seat => record.winners.includes(seat))) return "winners leave out the best shown hand";
+  // When the best hands covered everyone, there are no side pots for anyone else to win.
+  const totals = totalContributions(record, preflopState);
+  const covered = best.every(seat => end.liveSeats.every(other => totals[seat] >= totals[other]));
+  const exact = record.winners.length === best.length && best.every(seat => record.winners.includes(seat));
+  return covered && !exact ? "winners must be exactly the best shown hands" : null;
 }
 
 /**
  * Replays a parsed record through the same validators as the table helper, so only legal action sequences are
- * stored, and reports whether and how the hand ended.
+ * stored, and reports whether and how the hand ended. `checkWinners: false` skips the winner check, for a UI that
+ * needs to know who is still in before the winners are chosen.
  */
-export function replayHandRecord(record: HandRecordV1): ReplayResult {
+export function replayHandRecord(record: HandRecordV1, options: { checkWinners: boolean } = { checkWinners: true }): ReplayResult {
   const preflopError = replayPreflop(record);
   if (preflopError) return invalid(preflopError);
   const positions = record.seats.map(seat => seat.position);
@@ -115,8 +136,8 @@ export function replayHandRecord(record: HandRecordV1): ReplayResult {
     const liveSeats = setup.activeSeats.filter(seat => !context.foldedSeats.has(seat));
     const showdown = liveSeats.length > 1 && (isRunout(context, liveSeats) || (street === "river" && nextPostflopActor(context, setup.order) === null));
     const pending = liveSeats.length <= 1 ? "" : !showdown ? "the hand has not reached showdown" : record.board.length < 5 ? "the board needs five cards for showdown" : "";
-    end = { finished: pending === "", pending, endStreet: street, showdown, liveSeats };
+    end = { finished: pending === "", pending, endStreet: showdown ? "river" : street, showdown, liveSeats };
   }
-  const winnerError = checkWinners(record, end);
+  const winnerError = options.checkWinners ? checkWinners(record, end, preflopState) : null;
   return winnerError ? invalid(winnerError) : { ok: true, end, preflopState };
 }

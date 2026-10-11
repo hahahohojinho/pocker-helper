@@ -118,3 +118,12 @@ describe("resolveProfileDbPath", () => {
     spy.mockRestore();
   });
 });
+
+describe("isAllowedLocalHost", () => {
+  it("accepts loopback and configured hosts only, rejecting malformed headers", async () => {
+    const { isAllowedLocalHost } = await import("../local-api-guard");
+    expect(["localhost:3000", "127.0.0.1", "[::1]:3000"].map(host => isAllowedLocalHost(host, {}))).toEqual([true, true, true]);
+    expect(["evil.test", "[::1]evil", "localhost:abc", "localhost.evil.test", ""].map(host => isAllowedLocalHost(host, {}))).toEqual([false, false, false, false, false]);
+    expect(isAllowedLocalHost("192.168.0.5:3000", { RANGELAB_ALLOWED_HOSTS: "192.168.0.5, pc.lan" })).toBe(true);
+  });
+});
