@@ -4,7 +4,7 @@
 [workspace]
 members = ["dcfr-wasm"]
 # Built separately with real rayon and memmap2 (dcfr-adapter) or upstream's own tooling (dcfr-solver).
-exclude = ["dcfr-adapter", "dcfr-solver"]
+exclude = ["dcfr-adapter", "dcfr-solver", "rangelab-preflop"]
 resolver = "2"
 
 # wasm32 has no threads or mmap: swap in sequential rayon and heap-backed memmap2 without editing the submodule.

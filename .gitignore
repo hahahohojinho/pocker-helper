@@ -46,6 +46,8 @@ next-env.d.ts
 /tools/texassolver/*.zip
 /artifacts/*.png
 /artifacts/dcfr-preflop/
+/artifacts/preflop/
+/tools/*/target-dev/
 /tools/dcfr-adapter/target/
 /tools/target/
 /tools/*/target/

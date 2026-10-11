@@ -53,6 +53,9 @@ jobs:
       - name: Native adapter tests (real rayon, --json mode)
         working-directory: tools/dcfr-adapter
         run: cargo test --release --locked
+      - name: Preflop solver tests (6/8-max rules, export)
+        working-directory: tools/rangelab-preflop
+        run: cargo test --release --locked
       - name: Rebuild wasm, checksum, and license notices
         run: node scripts/build-solver-wasm.mjs
       - name: Fail if the committed module is stale

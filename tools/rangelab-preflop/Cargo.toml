@@ -1,0 +1,18 @@
+[package]
+name = "rangelab-preflop"
+version = "0.1.0"
+edition = "2021"
+description = "6-max/8-max preflop MCCFR solver for RangeLab, generalized from dcfr-solver's preflop module (MIT)."
+publish = false
+
+[dependencies]
+dcfr-solver = { path = "../dcfr-solver" }
+rand = { version = "0.8", features = ["small_rng"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+byteorder = "1"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
