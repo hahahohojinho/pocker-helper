@@ -33,12 +33,12 @@ export interface Classification {
 }
 
 // Population priors are heuristics for typical online pools, to be recalibrated against recorded data.
-const PRIORS: Record<ProfileTableSize, { vpip: number; pfr: number; threeBet: number }> = {
+export const PRIORS: Record<ProfileTableSize, { vpip: number; pfr: number; threeBet: number }> = {
   6: { vpip: 0.25, pfr: 0.19, threeBet: 0.07 },
   8: { vpip: 0.21, pfr: 0.16, threeBet: 0.06 },
 };
-const PRIOR_STRENGTH = 20;
-const MIN_HANDS = 20;
+export const PRIOR_STRENGTH = 20;
+export const MIN_HANDS = 20;
 const CONFIDENT_HANDS = 100;
 /** 8-max ranges are tighter, so VPIP thresholds scale down with the table. */
 const VPIP_SCALE: Record<ProfileTableSize, number> = { 6: 1, 8: 0.85 };

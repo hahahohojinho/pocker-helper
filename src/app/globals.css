@@ -103,3 +103,24 @@ input,select { width:100%; height:48px; margin-top:9px; padding:0 13px; color:va
 .showdown-inputs label span { width:60px; }
 .recorder-buttons { display:flex; gap:6px; margin-top:10px; }
 .profile-message { display:block; margin-top:8px; color:#9da89f; }
+
+/* Exploit advice (kept visually apart from the GTO answer) */
+.exploit-card { margin-top:14px; padding:12px; border:1px solid #ff7a62; background:#1a1210; font-size:10px; color:#d9c8c3; }
+.exploit-head { display:flex; gap:8px; align-items:center; }
+.exploit-head b { color:#ffb08f; font:700 9px/1 monospace; letter-spacing:.1em; }
+.exploit-head span { color:#2b100b; background:#ff7a62; padding:2px 5px; font:700 8px/1 monospace; }
+.exploit-head em { margin-left:auto; color:#9a8a85; font-style:normal; font-size:9px; }
+.exploit-card h3 { margin:8px 0; font-size:18px; color:#fff1ec; }
+.exploit-evs { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; }
+.exploit-evs span { border:1px solid #3a2a26; padding:6px; }
+.exploit-evs span.best { border-color:#ff7a62; }
+.exploit-evs small,.exploit-evs b { display:block; }
+.exploit-evs small { color:#9a8a85; font-size:9px; }
+.exploit-evs b { margin-top:3px; font-size:12px; }
+.exploit-card details { margin-top:8px; }
+.exploit-card summary { cursor:pointer; color:#c9b5ae; }
+.exploit-card ul { margin:6px 0 0 14px; padding:0; }
+.exploit-card li { margin-top:3px; }
+.exploit-card li.muted { color:#7a6b66; }
+.exploit-card .exploit-assumptions li { color:#9a8a85; }
+.exploit-card p { margin-top:6px; color:#9a8a85; font-size:9px; }
