@@ -77,3 +77,8 @@
 - `/api/profile/*`: loopback host allowlist (DNS rebinding), same-origin JSON writes, 64KB streamed body cap, `ALLOW_LOCAL_PROFILE_API` in production, Korean user messages with details only in server logs. `dev`/`start` now bind 127.0.0.1 (security review: a LAN client could spoof `Host: localhost`); `dev:lan`/`start:lan` keep the old behavior.
 - UI: seat assignment panel (persisted per table size in localStorage), per-seat tendency badge, hand recorder in the postflop panel (shown cards, winners, save), and "next hand" rotating players, hero, and stacks with the button. Known limit: seat coordinates are tied to positions, so players move around the drawn table between hands.
 - Review fixes before merge: replay rejected actions after the betting ended (they inflated AF), blinds no longer count as cold callers, limp-vs-iso counts only the response to the iso raise, winners must be exactly the best shown hands when those covered everyone, playedAt stored canonically, migration race and rollback masking.
+
+### 6-max preflop packs committed
+- `public/data/preflop/6max-{20,40,60,100,150}bb.json` (100M iterations each, after the all-in tax fix). RFI widths and model caveats are in docs/DCFR_PREFLOP.md. Browser check: the 6-max table loads the 100bb pack, switches to the 20bb pack when the stack changes, and labels the decision "SOLVED PACK".
+- `src/lib/preflop-packs.data.test.ts` keeps committed packs loadable and sane in CI. `MAX_PACK_CHARS` lowered from 20M to 4M now that real sizes are known (largest 6-max pack 0.56 MB; security review MEDIUM).
+- Why BTN opens wider than common charts: the generator approximates postflop play with showdown equity and a position tax; upstream's own 100bb data shows the same (BTN 71.6% there vs 61.7% here).

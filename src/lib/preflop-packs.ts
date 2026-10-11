@@ -20,7 +20,8 @@ export interface PreflopPack { id:string;license:string;generatedAt:string;table
 
 const CONTRACT="rangelab.preflop_pack.v1";
 const PERMILLE=1000;
-const MAX_PACK_CHARS=20_000_000;
+/** The largest 6-max pack is 0.56 MB; 8-max packs have more positions, so this leaves room for them. */
+const MAX_PACK_CHARS=4_000_000;
 const MAX_SPOTS=50_000;
 /** Packs stop at facing a 4-bet; later raises are not in them. */
 const MAX_PACK_RAISES=3;

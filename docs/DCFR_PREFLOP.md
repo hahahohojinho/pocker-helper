@@ -73,3 +73,20 @@ The runner trains each table/stack job with atomic checkpoints every 5M iteratio
 The exporter walks the averaged strategy with per-player hand reach and emits every decision spot reached at least 0.01% of the time, up to facing a 4-bet, keyed like the app's `derivePreflopSpotContext` (position, scenario, opener, latest aggressor, callers, limpers, current bet size). Forced all-in calls count as calls. The app loads the pack for the current table size and nearest stack bucket and prefers it over the bundled RFI dataset and the baseline heuristic; spots without a pack match fall back as before.
 
 Model limits stay the same as upstream: 169 hand classes, sampled-board equity with a heads-up out-of-position pot tax (multiway pots use raw equity), and only the small blind may limp, so limp/isolation spots other than SB-vs-BB come from the tendency-based subgame work planned next.
+
+### Committed 6-max packs (2026-10-11)
+
+`public/data/preflop/6max-{20,40,60,100,150}bb.json`: 100M iterations each, seed 42, generator revision in each pack's provenance. Checked by `src/lib/preflop-packs.data.test.ts` (parses with the app's validator; no AA folds in spots reached at least 1% of the time; RFI width non-decreasing UTG -> BTN; UTG folds 72o).
+
+| Stack | UTG | HJ | CO | BTN | SB (raise) | Spots |
+|---|---|---|---|---|---|---|
+| 20bb | 13.1% | 18.1% | 24.5% | 33.0% | 24.2% | 243 |
+| 40bb | 14.2% | 21.7% | 29.8% | 41.3% | 22.3% | 312 |
+| 60bb | 13.9% | 23.0% | 33.9% | 50.5% | 26.1% | 320 |
+| 100bb | 13.8% | 24.1% | 38.2% | 61.7% | 30.7% | 312 |
+| 150bb | 12.5% | 23.3% | 40.1% | 70.9% | 31.1% | 301 |
+
+Model limits to keep in mind when reading these:
+
+- Late-position opens are wider than common full-game solver charts (BTN 100bb ~62% vs ~43%). The upstream model has no postflop play: showdown equity plus a positional pot tax stands in for it, which makes stealing more profitable. Upstream's own 100bb RFI shows the same shape even more strongly (BTN 71.6%, `src/data/dcfr-6max-100bb-rfi-v1.json`).
+- Spots reached less than about 0.3% of the time (e.g. BB facing a 3-bet after a squeeze) are still noisy at 100M iterations; AA can show a few percent folds there. The app uses them as solved data; treat rare-line frequencies as rough.
