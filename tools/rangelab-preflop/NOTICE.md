@@ -11,6 +11,7 @@ Changes from the original:
 - Player count (6 or 8) and starting stack are parameters instead of the `NUM_PLAYERS = 6` constant and the
   hard-coded 200-chip (100bb) stack; blind seats and the postflop position ranking follow the player count.
 - Bet sizes come from a per-stack table; short stacks may open-shove.
+- The heads-up showdown position tax is not applied to all-in pots, where no streets remain to realize position.
 - A big blind raising over limpers sizes the raise as the open size plus one big blind per limper (the original
   reused the 2.5bb open size).
 - Training runs in chunks with atomic checkpoints and can resume from a checkpoint.

@@ -2,7 +2,7 @@
 
 use dcfr_solver::card::{card, Hand};
 use rangelab_preflop::game::{Action, NodeType, State, TableSpec};
-use rangelab_preflop::trainer::{Blueprint, Trainer};
+use rangelab_preflop::trainer::{showdown_tax, Blueprint, Trainer};
 
 fn six_max() -> TableSpec {
     TableSpec::for_stack(6, 100).unwrap()
@@ -160,4 +160,18 @@ fn training_counts_iterations_and_blueprints_round_trip() {
     assert!(Blueprint::read_from(&mut trailing.as_slice()).is_err());
     let truncated = &bytes[..bytes.len() - 3];
     assert!(Blueprint::read_from(&mut &truncated[..]).is_err());
+}
+
+#[test]
+fn position_tax_applies_only_when_postflop_play_remains() {
+    let spec = TableSpec::for_stack(6, 20).unwrap();
+    // Button shoves and the big blind calls: no streets are left to play, so position is worth nothing.
+    let shove = apply_all(State::new(&spec), &[Action::Fold, Action::Fold, Action::Fold, Action::AllIn, Action::Fold, Action::Call]);
+    assert!(matches!(shove.node_type(), NodeType::TerminalShowdown));
+    assert!(showdown_tax(&spec, &shove, 0.2).is_none());
+    // Button opens to 2bb and the big blind calls: the pot of 9 chips is taxed 20% x gap 4 / 5.
+    let open = apply_all(State::new(&spec), &[Action::Fold, Action::Fold, Action::Fold, Action::Raise(4), Action::Fold, Action::Call]);
+    let (ip, oop, amount) = showdown_tax(&spec, &open, 0.2).unwrap();
+    assert_eq!((ip, oop), (3, 5));
+    assert!((amount - 1.44).abs() < 1e-4);
 }

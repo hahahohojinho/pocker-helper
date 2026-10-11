@@ -144,6 +144,24 @@ impl Blueprint {
     }
 }
 
+/// Heads-up showdowns move a share of the pot to the player in position (upstream model), scaled by their
+/// positional gap. Returns (in position, out of position, chips). Upstream taxes every heads-up showdown; here an
+/// all-in pot is exempt, since no streets remain where position could be realized. Taxing shoves made calling
+/// them far too costly (at 20bb the big blind folded A5s to a 100% button shove).
+pub fn showdown_tax(spec: &TableSpec, state: &State, oop_pot_tax: f32) -> Option<(usize, usize, f32)> {
+    if oop_pot_tax <= 0.001 || state.active_count() != 2 {
+        return None;
+    }
+    let active: Vec<usize> = (0..state.n).filter(|&i| !state.folded[i]).collect();
+    if active.iter().any(|&i| state.stacks[i] == 0) {
+        return None;
+    }
+    let (ip, oop) = if spec.postflop_rank(active[0]) > spec.postflop_rank(active[1]) { (active[0], active[1]) } else { (active[1], active[0]) };
+    let gap = (spec.postflop_rank(ip) - spec.postflop_rank(oop)) as f32;
+    let max_gap = (spec.players - 1) as f32;
+    Some((ip, oop, state.pot() as f32 * oop_pot_tax * gap / max_gap))
+}
+
 pub struct Trainer {
     pub blueprint: Blueprint,
     rng: SmallRng,
@@ -210,16 +228,7 @@ impl Trainer {
     fn showdown_value(&mut self, state: &State, traverser: u8) -> f32 {
         let spec = &self.blueprint.spec;
         let dead = state.holes[..state.n].iter().fold(Hand::new(), |dead, &hole| dead.union(hole));
-        // Heads-up showdowns move a share of the pot to the player in position (upstream model).
-        let tax = if self.oop_pot_tax > 0.001 && state.active_count() == 2 {
-            let active: Vec<usize> = (0..state.n).filter(|&i| !state.folded[i]).collect();
-            let (ip, oop) = if spec.postflop_rank(active[0]) > spec.postflop_rank(active[1]) { (active[0], active[1]) } else { (active[1], active[0]) };
-            let gap = (spec.postflop_rank(ip) - spec.postflop_rank(oop)) as f32;
-            let max_gap = (spec.players - 1) as f32;
-            Some((ip, oop, state.pot() as f32 * self.oop_pot_tax * gap / max_gap))
-        } else {
-            None
-        };
+        let tax = showdown_tax(spec, state, self.oop_pot_tax);
         let mut total = 0.0;
         for _ in 0..self.board_samples {
             let board = self.sample_board(dead);
