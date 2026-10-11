@@ -6,11 +6,10 @@ Last updated: 2026-10-11
 
 - Roadmap phases 1-4 done (see "Real-time roadmap" below). Phase 5a (multiway model EV) done. Phase 5b (flop library) code done, library not generated yet. All committed locally, not pushed.
 - Flop library next steps (only when the CPU is free; one flop uses every core):
-  1. Rebuild the wasm module: `npm run solver:wasm` (dcfr-core changed, CI compares the committed wasm with a rebuild) and commit `public/solver`.
-  2. `cargo build --release` in `tools/dcfr-adapter`.
-  3. Pilot: `node scripts/build-flop-library.mjs --scenarios 6max-100bb-srp-btn-bb --limit 50`, check per-flop time and exploitability in `artifacts/flop-library/logs/`.
-  4. Full pass (~6 h per scenario at 10 s per flop), then `--redo-above 0.5 --budget-ms 30000`.
-  5. Dev E2E: BTN open 2.5 / BB call at 6-max 100bb shows the FLOP LIBRARY card; any other line shows the miss reason. Confirm `next start` serves files added after the build.
+  1. (Done 2026-10-11: wasm rebuilt for the dcfr-core change.) `cargo build --release` in `tools/dcfr-adapter`.
+  2. Pilot: `node scripts/build-flop-library.mjs --scenarios 6max-100bb-srp-btn-bb --limit 50`, check per-flop time and exploitability in `artifacts/flop-library/logs/`.
+  3. Full pass (~6 h per scenario at 10 s per flop), then `--redo-above 0.5 --budget-ms 30000`.
+  4. Dev E2E: BTN open 2.5 / BB call at 6-max 100bb shows the FLOP LIBRARY card; any other line shows the miss reason. Confirm `next start` serves files added after the build.
 - 8-max packs: 20/40/60bb exported (untracked in `public/data/preflop/`), 100bb/150bb running.
 - Running in the background: 8-max preflop packs (`node scripts/run-preflop-matrix.mjs "6:20,6:40,6:60,6:100,6:150@5;8:20,8:40,8:60,8:100,8:150@2"`, logs in `artifacts/preflop/logs/8max-*.log`). 6-max is finished and committed. If the PC restarted or the runner was killed, resume with only the 8-max group: `node scripts/run-preflop-matrix.mjs "8:20,8:40,8:60,8:100,8:150@2"`. Unfinished jobs continue from their last 5M-iteration checkpoint; finished ones are only re-exported (do not re-run the 6-max group: it would rewrite the committed 6-max packs with a new date).
 - When all five 8-max packs exist in `public/data/preflop/`: `npx vitest run src/lib/preflop-packs.data.test.ts`, check the largest size against `MAX_PACK_CHARS` (4M) in `src/lib/preflop-packs.ts`, add an 8-max table to docs/DCFR_PREFLOP.md, commit.

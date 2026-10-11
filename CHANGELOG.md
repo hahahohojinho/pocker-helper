@@ -8,7 +8,7 @@
 - Why exact matches only: an approximate board (e.g. K82 for K72) turns some combos from top pair into air, so per-combo answers can be arbitrarily wrong. Why gitignored: about 80 MB per scenario, generated on the user's PC.
 - Decided against shipping in git and against nearest-stack matching for now (hit rate is limited to the pack's open sizes and exact 100bb stacks; tolerance is a v2 question).
 - Review fixes: solution files carry a `specHash` of their inputs, checked by the generator (resume, index) and the app, so a regenerated manifest can never serve answers solved for old ranges; the index is built from an in-memory record instead of re-reading every file; `--redo-above` keeps the better of the old and new solve; an adapter that dies before reading stdin fails only that flop.
-- The library data is not generated yet (needs ~6 h of CPU per scenario) and the wasm module must be rebuilt because dcfr-core changed.
+- The library data is not generated yet (needs ~6 h of CPU per scenario). The wasm module was rebuilt for the dcfr-core change (engine tests pass).
 
 ### Split pots among every tied player
 - `calculateEquity` and `calculateRangeEquity` now give a tie 1/(players tied for the best hand) instead of always 1/2; the margin of error uses the per-sample second moment of that share.
