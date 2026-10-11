@@ -51,3 +51,9 @@ next-env.d.ts
 /tools/dcfr-adapter/target/
 /tools/target/
 /tools/*/target/
+
+# Local profile database (normally outside the repo; see RANGELAB_DB_PATH)
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite.bak-v*
