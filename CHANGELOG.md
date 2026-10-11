@@ -51,3 +51,6 @@
 ### Native multi-threaded DCFR path
 - New `tools/dcfr-core` crate shared by the wasm module and `rangelab-dcfr-adapter`; the adapter gained `--json` (stdin) with the same request/envelope. `/api/solver` accepts `{kind:"dcfr-json"}` when the adapter is configured and advertises `nativeJson`; the panel prefers it and falls back to the browser. Why: flop solves are ~3x faster end to end (E2E 52s vs 145s) and converge further (flop 60 iterations at 0.04% vs 20 at ~1%).
 - Hardening from review: body read is streamed with a 300KB cap, adapter completion waits for stdio `close`, stdin EPIPE no longer masks the adapter's error envelope, the child gets an allowlisted environment, and CI runs the core and adapter tests with checkout credentials disabled.
+
+### CI first run
+- The first run failed in the wasm rebuild: after extracting `dcfr-core`, the license notice generator required a license file for every path crate. Repository crates are now listed as RangeLab code. Local verification had missed it because the build log was filtered for lowercase `error`. The second run passed on Ubuntu and Windows, with the rebuilt wasm identical to the committed one.
