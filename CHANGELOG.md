@@ -44,3 +44,6 @@
 ### Reproducible solver wasm and CI
 - The wasm build remaps source paths (`/rangelab`, `/cargo`), strips the name section, and uses a Cargo workspace rooted at `tools/` (moving `Cargo.lock` to `tools/Cargo.lock`). Why: the module embedded the local user path and its hash changed with the checkout location; two clones now produce the same hash.
 - Added `.github/workflows/ci.yml`: lint, vitest, and build on Ubuntu; Rust tests plus a wasm rebuild that must match the committed `public/solver` on Windows (remapped paths keep Windows separators).
+
+### Solve progress and cancel
+- The wasm module imports `env.progress(completed, total)` and reports at most ~100 times per solve; the worker forwards it and the panel shows `SOLVING n/m` (then "마무리 중…" during the exploitability pass) with a cancel button that terminates the worker. Why: flop solves take one to two minutes with no feedback.

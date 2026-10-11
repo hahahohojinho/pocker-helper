@@ -1,4 +1,4 @@
-use rangelab_dcfr_wasm::solve_json;
+use rangelab_dcfr_wasm::{solve_json, solve_json_with_progress};
 use serde_json::{json, Value};
 
 fn request(overrides: Value) -> String {
@@ -27,6 +27,17 @@ fn rejects_out_of_range_limits() {
     assert!(error_of(json!({"hero": "JsQh"})).contains("board"));
     assert!(error_of(json!({"oopRange": "ZZ"})).contains("OOP range"));
     assert!(error_of(json!({"unexpected": 1})).contains("invalid request"));
+}
+
+#[test]
+fn reports_bounded_monotonic_progress_ending_at_total() {
+    let mut reports = Vec::new();
+    let response: Value = serde_json::from_str(&solve_json_with_progress(&request(json!({"iterations": 250})), &mut |done, total| reports.push((done, total)))).unwrap();
+    assert_eq!(response["ok"], true, "{response}");
+    assert_eq!(reports.first(), Some(&(0, 250)));
+    assert_eq!(reports.last(), Some(&(250, 250)));
+    assert!(reports.windows(2).all(|pair| pair[0].0 <= pair[1].0), "{reports:?}");
+    assert!(reports.len() <= 102, "{} reports", reports.len());
 }
 
 #[test]

@@ -82,9 +82,17 @@ fn best_response(action_evs: &[(Action, [f32; dcfr_solver::card::NUM_COMBOS])], 
     action_evs.iter().enumerate().map(|(index, (action, _))| (*action, if Some(index) == best { 1.0 } else { 0.0 })).collect()
 }
 
-pub fn solve(request: &SolveRequest) -> Result<Value, String> {
+/// Upper bound on progress reports per solve, so the browser worker posts at most about this many messages.
+const MAX_PROGRESS_REPORTS: u32 = 100;
+
+/// Solves the request, reporting `(completed, total)` iterations: once with 0 before the tree is built, then at
+/// most MAX_PROGRESS_REPORTS more times, always ending with `(total, total)`.
+pub fn solve(request: &SolveRequest, on_progress: &mut dyn FnMut(u32, u32)) -> Result<Value, String> {
+    let total = request.iterations;
+    on_progress(0, total);
     let mut solver = SubgameSolver::new(subgame_config(request));
-    solver.solve();
+    let every = total.div_ceil(MAX_PROGRESS_REPORTS).max(1);
+    solver.solve_with_report_interval(every, |done, _| on_progress(done.min(total), total));
     let history = &request.history;
     let player = solver.get_player(history).ok_or("history does not reach a decision node in the solver tree")?;
     let node_strategy = solver.get_strategy(history).ok_or("strategy is unavailable at the history node")?;

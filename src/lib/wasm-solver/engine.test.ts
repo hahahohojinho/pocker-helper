@@ -17,6 +17,12 @@ describe.skipIf(!existsSync(wasmPath))("in-browser DCFR engine (real wasm)",()=>
     expect(result.actions.map(item=>item.action).sort()).toEqual(["bet","check"]);
     expect(result.exploitability).toBeLessThan(1);
   });
+  it("reports progress up to the iteration count",async()=>{
+    const reports:[number,number][]=[];
+    (await engine).solve(buildWasmSolveRequest({...river,iterations:120}),(done,total)=>reports.push([done,total]));
+    expect(reports[0]).toEqual([0,120]);
+    expect(reports.at(-1)).toEqual([120,120]);
+  });
   it("reaches an IP node facing an observed non-default raise",async()=>{
     const history=[{role:"oop",action:"bet",amount:7},{role:"ip",action:"raise",amount:25},{role:"oop",action:"raise",amount:61}] as const;
     const result=parseSolverResult((await engine).solve(buildWasmSolveRequest({...river,history:[...history]})));

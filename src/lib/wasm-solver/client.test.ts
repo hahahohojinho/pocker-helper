@@ -10,7 +10,7 @@ class FakeWorker{
   posted:WasmWorkerRequest[]=[];
   terminate=vi.fn();
   postMessage(message:WasmWorkerRequest){this.posted.push(message);}
-  reply(response:{ok:true;raw:string}|{ok:false;error:string},id=this.posted[0].id){this.onmessage?.({data:{...response,id}} as MessageEvent<WasmWorkerResponse>);}
+  reply(response:{ok:true;raw:string}|{ok:false;error:string}|{progress:{done:number;total:number}},id=this.posted[0].id){this.onmessage?.({data:{...response,id}} as MessageEvent<WasmWorkerResponse>);}
 }
 
 afterEach(()=>vi.useRealTimers());
@@ -23,6 +23,25 @@ describe("wasm solver client",()=>{
     worker.reply({ok:true,raw:'{"source":"dcfr-wasm"}'});
     await expect(result).resolves.toBe('{"source":"dcfr-wasm"}');
     expect(worker.terminate).toHaveBeenCalledOnce();
+  });
+  it("forwards progress without settling, then resolves",async()=>{
+    const worker=new FakeWorker();const onProgress=vi.fn();
+    const result=runWasmSolve(request,{timeoutMs:1000,onProgress,createWorker:()=>worker as unknown as Worker});
+    worker.reply({progress:{done:0,total:20}});
+    worker.reply({progress:{done:10,total:20}});
+    worker.reply({progress:{done:5,total:20}},-1);
+    expect(onProgress.mock.calls).toEqual([[0,20],[10,20]]);
+    expect(worker.terminate).not.toHaveBeenCalled();
+    worker.reply({ok:true,raw:"{}"});
+    await expect(result).resolves.toBe("{}");
+  });
+  it("ignores progress that arrives after cancellation",async()=>{
+    const worker=new FakeWorker();const onProgress=vi.fn();const controller=new AbortController();
+    const result=runWasmSolve(request,{timeoutMs:1000,onProgress,signal:controller.signal,createWorker:()=>worker as unknown as Worker});
+    controller.abort();
+    worker.reply({progress:{done:3,total:20}});
+    await expect(result).rejects.toThrow(/cancelled/);
+    expect(onProgress).not.toHaveBeenCalled();
   });
   it("rejects with the solver error and ignores replies for other requests",async()=>{
     const worker=new FakeWorker();

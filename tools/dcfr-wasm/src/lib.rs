@@ -14,7 +14,12 @@ pub use request::SolveRequest;
 
 /// Solves a JSON request and returns the JSON envelope; usable natively for tests and benchmarks.
 pub fn solve_json(request_json: &str) -> String {
-    let outcome = SolveRequest::parse(request_json).and_then(|request| solve::solve(&request));
+    solve_json_with_progress(request_json, &mut |_, _| {})
+}
+
+/// Like `solve_json`, calling `on_progress(completed, total)` as iterations finish.
+pub fn solve_json_with_progress(request_json: &str, on_progress: &mut dyn FnMut(u32, u32)) -> String {
+    let outcome = SolveRequest::parse(request_json).and_then(|request| solve::solve(&request, on_progress));
     match outcome {
         Ok(result) => json!({"ok": true, "result": result}).to_string(),
         Err(error) => json!({"ok": false, "error": error}).to_string(),
@@ -51,11 +56,27 @@ pub unsafe extern "C" fn dealloc(pointer: *mut u8, len: usize) {
 pub unsafe extern "C" fn solve(pointer: *const u8, len: usize) {
     let bytes = std::slice::from_raw_parts(pointer, len);
     let response = match std::str::from_utf8(bytes) {
-        Ok(text) => solve_json(text),
+        Ok(text) => solve_json_with_progress(text, &mut report_progress),
         Err(_) => json!({"ok": false, "error": "request is not UTF-8"}).to_string(),
     };
     RESULT.with(|result| *result.borrow_mut() = response.into_bytes());
 }
+
+#[cfg(target_arch = "wasm32")]
+#[link(wasm_import_module = "env")]
+extern "C" {
+    /// Provided by the JS host when instantiating the module.
+    fn progress(completed: u32, total: u32);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn report_progress(completed: u32, total: u32) {
+    // SAFETY: a plain JS import taking two integers; it cannot access wasm memory.
+    unsafe { progress(completed, total) }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn report_progress(_completed: u32, _total: u32) {}
 
 #[no_mangle]
 pub extern "C" fn result_ptr() -> *const u8 {

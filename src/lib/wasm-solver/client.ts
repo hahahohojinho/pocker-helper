@@ -3,8 +3,8 @@ import type { WasmSolveRequest } from "./request";
 export const DEFAULT_WASM_URL="/solver/rangelab_dcfr_wasm.wasm";
 
 export interface WasmWorkerRequest { id:number;wasmUrl:string;request:WasmSolveRequest; }
-export type WasmWorkerResponse={id:number;ok:true;raw:string}|{id:number;ok:false;error:string};
-export interface WasmSolveOptions { timeoutMs:number;signal?:AbortSignal;wasmUrl?:string;createWorker?:()=>Worker; }
+export type WasmWorkerResponse={id:number;ok:true;raw:string}|{id:number;ok:false;error:string}|{id:number;progress:{done:number;total:number}};
+export interface WasmSolveOptions { timeoutMs:number;signal?:AbortSignal;wasmUrl?:string;onProgress?:(done:number,total:number)=>void;createWorker?:()=>Worker; }
 
 export const isWasmSolverSupported=()=>typeof WebAssembly==="object"&&typeof Worker==="function";
 
@@ -33,7 +33,8 @@ export function runWasmSolve(request:WasmSolveRequest,options:WasmSolveOptions):
     options.signal?.addEventListener("abort",onAbort,{once:true});
     worker.onmessage=(event:MessageEvent<WasmWorkerResponse>)=>{
       const response=event.data;
-      if(response.id!==id)return;
+      if(response.id!==id||settled)return;
+      if("progress" in response){options.onProgress?.(response.progress.done,response.progress.total);return;}
       finish(()=>response.ok?resolve(response.raw):reject(new Error(response.error)));
     };
     worker.onerror=(event:ErrorEvent)=>finish(()=>reject(new Error(event.message||"In-browser solver worker failed.")));

@@ -45,6 +45,7 @@ try{
   const expectsSolverEv=solverLabel.includes("DCFR EV")||solverLabel.includes("브라우저");
   if(!(await solverButton.isEnabled()))throw new Error("Solver button did not activate for heads-up flop Hero OOP.");
   await solverButton.click();
+  if(solverLabel.includes("브라우저"))await page.getByRole("button",{name:/SOLVING \d+\/\d+/}).waitFor({timeout:60000});
   await Promise.race([
     page.getByText("SOLVER STRATEGY",{exact:true}).waitFor({timeout:240000}),
     page.locator(".validation-message").waitFor({state:"visible",timeout:240000}).then(async()=>{throw new Error(`Local solver failed: ${await page.locator(".validation-message").innerText()}`);}),
@@ -57,6 +58,12 @@ try{
   await page.locator(".advance-street").click();
   await page.locator(".board-entry input").nth(3).fill("Kh");
   if(!(await page.locator(".local-solver-button").isEnabled()))throw new Error("Local solver button did not activate for a heads-up turn root.");
+  if(solverLabel.includes("브라우저")){
+    await page.locator(".local-solver-button").click();
+    await page.locator(".solver-cancel-button").click();
+    await page.getByText("Solver 실행을 취소했습니다.").waitFor({timeout:10000});
+    if(!(await page.locator(".local-solver-button").isEnabled()))throw new Error("Solver button did not re-enable after cancelling.");
+  }
   const potText=await page.locator(".postflop-status").innerText();
   const history=await page.locator(".history-strip").innerText();
   await page.screenshot({path:"artifacts/e2e-smoke.png",fullPage:true});

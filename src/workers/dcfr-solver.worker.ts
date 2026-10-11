@@ -10,7 +10,8 @@ self.onmessage=async(event:MessageEvent<WasmWorkerRequest>)=>{
   try{
     if(new URL(wasmUrl,self.location.origin).origin!==self.location.origin)throw new Error("Solver module must be served from this site.");
     engine??=fetch(wasmUrl).then(result=>{if(!result.ok)throw new Error(`Solver module download failed (HTTP ${result.status}).`);return WasmSolverEngine.load(result);});
-    response={id,ok:true,raw:(await engine).solve(request)};
+    const report=(completed:number,total:number)=>self.postMessage({id,progress:{done:completed,total}} satisfies WasmWorkerResponse);
+    response={id,ok:true,raw:(await engine).solve(request,report)};
   }catch(error){
     // A trap can leave wasm memory inconsistent, so the next solve starts from a fresh instance.
     engine=null;
