@@ -2,6 +2,7 @@
 //! Both take the same JSON request and return the same `{"ok":...}` envelope.
 
 mod estimate;
+mod nodes;
 mod request;
 mod run;
 mod solve;
@@ -9,6 +10,7 @@ mod solve;
 use serde_json::json;
 
 pub use estimate::{estimate, TreeEstimate};
+pub use nodes::{solve_nodes_json, MAX_NODES};
 pub use run::{plan_iterations, MIN_ITERATIONS};
 pub use request::{SolveRequest, MAX_REQUEST_BYTES};
 #[doc(hidden)]

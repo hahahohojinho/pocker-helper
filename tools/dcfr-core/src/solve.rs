@@ -9,7 +9,7 @@ use serde_json::{json, Value};
 
 use crate::estimate::{estimate, MAX_TREE_NODES};
 use crate::request::SolveRequest;
-use crate::run::{plan_iterations, run, StoppedBy};
+use crate::run::{plan_iterations, run, RunReport, StoppedBy};
 use crate::SolveOptions;
 
 const MIB: u64 = 1024 * 1024;
@@ -71,7 +71,7 @@ pub fn subgame_config(request: &SolveRequest) -> SubgameConfig {
 }
 
 /// UI category of a concrete solver action; a facing-bet node has Fold, so Bet means raise there.
-fn category(action: Action, actions: &[Action]) -> &'static str {
+pub(crate) fn category(action: Action, actions: &[Action]) -> &'static str {
     let facing_bet = actions.contains(&Action::Fold);
     match action {
         Action::Fold => "fold",
@@ -83,15 +83,23 @@ fn category(action: Action, actions: &[Action]) -> &'static str {
     }
 }
 
-fn best_response(action_evs: &[(Action, [f32; dcfr_solver::card::NUM_COMBOS])], hero_index: usize) -> Vec<(Action, f32)> {
+pub(crate) fn best_response(action_evs: &[(Action, [f32; dcfr_solver::card::NUM_COMBOS])], hero_index: usize) -> Vec<(Action, f32)> {
     let best = action_evs.iter().enumerate()
         .max_by(|left, right| left.1 .1[hero_index].total_cmp(&right.1 .1[hero_index]))
         .map(|(index, _)| index);
     action_evs.iter().enumerate().map(|(index, (action, _))| (*action, if Some(index) == best { 1.0 } else { 0.0 })).collect()
 }
 
-/// Solves the request within its optional time budget, reporting `(completed, total)` iterations.
-pub fn solve(request: &SolveRequest, options: SolveOptions, on_progress: &mut dyn FnMut(u32, u32)) -> Result<Value, String> {
+pub(crate) struct Solved {
+    pub solver: SubgameSolver,
+    pub report: RunReport,
+    pub total: u32,
+    pub work_units: u64,
+    pub tree_bytes: u64,
+}
+
+/// Checks the tree fits in memory, then runs the solve within the request's iteration cap and time budget.
+pub(crate) fn solve_tree(request: &SolveRequest, options: SolveOptions, on_progress: &mut dyn FnMut(u32, u32)) -> Result<Solved, String> {
     // Regret/strategy storage matches dcfr-solver within ~1%; per-node overhead is rounded up from measurements.
     let tree = estimate(request, options.max_tree_bytes).map_err(|counted| format!(
         "solver tree needs more than {} MB or {} nodes (limits {} MB, {} nodes); narrow the ranges or use fewer bet sizes and raises",
@@ -109,18 +117,25 @@ pub fn solve(request: &SolveRequest, options: SolveOptions, on_progress: &mut dy
     config.iterations = total;
     let mut solver = SubgameSolver::new(config);
     let report = run(&mut solver, total, request.time_budget_ms, on_progress);
+    Ok(Solved { solver, report, total, work_units, tree_bytes: tree.bytes })
+}
+
+/// Solves the request within its optional time budget, reporting `(completed, total)` iterations.
+pub fn solve(request: &SolveRequest, options: SolveOptions, on_progress: &mut dyn FnMut(u32, u32)) -> Result<Value, String> {
+    let hero_index = request.hero_index.ok_or("hero is required")?;
+    let Solved { solver, report, total, work_units, tree_bytes } = solve_tree(request, options, on_progress)?;
     let history = &request.history;
     let player = solver.get_player(history).ok_or("history does not reach a decision node in the solver tree")?;
     let node_strategy = solver.get_strategy(history).ok_or("strategy is unavailable at the history node")?;
     let action_evs = solver.compute_action_evs(history, player).ok_or("action EVs are unavailable at the history node")?;
-    if !request.ranges[player as usize].weights[request.hero_index].is_finite() || request.ranges[player as usize].weights[request.hero_index] <= 0.0 {
+    if !request.ranges[player as usize].weights[hero_index].is_finite() || request.ranges[player as usize].weights[hero_index] <= 0.0 {
         return Err("hero combo is not in the acting player's range".into());
     }
     // The equilibrium can give Hero's combo zero reach on this line (e.g. a hand that always bets but checked);
     // its average strategy is then undefined, so report the best response by EV instead.
-    let reached = node_strategy.iter().find(|(combo, _)| *combo as usize == request.hero_index).map(|(_, strategy)| strategy.clone());
+    let reached = node_strategy.iter().find(|(combo, _)| *combo as usize == hero_index).map(|(_, strategy)| strategy.clone());
     let hero_unreached = reached.is_none();
-    let hero_strategy = reached.unwrap_or_else(|| best_response(&action_evs, request.hero_index));
+    let hero_strategy = reached.unwrap_or_else(|| best_response(&action_evs, hero_index));
     if action_evs.len() != hero_strategy.len() {
         return Err("strategy/action EV mismatch".into());
     }
@@ -128,7 +143,7 @@ pub fn solve(request: &SolveRequest, options: SolveOptions, on_progress: &mut dy
     let mut grouped: BTreeMap<&str, (f64, f64)> = BTreeMap::new();
     let mut details = Vec::new();
     for ((action, frequency), (_, evs)) in hero_strategy.iter().zip(action_evs.iter()) {
-        let ev = evs[request.hero_index] as f64;
+        let ev = evs[hero_index] as f64;
         let frequency = *frequency as f64;
         let key = category(*action, &actions);
         let entry = grouped.entry(key).or_insert((0.0, 0.0));
@@ -157,7 +172,7 @@ pub fn solve(request: &SolveRequest, options: SolveOptions, on_progress: &mut dy
         "stoppedBy": if total < request.iterations { StoppedBy::Deadline.as_str() } else { report.stopped_by.as_str() },
         "elapsedMs": report.elapsed_ms,
         "workUnits": work_units,
-        "treeBytes": tree.bytes,
+        "treeBytes": tree_bytes,
         "heroUnreached": hero_unreached,
     }))
 }

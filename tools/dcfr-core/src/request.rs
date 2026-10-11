@@ -24,7 +24,9 @@ const MAX_FRACTION_TERM: i32 = 1_000_000_000;
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RawRequest {
     pub board: String,
-    pub hero: String,
+    /// Required for a single-node solve; omitted when every combo of several nodes is exported.
+    #[serde(default)]
+    pub hero: Option<String>,
     pub oop_range: String,
     pub ip_range: String,
     /// Chips at the start of the street; the caller chooses the chip unit (RangeLab uses 1/100 BB).
@@ -56,7 +58,7 @@ pub struct RawStep {
 pub struct SolveRequest {
     pub board: Hand,
     pub street: Street,
-    pub hero_index: usize,
+    pub hero_index: Option<usize>,
     pub ranges: [Range; 2],
     pub pot: i32,
     pub stacks: [i32; 2],
@@ -76,7 +78,7 @@ fn fraction(value: [i32; 2], label: &str) -> Result<BetSize, String> {
     Ok(BetSize::Frac(numerator, denominator))
 }
 
-fn parse_step(step: &RawStep) -> Result<Action, String> {
+pub(crate) fn parse_step(step: &RawStep) -> Result<Action, String> {
     match (step.action.as_str(), step.size) {
         ("check", None) => Ok(Action::Check),
         ("call", None) => Ok(Action::Call),
@@ -150,7 +152,7 @@ impl SolveRequest {
         Ok(SolveRequest {
             board,
             street,
-            hero_index: parse_hero(&raw.hero, board)?,
+            hero_index: raw.hero.as_deref().map(|hero| parse_hero(hero, board)).transpose()?,
             ranges: [oop, ip],
             pot: raw.pot,
             stacks: raw.stacks,

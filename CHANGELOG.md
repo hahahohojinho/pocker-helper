@@ -2,6 +2,14 @@
 
 ## Unreleased - fix/solver-quality (2026-10-11)
 
+### Flop library code (phase 5b)
+- Precomputed heads-up flops answer instantly when the spot is exactly the stored one; otherwise the card shows why and the live solver answers. New `src/lib/flop-library` (suit canonicalization of the 1755 flop classes, strict file validation, lookup, cached loader with retry suppression), `FlopLibraryCard` in the postflop panel, the generator `scripts/build-flop-library.mjs`, and `src/data/flop-library-manifest.json` (BTN/CO/SB vs BB single-raised pots, 6-max 100bb).
+- dcfr-core: `hero` is optional in the request (single-node solves still require it), solving is shared through `solve_tree`, and `solve_nodes_json` exports every combo's strategy and per-action EV at up to 8 nodes from one solve, always measuring exploitability. The native adapter exposes it as `--json-nodes`.
+- Why exact matches only: an approximate board (e.g. K82 for K72) turns some combos from top pair into air, so per-combo answers can be arbitrarily wrong. Why gitignored: about 80 MB per scenario, generated on the user's PC.
+- Decided against shipping in git and against nearest-stack matching for now (hit rate is limited to the pack's open sizes and exact 100bb stacks; tolerance is a v2 question).
+- Review fixes: solution files carry a `specHash` of their inputs, checked by the generator (resume, index) and the app, so a regenerated manifest can never serve answers solved for old ranges; the index is built from an in-memory record instead of re-reading every file; `--redo-above` keeps the better of the old and new solve; an adapter that dies before reading stdin fails only that flop.
+- The library data is not generated yet (needs ~6 h of CPU per scenario) and the wasm module must be rebuilt because dcfr-core changed.
+
 ### Split pots among every tied player
 - `calculateEquity` and `calculateRangeEquity` now give a tie 1/(players tied for the best hand) instead of always 1/2; the margin of error uses the per-sample second moment of that share.
 - Why: a three-way chop counted as half the pot overstated multiway equity, which now feeds the multiway bet EV directly. Found comparing against a standalone Python equity engine that splits ties this way.

@@ -57,3 +57,7 @@ next-env.d.ts
 *.sqlite-wal
 *.sqlite-shm
 *.sqlite.bak-v*
+
+# Flop library: generated locally by scripts/build-flop-library.mjs (hundreds of MB)
+/public/data/flop-library/
+/artifacts/flop-library/
