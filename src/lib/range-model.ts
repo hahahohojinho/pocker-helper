@@ -6,6 +6,7 @@ import { normalizeStartingHand } from "./strategy-data";
 import { bestHandScore, parseCard } from "./equity";
 import { parseWeightedRange, type WeightedCombo } from "./range-equity";
 import type { PostflopActionType } from "./postflop-machine";
+import type { TableSize } from "./preflop-packs";
 
 export interface InferredRange {
   text: string;
@@ -15,7 +16,7 @@ export interface InferredRange {
 
 function actionProbability(type: PlayerAction["type"], amount: number, scenario: PreflopScenario, mix: ReturnType<typeof lookupStrategy>) {
   if (type === "fold") return mix.fold;
-  const benchmark = scenario === "unopened" ? 2.5 : scenario === "single-open" || scenario === "open-with-callers" ? 8 : scenario === "facing-3bet" ? 22 : 50;
+  const benchmark = scenario === "unopened" ? 2.5 : scenario === "limped" || scenario === "single-open" || scenario === "open-with-callers" ? 8 : scenario === "facing-3bet" ? 22 : 50;
   const pressure = Math.max(0, amount / benchmark - 1);
   if (["open", "3bet", "4bet", "5bet"].includes(type)) {
     const strengthTilt = 0.55 + mix.aggressive / 100;
@@ -30,15 +31,24 @@ function scenarioBefore(actions: PlayerAction[], index: number): PreflopScenario
 }
 
 /** Converts observed actions to a weighted baseline range; it is not solver GTO data. */
-export function inferRangeFromPreflop(input: { actions: PlayerAction[]; seat: number; position: Position; stack: number }): InferredRange {
+export function inferRangeFromPreflop(input: { actions: PlayerAction[]; seat: number; position: Position; stack: number; tableSize?: TableSize }): InferredRange {
   const observations = input.actions.map((action, index) => ({ action, index }))
     .filter(({ action }) => action.seat === input.seat && action.type !== "fold");
+  // An observed action a source gives zero probability for every hand (e.g. a UTG limp, which neither the solved
+  // pack nor the RFI dataset allows) carries no information from that source: fall back to the next source, and
+  // skip the observation when none explains it, so one off-model action cannot collapse the range to one hand.
+  const sourced = observations.flatMap(({ action, index }) => {
+    const scenario = scenarioBefore(input.actions, index);
+    const context = { position: input.position, stack: input.stack, scenario, ...derivePreflopSpotContext(input.actions.slice(0, index)) };
+    const explains = (tableSize: TableSize | undefined) => allStartingHands.some(hand => actionProbability(action.type, action.amount, scenario, lookupStrategy({ hand, ...context, tableSize })) > 0);
+    const options = input.tableSize === undefined ? [undefined] : [input.tableSize, undefined];
+    const chosen = options.findIndex(explains);
+    return chosen < 0 ? [] : [{ action, scenario, context: { ...context, tableSize: options[chosen] } }];
+  });
   const scores = allStartingHands.map(hand => {
     let score = 1;
-    for (const { action, index } of observations) {
-      const priorActions=input.actions.slice(0,index);
-      const mix = lookupStrategy({ hand, position: input.position, stack: input.stack, scenario: scenarioBefore(input.actions, index),...derivePreflopSpotContext(priorActions) });
-      score *= actionProbability(action.type, action.amount, scenarioBefore(input.actions, index), mix) / 100;
+    for (const { action, scenario, context } of sourced) {
+      score *= actionProbability(action.type, action.amount, scenario, lookupStrategy({ hand, ...context })) / 100;
     }
     return { hand, score };
   });

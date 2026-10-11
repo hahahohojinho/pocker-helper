@@ -1,5 +1,6 @@
 import { Action as RecommendationAction, Position, Recommendation, recommendPreflop } from "./preflop";
 import { lookupStrategy, nearestStackBucket, type PreflopSpotContext } from "./strategy-data";
+import type { TableSize } from "./preflop-packs";
 
 export type Street = "preflop" | "flop" | "turn" | "river";
 export type PlayerActionType = "fold" | "check" | "limp" | "open" | "call" | "3bet" | "4bet" | "5bet";
@@ -14,7 +15,7 @@ export interface PlayerAction {
   implicit?: boolean;
 }
 
-export type PreflopScenario = "unopened" | "single-open" | "open-with-callers" | "facing-3bet" | "facing-4bet";
+export type PreflopScenario = "unopened" | "limped" | "single-open" | "open-with-callers" | "facing-3bet" | "facing-4bet";
 
 export function classifyPreflop(actions: PlayerAction[]): PreflopScenario {
   const active = actions.filter(action => action.type !== "fold");
@@ -24,6 +25,7 @@ export function classifyPreflop(actions: PlayerAction[]): PreflopScenario {
   const callers = active.filter(action => action.type === "call").length;
   if (opened && callers > 0) return "open-with-callers";
   if (opened) return "single-open";
+  if (active.some(action => action.type === "limp")) return "limped";
   return "unopened";
 }
 
@@ -32,11 +34,14 @@ export function derivePreflopSpotContext(actions:PlayerAction[]):PreflopSpotCont
   const opener=active.find(action=>action.type==="open");
   const callerPositions=[...new Set(active.filter(action=>action.type==="call").map(action=>action.position))];
   const latestAggression=[...active].reverse().find(action=>["open","3bet","4bet","5bet"].includes(action.type));
-  return {openerPosition:opener?.position,callerPositions,actionSize:latestAggression?.amount};
+  const limperPositions=[...new Set(active.filter(action=>action.type==="limp").map(action=>action.position))];
+  const raiseCount=active.filter(action=>["open","3bet","4bet","5bet"].includes(action.type)).length;
+  return {openerPosition:opener?.position,callerPositions,actionSize:latestAggression?.amount,aggressorPosition:latestAggression?.position,limperPositions,raiseCount};
 }
 
 const scenarioLabels: Record<PreflopScenario, string> = {
   unopened: "미오픈 팟",
+  limped: "림프 팟",
   "single-open": "단일 오픈 대응",
   "open-with-callers": "오픈 + 콜러 대응",
   "facing-3bet": "3-bet 대응",
@@ -53,6 +58,8 @@ export function recommendFromHistory(input: {
   hand: string;
   effectiveStack: number;
   actions: PlayerAction[];
+  /** Enables solved preflop packs for this table size. */
+  tableSize?: TableSize;
 }): Recommendation & { scenario: PreflopScenario; spotContext:PreflopSpotContext;strategySource:string;scenarioLabel: string; primaryDisplay:string; displayFrequencies:{action:string;frequency:number}[] } {
   const scenario = classifyPreflop(input.actions);
   const spotContext=derivePreflopSpotContext(input.actions);
@@ -64,10 +71,10 @@ export function recommendFromHistory(input: {
     openSize: aggressor?.amount || 2.5,
     effectiveStack: input.effectiveStack,
   });
-  const mix=lookupStrategy({hand:input.hand,position:input.heroPosition,stack:input.effectiveStack,scenario,...spotContext});
+  const mix=lookupStrategy({hand:input.hand,position:input.heroPosition,stack:input.effectiveStack,scenario,tableSize:input.tableSize,...spotContext});
   const frequencies = normalize({ Fold: mix.fold, Call: mix.passive, "3-bet": mix.aggressive });
   const primary = Object.entries(frequencies).sort((a, b) => b[1] - a[1])[0][0] as RecommendationAction;
-  const labels=scenario==="unopened"?{Fold:"Fold",Call:"Limp","3-bet":"Open"}:scenario==="facing-3bet"?{Fold:"Fold",Call:"Call","3-bet":"4-bet"}:scenario==="facing-4bet"?{Fold:"Fold",Call:"Call","3-bet":"5-bet / All-in"}:{Fold:"Fold",Call:"Call","3-bet":"3-bet"};
+  const labels=scenario==="unopened"?{Fold:"Fold",Call:"Limp","3-bet":"Open"}:scenario==="limped"?{Fold:"Fold",Call:input.heroPosition==="BB"?"Check":"Over-limp","3-bet":"Iso raise"}:scenario==="facing-3bet"?{Fold:"Fold",Call:"Call","3-bet":"4-bet"}:scenario==="facing-4bet"?{Fold:"Fold",Call:"Call","3-bet":"5-bet / All-in"}:{Fold:"Fold",Call:"Call","3-bet":"3-bet"};
   const primaryDisplay=labels[primary];
   return {
     ...base,

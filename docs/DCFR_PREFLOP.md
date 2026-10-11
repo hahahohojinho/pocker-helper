@@ -56,3 +56,20 @@ npm run strategy:data -- convert-dcfr tools\dcfr-solver\smoke-charts.json data\d
 ```
 
 The adapter maps `fold` to fold, `call/check` to passive, and `raise/allin` to aggressive. It validates all 169 hands per RFI spot and embeds generator provenance. Do not ship the 100,000-iteration pipeline output as strategy data. The bundled dataset uses the full 100,000,000-iteration run described above.
+
+## 6-max and 8-max packs for multiple stack depths (rangelab-preflop)
+
+`tools/rangelab-preflop` generalizes the upstream preflop MCCFR to 6 or 8 players and any starting stack without modifying the submodule (attribution and the list of changes are in `tools/rangelab-preflop/NOTICE.md`). Rules, the MCCFR update, and the showdown model match upstream; ported upstream tests pass. Documented differences: per-stack bet sizes (20bb: 2bb open, 3-bet all-in, open-shove allowed; 26-50bb: 2.5bb/9bb; 51-120bb: 2.5/9/22bb as upstream; deeper: 2.5/10/25/60bb), and a big blind raising over a limper sizes the raise as the open plus 1bb per limper.
+
+```powershell
+cd tools\rangelab-preflop
+cargo build --release
+cd ..\..
+node scripts/run-preflop-matrix.mjs "6:20,6:40,6:60,6:100,6:150@5;8:20,8:40,8:60,8:100,8:150@2"
+```
+
+The runner trains each table/stack job with atomic checkpoints every 5M iterations (`artifacts/preflop/*.bin`, ignored) and resumes on re-run, then exports `public/data/preflop/<n>max-<stack>bb.json`. Iterations: 6-max 100M (upstream reference), 8-max 200M. Measured throughput on the development PC: 6-max 100bb 43.6k it/s (upstream 45.8k), 8-max 100bb 28.0k it/s with 5.1M information sets after 2M iterations. 8-max blueprints need several GB of RAM, so that group runs two jobs at a time.
+
+The exporter walks the averaged strategy with per-player hand reach and emits every decision spot reached at least 0.01% of the time, up to facing a 4-bet, keyed like the app's `derivePreflopSpotContext` (position, scenario, opener, latest aggressor, callers, limpers, current bet size). Forced all-in calls count as calls. The app loads the pack for the current table size and nearest stack bucket and prefers it over the bundled RFI dataset and the baseline heuristic; spots without a pack match fall back as before.
+
+Model limits stay the same as upstream: 169 hand classes, sampled-board equity with a heads-up out-of-position pot tax (multiway pots use raw equity), and only the small blind may limp, so limp/isolation spots other than SB-vs-BB come from the tendency-based subgame work planned next.

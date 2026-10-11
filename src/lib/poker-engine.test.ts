@@ -100,7 +100,7 @@ describe("169 hand strategy",()=>{
       {id:"2",street:"preflop",seat:1,position:"BTN",type:"call",amount:2.5},
       {id:"3",street:"preflop",seat:2,position:"SB",type:"3bet",amount:10},
     ];
-    expect(derivePreflopSpotContext(actions)).toEqual({openerPosition:"CO",callerPositions:["BTN"],actionSize:10});
+    expect(derivePreflopSpotContext(actions)).toEqual({openerPosition:"CO",callerPositions:["BTN"],actionSize:10,aggressorPosition:expect.any(String),limperPositions:[],raiseCount:2});
   });
   it("contains 169 unique normalized starting hands",()=>{
     expect(allStartingHands).toHaveLength(169);

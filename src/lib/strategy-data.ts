@@ -1,17 +1,19 @@
 import type { PreflopScenario } from "./game-state";
 import type { Position } from "./preflop";
 import bundledDcfrDataset from "../data/dcfr-6max-100bb-rfi-v1.json";
+import { lookupPackStrategy, type TableSize } from "./preflop-packs";
 
 export type StackBucket = 20 | 40 | 60 | 100 | 150;
-export interface StrategyMix { fold: number; passive: number; aggressive: number; source: "baseline-v1"|`dataset:${string}`; }
-export interface PreflopSpotContext { openerPosition?:Position;callerPositions?:Position[];actionSize?:number; }
+export interface StrategyMix { fold: number; passive: number; aggressive: number; source: "baseline-v1"|`dataset:${string}`|`pack:${string}`; }
+/** aggressorPosition and limperPositions are only matched by preflop packs; v1/v2 datasets ignore them. */
+export interface PreflopSpotContext { openerPosition?:Position;callerPositions?:Position[];actionSize?:number;aggressorPosition?:Position;limperPositions?:Position[];raiseCount?:number; }
 export interface StrategyDatasetRow extends PreflopSpotContext { hand:string;position:Position;stack:StackBucket;scenario:PreflopScenario;fold:number;passive:number;aggressive:number; }
 export interface StrategyDatasetProvenance { generator:string;revision:string;iterations:number;seed:number;model:string;config?:Record<string,unknown>; }
 export interface StrategyDataset { contract?:"rangelab.preflop_strategy.v1"|"rangelab.preflop_strategy.v2";id:string;license:string;generatedAt:string;provenance?:StrategyDatasetProvenance;rows:StrategyDatasetRow[]; }
 export const bundledStrategyDatasetId="dcfr-6max-100bb-rfi-v1";
 const validPositions=new Set<Position>(["UTG","UTG+1","MP","HJ","CO","BTN","SB","BB"]);
 const validStacks=new Set<StackBucket>([20,40,60,100,150]);
-const validScenarios=new Set<PreflopScenario>(["unopened","single-open","open-with-callers","facing-3bet","facing-4bet"]);
+const validScenarios=new Set<PreflopScenario>(["unopened","limped","single-open","open-with-callers","facing-3bet","facing-4bet"]);
 
 let activeDataset:StrategyDataset|null=null;
 let activeIndex=new Map<string,StrategyDatasetRow[]>();
@@ -71,7 +73,7 @@ export function activeStrategyDataset(){return activeDataset&&{id:activeDataset.
 
 const ranks = "AKQJT98765432";
 const positionWidth: Record<Position, number> = { UTG:0,"UTG+1":2,MP:4,HJ:6,CO:10,BTN:15,SB:12,BB:14 };
-const scenarioTightness: Record<PreflopScenario, number> = { unopened:-7,"single-open":0,"open-with-callers":2,"facing-3bet":12,"facing-4bet":23 };
+const scenarioTightness: Record<PreflopScenario, number> = { unopened:-7,limped:-9,"single-open":0,"open-with-callers":2,"facing-3bet":12,"facing-4bet":23 };
 
 export const allStartingHands = ranks.split("").flatMap((high, row) =>
   ranks.split("").map((low, column) => row === column ? `${high}${low}` : row < column ? `${high}${low}s` : `${low}${high}o`)
@@ -103,9 +105,12 @@ function strength(hand: string) {
   return value;
 }
 
-export function lookupStrategy(input:{hand:string;position:Position;stack:number;scenario:PreflopScenario}&PreflopSpotContext):StrategyMix {
+/** Solved packs for the table size come first, then the installed dataset, then the labeled baseline heuristic. */
+export function lookupStrategy(input:{hand:string;position:Position;stack:number;scenario:PreflopScenario;tableSize?:TableSize}&PreflopSpotContext):StrategyMix {
   const hand=normalizeStartingHand(input.hand);
   if(!hand)return {fold:100,passive:0,aggressive:0,source:"baseline-v1"};
+  const packMix=input.tableSize===undefined?null:lookupPackStrategy({...input,tableSize:input.tableSize,hand});
+  if(packMix)return packMix;
   const bucket=nearestStackBucket(input.stack);
   const inputCallers=normalizedCallers(input.callerPositions??[]);
   const candidates=activeIndex.get(baseKey({hand,position:input.position,stack:bucket,scenario:input.scenario}))??[];
@@ -125,8 +130,8 @@ export function lookupStrategy(input:{hand:string;position:Position;stack:number
   return {fold:96,passive:4,aggressive:0,source:"baseline-v1"};
 }
 
-export function buildStrategyMatrix(position:Position,stack:number,scenario:PreflopScenario,context:PreflopSpotContext={}){
-  return allStartingHands.map(hand=>({hand,...lookupStrategy({hand,position,stack,scenario,...context})}));
+export function buildStrategyMatrix(position:Position,stack:number,scenario:PreflopScenario,context:PreflopSpotContext={},tableSize?:TableSize){
+  return allStartingHands.map(hand=>({hand,...lookupStrategy({hand,position,stack,scenario,tableSize,...context})}));
 }
 
 installStrategyDataset(bundledDcfrDataset as StrategyDataset);

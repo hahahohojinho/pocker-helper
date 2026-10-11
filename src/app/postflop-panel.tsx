@@ -15,6 +15,7 @@ import { conditionRangeOnPostflop, ensureComboInRange, inferRangeFromPreflop, to
 import { isWasmSolverSupported, runWasmSolve } from "@/lib/wasm-solver/client";
 import { NativeSolverUnavailableError, runNativeSolve } from "@/lib/wasm-solver/native-client";
 import { buildWasmSolveRequest } from "@/lib/wasm-solver/request";
+import type { TableSize } from "@/lib/preflop-packs";
 import { loadIterationCost, recordIterationCost } from "@/lib/wasm-solver/cost-model";
 import { timed } from "@/lib/timing";
 import { exploitabilityLevel, getSolverPreset } from "@/lib/solver-presets";
@@ -37,6 +38,8 @@ const baselineRange="AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,
 
 export default function PostflopPanel({positions,preflopActions,stacks,heroSeat}:{positions:Position[];preflopActions:PlayerAction[];stacks:number[];heroSeat:number}){
   const preflop=deriveBettingState(preflopActions,positions,stacks);
+  // Solved preflop packs exist per table size; the seat count tells which one applies.
+  const tableSize:TableSize|undefined=positions.length===6||positions.length===8?positions.length:undefined;
   const activeSeats=positions.map((_,seat)=>seat).filter(seat=>!preflop.foldedSeats.has(seat));
   const nonActingSeats=new Set([...preflop.foldedSeats,...preflop.allInSeats]);
   const order=postflopOrder(positions,nonActingSeats);
@@ -60,8 +63,8 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat}
   const [solveMode,setSolveMode]=useState<"native"|"wasm"|null>(null);
   useEffect(()=>()=>wasmSolveRef.current?.abort(),[]);
   useEffect(()=>{const controller=new AbortController();fetch("/api/solver",{signal:controller.signal,cache:"no-store"}).then(response=>response.ok?response.json():Promise.reject()).then(value=>{if(value&&["texassolver","dcfr","counterfactual"].includes(value.backend)&&Number.isInteger(value.maxPlayers))setSolverCapability({backend:value.backend,maxPlayers:value.maxPlayers,nativeJson:value.nativeJson===true});}).catch(()=>{});return()=>controller.abort();},[]);
-  const inferredRanges=Object.fromEntries(activeSeats.filter(seat=>seat!==heroSeat).map(seat=>[seat,inferRangeFromPreflop({actions:preflopActions,seat,position:positions[seat],stack:stacks[seat]})]));
-  const heroInferredRange=inferRangeFromPreflop({actions:preflopActions,seat:heroSeat,position:positions[heroSeat],stack:stacks[heroSeat]});
+  const inferredRanges=Object.fromEntries(activeSeats.filter(seat=>seat!==heroSeat).map(seat=>[seat,inferRangeFromPreflop({actions:preflopActions,seat,position:positions[seat],stack:stacks[seat],tableSize})]));
+  const heroInferredRange=inferRangeFromPreflop({actions:preflopActions,seat:heroSeat,position:positions[heroSeat],stack:stacks[heroSeat],tableSize});
   const rangeFor=(seat:number)=>rangeBySeat[seat]??conditionRangeOnPostflop({rangeText:inferredRanges[seat]?.text??baselineRange,boardCodes:board.slice(0,boardCount).filter(card=>card.length===2),actions:actions.filter(action=>action.seat===seat).map(action=>action.type)});
   const streetActions=useMemo(()=>actions.filter(action=>action.street===street),[actions,street]);
   const context=buildPostflopContext({actions,street,seats:activeSeats,initialRemaining,initialPot:preflop.pot});
