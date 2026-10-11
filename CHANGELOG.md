@@ -2,6 +2,10 @@
 
 ## Unreleased - fix/solver-quality (2026-10-11)
 
+### Split pots among every tied player
+- `calculateEquity` and `calculateRangeEquity` now give a tie 1/(players tied for the best hand) instead of always 1/2; the margin of error uses the per-sample second moment of that share.
+- Why: a three-way chop counted as half the pot overstated multiway equity, which now feeds the multiway bet EV directly. Found comparing against a standalone Python equity engine that splits ties this way.
+
 ### Multiway model EV (phase 5a)
 - New `src/lib/multiway-ev.ts`: bet/raise EV against independent opponents. Each subset of callers gets its own pot (grows per caller, short callers return the hero's uncalled excess, unmatched opponents pay what they owe first) and its own equity against those callers' calling ranges. The likeliest subsets (up to 8, until 98% of the probability) are exact; the rest share one all-callers estimate. One opponent reproduces the old heads-up formula.
 - Why: the old model counted one caller's chips in the pot and computed equity against every opponent's calling range at once, even when only one called, so multiway bets were mispriced and only labeled "heads-up 근사".

@@ -79,7 +79,8 @@ export function calculateRangeEquity(heroCodes:string[],boardCodes:string[],rang
   const filteredCounts=prepared.map(range=>range.combos.length);
   if(filteredCounts.some(count=>count===0))throw new Error("공개 카드와 충돌하지 않는 상대 콤보가 없습니다.");
   const unknownDeck:Card[]=[];for(const rank of ranks)for(const suit of suits){const card=parseCard(`${rank}${suit}`)!;if(!knownCodes.has(card.code))unknownDeck.push(card);}
-  const missingBoard=5-boardCodes.length;let wins=0,ties=0,losses=0,completed=0;const random=seededRandom(seed);
+  // A tie splits the pot among everyone holding the best hand, so each sample is worth 1/(tied players).
+  const missingBoard=5-boardCodes.length;let wins=0,ties=0,losses=0,completed=0,equityUnits=0,squaredUnits=0;const random=seededRandom(seed);
   for(let run=0;run<iterations;run++){
     const blocked=new Set(knownCodes);const opponents:Card[][]=[];let valid=true;
     for(const range of prepared){const combo=sampleCombo(range,blocked,random);if(!combo){valid=false;break;}blocked.add(combo.codes[0]);blocked.add(combo.codes[1]);opponents.push(combo.cards);}
@@ -87,10 +88,13 @@ export function calculateRangeEquity(heroCodes:string[],boardCodes:string[],rang
     const deck=unknownDeck.filter(card=>!blocked.has(card.code));
     for(let i=0;i<missingBoard;i++){const j=i+Math.floor(random()*(deck.length-i));[deck[i],deck[j]]=[deck[j],deck[i]];}
     const board=[...cards.slice(2),...deck.slice(0,missingBoard)];const heroScore=bestHandScore([...cards.slice(0,2),...board]);const opponentScores=opponents.map(hand=>bestHandScore([...hand,...board]));const bestOpponent=Math.max(...opponentScores);
-    if(heroScore>bestOpponent)wins++;else if(heroScore===bestOpponent)ties++;else losses++;completed++;
+    if(heroScore>bestOpponent){wins++;equityUnits++;squaredUnits++;}
+    else if(heroScore===bestOpponent){ties++;const share=1/(1+opponentScores.filter(score=>score===heroScore).length);equityUnits+=share;squaredUnits+=share*share;}
+    else losses++;
+    completed++;
   }
   if(!completed)throw new Error("서로 충돌하지 않는 상대 콤보를 샘플링할 수 없습니다.");
   const percent=(value:number)=>Math.round(value/completed*1000)/10;
-  const equityUnits=wins+ties/2;const mean=equityUnits/completed;const secondMoment=(wins+ties/4)/completed;const marginOfError=Math.round(1.96*Math.sqrt(Math.max(0,secondMoment-mean*mean)/completed)*1000)/10;
+  const mean=equityUnits/completed;const marginOfError=Math.round(1.96*Math.sqrt(Math.max(0,squaredUnits/completed-mean*mean)/completed)*1000)/10;
   return {win:percent(wins),tie:percent(ties),loss:percent(losses),equity:percent(equityUnits),iterations:completed,marginOfError,seed,mode:"weighted-range",availableCombos:filteredCounts};
 }

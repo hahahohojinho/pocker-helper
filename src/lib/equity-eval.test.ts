@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bestHandScore, bestHandScoreReference, parseCard, seededRandom, type Card } from "./equity";
+import { bestHandScore, bestHandScoreReference, calculateEquity, parseCard, seededRandom, type Card } from "./equity";
 import { calculateRangeEquity } from "./range-equity";
 
 const deck:Card[]=[];
@@ -56,5 +56,30 @@ describe("range equity performance",()=>{
     const direct=calculateRangeEquity(["Kc","Kd"],["2s","7h","9c"],["AhAd","KsKh"],3000);
     expect(constrained.iterations).toBe(3000);
     expect(Math.abs(constrained.equity-direct.equity)).toBeLessThan(3);
+  });
+});
+
+describe("split pots",()=>{
+  // A royal flush on the board: every player plays the board and the pot is split among all of them.
+  const royal=["As","Ks","Qs","Js","Ts"];
+  it("splits a random-opponent tie among everyone tied",()=>{
+    const result=calculateEquity(["2c","3d"],royal,2,500);
+    expect(result.tie).toBe(100);
+    expect(result.equity).toBeCloseTo(100/3,0);
+    expect(result.marginOfError).toBe(0);
+  });
+  it("splits a range tie among everyone tied",()=>{
+    expect(calculateRangeEquity(["2c","3d"],royal,["44"],500).equity).toBe(50);
+    expect(calculateRangeEquity(["2c","3d"],royal,["44","55","66"],500).equity).toBe(25);
+  });
+  it("measures the margin of error from the split shares",()=>{
+    // Half the time TT splits with hero (worth 1/2), otherwise 44 loses (worth 1): variance 0.0625, sd 0.25.
+    const result=calculateRangeEquity(["Tc","3d"],["Ah","Kd","Qc","Js","2h"],["TdTs,4c4h","5c5s"],2000);
+    expect(result.marginOfError).toBeCloseTo(1.96*0.25/Math.sqrt(result.iterations)*100,1);
+  });
+  it("counts only the tied players when someone else loses",()=>{
+    // Hero and TT both make the broadway straight; 33 only pairs, so the pot is split two ways.
+    const result=calculateRangeEquity(["Tc","3d"],["Ah","Kd","Qc","Js","2h"],["TdTs","33"],500);
+    expect(result.equity).toBe(50);
   });
 });

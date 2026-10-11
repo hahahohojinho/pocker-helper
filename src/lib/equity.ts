@@ -1,3 +1,4 @@
+/** win/tie/loss are shares of samples (a tie is any split); equity counts a tie as 1/(players tied). */
 export interface EquityResult { win:number; tie:number; loss:number; equity:number; iterations:number;marginOfError:number;seed:number; }
 export type Card={rank:number;suit:string;code:string};
 const rankChars="23456789TJQKA";
@@ -90,7 +91,8 @@ export function calculateEquity(heroCodes:string[],boardCodes:string[],opponents
   const remaining=fullDeck.filter(card=>!cards.some(knownCard=>knownCard.code===card.code));
   const missingBoard=5-boardCodes.length;
   if(opponents<1||remaining.length<missingBoard+opponents*2)throw new Error("상대 수 또는 카드 입력이 올바르지 않습니다.");
-  let wins=0,ties=0,losses=0;const random=seededRandom(seed);
+  // A tie splits the pot among everyone holding the best hand, so each sample is worth 1/(tied players).
+  let wins=0,ties=0,losses=0,equityUnits=0,squaredUnits=0;const random=seededRandom(seed);
   for(let run=0;run<iterations;run++){
     const deck=[...remaining];
     for(let i=0;i<missingBoard+opponents*2;i++){const j=i+Math.floor(random()*(deck.length-i));[deck[i],deck[j]]=[deck[j],deck[i]];}
@@ -98,9 +100,11 @@ export function calculateEquity(heroCodes:string[],boardCodes:string[],opponents
     const heroScore=bestHandScore([...cards.slice(0,2),...board]);
     const opponentScores=Array.from({length:opponents},(_,index)=>bestHandScore([...deck.slice(missingBoard+index*2,missingBoard+index*2+2),...board]));
     const bestOpponent=Math.max(...opponentScores);
-    if(heroScore>bestOpponent)wins++;else if(heroScore===bestOpponent)ties++;else losses++;
+    if(heroScore>bestOpponent){wins++;equityUnits++;squaredUnits++;}
+    else if(heroScore===bestOpponent){ties++;const share=1/(1+opponentScores.filter(score=>score===heroScore).length);equityUnits+=share;squaredUnits+=share*share;}
+    else losses++;
   }
   const percent=(value:number)=>Math.round(value/iterations*1000)/10;
-  const equityUnits=wins+ties/2;const mean=equityUnits/iterations;const secondMoment=(wins+ties/4)/iterations;const marginOfError=Math.round(1.96*Math.sqrt(Math.max(0,secondMoment-mean*mean)/iterations)*1000)/10;
+  const mean=equityUnits/iterations;const marginOfError=Math.round(1.96*Math.sqrt(Math.max(0,squaredUnits/iterations-mean*mean)/iterations)*1000)/10;
   return {win:percent(wins),tie:percent(ties),loss:percent(losses),equity:percent(equityUnits),iterations,marginOfError,seed};
 }

@@ -101,7 +101,7 @@ Plan (reordered): 2a range weights (done) -> 1 presets/budget (done) -> 4 model 
 - Manual checks needing a solver binary: isomorphism=1 keeps the exact Hero combo in the dump; an observed-size tree resolves a bet -> raise -> call history end to end; solve times per street fit `SOLVER_TIMEOUT_MS`.
 - Histories with more than 4 raises exceed TexasSolver's default `raise_limit=4` and will be reported as a missing size.
 - Model EV is a one-street heuristic (no future betting); equity itself is not invalidated when cards change.
-- Multiway model EV limits: opponents fold/call independently (real callers tighten behind a caller), no raises after the bet, no overcall/squeeze on a hero call (labeled), side pots not separated, 3-way ties counted as half, unlikely caller subsets share one all-callers equity, the alpha^(1/k) default fold split is uncalibrated. Local solvers stay heads-up only; 3+ players show the model EV with a notice.
+- Multiway model EV limits: opponents fold/call independently (real callers tighten behind a caller), no raises after the bet, no overcall/squeeze on a hero call (labeled), side pots not separated, unlikely caller subsets share one all-callers equity, the alpha^(1/k) default fold split is uncalibrated. Local solvers stay heads-up only; 3+ players show the model EV with a notice.
 - Equity still runs synchronously on the main thread; ranges whose heavy combos all collide with dealt cards fall back to a full scan per sample and can freeze the UI for seconds.
 - Deferred security items: no Host allowlist against DNS rebinding (would block LAN access), 512MB solver output read into memory, no request body size limit, solver error text returned to the client.
 
