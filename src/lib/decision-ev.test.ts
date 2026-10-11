@@ -52,9 +52,42 @@ describe("model action EV",()=>{
     const results=estimateActionEvs({equity:50,pot:40,toCall:30,betSize:0,maxCommitment:10});
     expect(evOf(results,"call")).toBeCloseTo(0.5*(40-20+10)-10,2);
   });
-  it("labels multiway estimates as a heads-up approximation",()=>{
+  it("splits the break-even fold rate across multiway opponents",()=>{
     const results=estimateActionEvs({equity:50,pot:10,toCall:0,betSize:5,opponents:2});
-    expect(results.find(item=>item.action==="bet")!.assumption).toContain("heads-up 근사");
+    const bet=results.find(item=>item.action==="bet")!;
+    expect(bet.assumption).toContain("멀티웨이 2명");
+    expect(bet.assumption).toContain("전원 Fold 33%");
+    // Each folds sqrt(1/3); one caller makes a 20 pot, two make 25.
+    const fold=Math.sqrt(1/3),one=2*fold*(1-fold),two=(1-fold)**2;
+    expect(bet.ev).toBeCloseTo(10/3+one*(0.5*20-5)+two*(0.5*25-5),2);
+  });
+  it("prices caller subsets with their own equity",()=>{
+    const calledEquities={byKey:new Map([["0",50],["1",40],["0,1",30]]),everyone:null};
+    const bet=estimateActionEvs({equity:45,pot:10,toCall:0,betSize:5,foldEquities:[0.5,0.6],calledEquities}).find(item=>item.action==="bet")!;
+    expect(bet.ev).toBeCloseTo(5.6,2);
+    expect(bet.assumption).toContain("콜 조합별 Equity");
+  });
+  it("gives an all-in opponent no fold share",()=>{
+    const bet=estimateActionEvs({equity:50,pot:10,toCall:0,betSize:5,foldable:[true,false],callCaps:[100,0]}).find(item=>item.action==="bet")!;
+    expect(bet.assumption).toContain("전원 Fold 0%");
+  });
+  it("keeps the heads-up result for every single-opponent input",()=>{
+    const cases=[{},{foldEquity:0.2},{equityWhenCalled:35},{foldEquity:0.4,equityWhenCalled:30}];
+    for(const extra of cases){
+      const input={equity:50,pot:10,toCall:0,betSize:5,...extra};
+      const fold=extra.foldEquity??1/3,called=(extra.equityWhenCalled??50)/100;
+      expect(evOf(estimateActionEvs(input),"bet")).toBeCloseTo(fold*10+(1-fold)*(called*20-5),2);
+      expect(estimateActionEvs({...input,opponents:1,foldable:[true]})).toEqual(estimateActionEvs(input));
+    }
+  });
+  it("gives a single all-in opponent no fold and treats no opponents as one",()=>{
+    const allIn=estimateActionEvs({equity:50,pot:10,toCall:0,betSize:5,foldable:[false],callCaps:[0]}).find(item=>item.action==="bet")!;
+    expect(allIn.assumption).toContain("Fold 0%");
+    expect(estimateActionEvs({equity:50,pot:10,toCall:0,betSize:5,opponents:0,foldable:[]})).toEqual(estimateActionEvs({equity:50,pot:10,toCall:0,betSize:5}));
+  });
+  it("notes players behind a call",()=>{
+    const call=estimateActionEvs({equity:50,pot:15,toCall:5,betSize:0,playersBehind:2}).find(item=>item.action==="call")!;
+    expect(call.assumption).toContain("뒤 2명 오버콜/스퀴즈 미반영");
   });
   it("honors an explicit fold equity and labels every value as a model",()=>{
     const results=estimateActionEvs({equity:50,pot:10,toCall:0,betSize:5,foldEquity:0});

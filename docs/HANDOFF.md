@@ -2,9 +2,10 @@
 
 Last updated: 2026-10-11
 
-## Resume here (2026-10-11, branch fix/solver-quality, last commit 5c4df1a, all pushed)
+## Resume here (2026-10-11, branch fix/solver-quality)
 
-- Roadmap phases 1-4 done (see "Real-time roadmap" below). Phase 5 (multiway approximation, flop library) not started.
+- Roadmap phases 1-4 done (see "Real-time roadmap" below). Phase 5a (multiway model EV) done and committed locally (not pushed); phase 5b (flop library) not started.
+- 8-max progress at 15:00: 20bb and 40bb packs exported (untracked in `public/data/preflop/`), 60bb running (~2 h), then 100bb/150bb.
 - Running in the background: 8-max preflop packs (`node scripts/run-preflop-matrix.mjs "6:20,6:40,6:60,6:100,6:150@5;8:20,8:40,8:60,8:100,8:150@2"`, logs in `artifacts/preflop/logs/8max-*.log`). 6-max is finished and committed. If the PC restarted or the runner was killed, resume with only the 8-max group: `node scripts/run-preflop-matrix.mjs "8:20,8:40,8:60,8:100,8:150@2"`. Unfinished jobs continue from their last 5M-iteration checkpoint; finished ones are only re-exported (do not re-run the 6-max group: it would rewrite the committed 6-max packs with a new date).
 - When all five 8-max packs exist in `public/data/preflop/`: `npx vitest run src/lib/preflop-packs.data.test.ts`, check the largest size against `MAX_PACK_CHARS` (4M) in `src/lib/preflop-packs.ts`, add an 8-max table to docs/DCFR_PREFLOP.md, commit.
 - Watch memory while 8max-100bb and 8max-150bb run together (machine has 16 GB; 8max-40bb used ~1 GB at 5M info sets).
@@ -81,7 +82,7 @@ Goal: on the user's PC, answer each decision in 6-max/8-max within 5 s from boar
 2. Preflop packs: solver, exporter, runner, and app loading done and pushed (commits 2288350, 8d0ba21; docs/DCFR_PREFLOP.md). 6-max packs committed and validated (docs/DCFR_PREFLOP.md table). Remaining: 8-max packs (matrix still running, `artifacts/preflop/logs/8max-*.log`); when done, run `npx vitest run src/lib/preflop-packs.data.test.ts`, check sizes against `MAX_PACK_CHARS` (4M), commit. Generation runs detached via `node scripts/run-preflop-matrix.mjs ...`; logs in `artifacts/preflop/logs`. Re-running the same command resumes. After it finishes, re-export all packs with the current binary if the running matrix started before the latest export fixes (the matrix was restarted 2026-10-11 ~04:20 UTC with the all-in position-tax fix, so its own exports are current).
 3. Opponent profiling: done (commits 4045bb7, 3f61203, 43e5f4c; README "상대 성향 기록"). Records, stats, tendencies, SQLite store, `/api/profile/*`, seat assignment and hand recorder UI. Phase 4 should read `getPlayerStats` totals ({n,x} pairs) and shrink toward the solved strategy with `posteriorMean`.
 4. Tendency-based exploits: done for iso raises (preflop) and flop c-bets with range lock (commits f93c25f, 03a889e; README "상대 성향 기반 조언"). Not built: on-demand exploit re-solve with locked ranges, 3-bet bluff / 3-bet defense adjustments, turn/river advice (no stats recorded for them), blind fold-to-steal stat. Priors in src/lib/exploit/*.ts are heuristics to recalibrate from recorded hands.
-5. Multiway approximation; flop library for instant flops.
+5. Multiway approximation [5a model EV done: `src/lib/multiway-ev.ts`]; flop library for instant flops.
 
 ## In-browser solver (2026-10-11, branch fix/solver-quality)
 
@@ -99,7 +100,8 @@ Plan (reordered): 2a range weights (done) -> 1 presets/budget (done) -> 4 model 
 - Solver budgets in `src/lib/solver-presets.ts` are uncalibrated; run one local TexasSolver/DCFR solve per street and tune iterations and `SOLVER_TIMEOUT_MS`.
 - Manual checks needing a solver binary: isomorphism=1 keeps the exact Hero combo in the dump; an observed-size tree resolves a bet -> raise -> call history end to end; solve times per street fit `SOLVER_TIMEOUT_MS`.
 - Histories with more than 4 raises exceed TexasSolver's default `raise_limit=4` and will be reported as a missing size.
-- Model EV is a one-street heuristic (no future betting, multiway approximated as heads-up); equity itself is not invalidated when cards change.
+- Model EV is a one-street heuristic (no future betting); equity itself is not invalidated when cards change.
+- Multiway model EV limits: opponents fold/call independently (real callers tighten behind a caller), no raises after the bet, no overcall/squeeze on a hero call (labeled), side pots not separated, 3-way ties counted as half, unlikely caller subsets share one all-callers equity, the alpha^(1/k) default fold split is uncalibrated. Local solvers stay heads-up only; 3+ players show the model EV with a notice.
 - Equity still runs synchronously on the main thread; ranges whose heavy combos all collide with dealt cards fall back to a full scan per sample and can freeze the UI for seconds.
 - Deferred security items: no Host allowlist against DNS rebinding (would block LAN access), 512MB solver output read into memory, no request body size limit, solver error text returned to the client.
 

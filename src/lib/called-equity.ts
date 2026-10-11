@@ -1,5 +1,6 @@
 import { calculateRangeEquity } from "./range-equity";
 import { scoreRangeOnBoard } from "./range-model";
+import { callerSubsets, foldOutcomes, planSubsets, subsetKey, type SubsetEquities } from "./multiway-ev";
 
 /** Relative to the total range weight, below which leftover weight is treated as rounding noise. */
 const NEGLIGIBLE_SHARE=1e-9;
@@ -43,4 +44,21 @@ export function estimateEquityWhenCalled(heroCodes:string[],boardCodes:string[],
   if(scoreRangeOnBoard("AA",boardCodes)===null)return null;
   const ranges=rangeTexts.map(range=>callingRange(range,boardCodes,foldShare,heroCodes));
   return calculateRangeEquity(heroCodes,boardCodes,ranges,iterations).equity;
+}
+
+/**
+ * Hero equity (percent) against each likely subset of callers, each opponent trimmed to the hands that call with
+ * its own fold probability, plus one estimate against every possible caller for the unlikely subsets. Null when the
+ * board is too short to rank continuing hands.
+ */
+export function estimateSubsetEquities(heroCodes:string[],boardCodes:string[],rangeTexts:string[],folds:readonly number[],iterations:number,equity?:(ranges:string[])=>number):SubsetEquities|null{
+  if(rangeTexts.length!==folds.length)throw new Error("Each opponent range needs a fold probability.");
+  if(scoreRangeOnBoard("AA",boardCodes)===null)return null;
+  const equityOf=equity??((ranges:string[])=>calculateRangeEquity(heroCodes,boardCodes,ranges,iterations).equity);
+  // An opponent who always folds never calls, so no subset refers to their range.
+  const calling=rangeTexts.map((range,index)=>folds[index]>=1?"":callingRange(range,boardCodes,folds[index],heroCodes));
+  const plan=planSubsets(callerSubsets(foldOutcomes(folds)));
+  const byKey=new Map(plan.exact.map(subset=>[subsetKey(subset.members),equityOf(subset.members.map(index=>calling[index]))] as const));
+  const everyone=plan.rest.length?equityOf(calling.filter((_,index)=>folds[index]<1)):null;
+  return {byKey,everyone};
 }

@@ -62,6 +62,11 @@ export function availablePostflopActions(context:PostflopContext,seat:number):Po
   return facedShortRaise?["fold","call"]:["fold","call","raise"];
 }
 
+/** Opponents who still have to act on the current bet after the hero calls it: live, not all in, not yet matched. */
+export function seatsYetToRespond(context:PostflopContext,heroSeat:number,seats:readonly number[]):number[]{
+  return seats.filter(seat=>seat!==heroSeat&&!context.foldedSeats.has(seat)&&!context.allInSeats.has(seat)&&(context.contributions.get(seat)??0)<context.currentBet);
+}
+
 export function validatePostflopActionV2(context:PostflopContext,seat:number,type:PostflopActionType,amount:number){
   if(!availablePostflopActions(context,seat).includes(type))return {valid:false,message:`현재 ${type} 액션을 사용할 수 없습니다.`};
   if(type==="fold"||type==="check")return {valid:true,message:"유효한 액션입니다."};

@@ -9,7 +9,7 @@ import { activeStrategyDataset, allStartingHands, buildStrategyMatrix, bundledSt
 import { createSolverNode, parseSolverResult, parseTexasSolverNode, parseTexasSolverNodeAtHistory } from "./solver-adapter";
 import { calculatePokerPots, calculatePotLayers, totalPot } from "./pots";
 import { buildTexasSolverCommands } from "./texas-solver-config";
-import { buildPostflopContext, nextPostflopActor } from "./postflop-hand-state";
+import { buildPostflopContext, nextPostflopActor, seatsYetToRespond } from "./postflop-hand-state";
 import type { PostflopAction } from "./postflop-machine";
 import { attachActionEvs } from "./decision-ev";
 import { calculateRangeEquity, parseWeightedRange } from "./range-equity";
@@ -85,6 +85,20 @@ describe("postflop state persistence",()=>{
     const turn=buildPostflopContext({actions,street:"turn",seats:[0,1,2],initialRemaining:[90,90,90],initialPot:10});
     expect(turn.foldedSeats.has(0)).toBe(true);
     expect(nextPostflopActor(turn,[0,1,2])).toBe(1);
+  });
+});
+
+describe("players behind a call",()=>{
+  it("lists live opponents who have not matched the bet",()=>{
+    const actions=[postAction("flop",0,"check"),postAction("flop",1,"bet",5),postAction("flop",2,"call",5)];
+    const context=buildPostflopContext({actions,street:"flop",seats:[0,1,2,3],initialRemaining:[90,90,90,90],initialPot:10});
+    expect(seatsYetToRespond(context,3,[0,1,2,3])).toEqual([0]);
+    expect(seatsYetToRespond(context,0,[0,1,2,3])).toEqual([3]);
+  });
+  it("skips folded and all-in opponents",()=>{
+    const actions=[postAction("flop",0,"bet",5),postAction("flop",1,"fold"),postAction("flop",2,"call",4)];
+    const context=buildPostflopContext({actions,street:"flop",seats:[0,1,2,3],initialRemaining:[90,90,4,90],initialPot:10});
+    expect(seatsYetToRespond(context,3,[0,1,2,3])).toEqual([]);
   });
 });
 

@@ -2,6 +2,15 @@
 
 ## Unreleased - fix/solver-quality (2026-10-11)
 
+### Multiway model EV (phase 5a)
+- New `src/lib/multiway-ev.ts`: bet/raise EV against independent opponents. Each subset of callers gets its own pot (grows per caller, short callers return the hero's uncalled excess, unmatched opponents pay what they owe first) and its own equity against those callers' calling ranges. The likeliest subsets (up to 8, until 98% of the probability) are exact; the rest share one all-callers estimate. One opponent reproduces the old heads-up formula.
+- Why: the old model counted one caller's chips in the pot and computed equity against every opponent's calling range at once, even when only one called, so multiway bets were mispriced and only labeled "heads-up 근사".
+- Default fold per opponent is alpha^(1/k) (alpha = risk / (pot + risk), k = opponents who can fold): everyone folds with the break-even rate, so a pure bluff still breaks even for any number of callers. Splitting alpha evenly has no such property.
+- `estimateSubsetEquities` (called-equity) builds each calling range once and runs at most 9 equity calls; 7 opponents take ~0.2 s at 5000 iterations per subset. `cbetAdvice` and the postflop panel use the same path; `callerSubsets` is shared with the iso-raise model.
+- Hero calls note opponents still to act behind (`seatsYetToRespond`), whose overcalls and squeezes are not modeled.
+- Decided against a heads-up-reduced solver for 3+ players: multiway equilibria differ fundamentally (bluff and defense frequencies), and its exploitability would not describe the real game. The panel says local solvers do not support 3+ players.
+- Review fixes: unmatched opponents' owed chips, a single all-in opponent no longer gets a fold share, always-folding opponents skipped, per-opponent array length checked, model EV errors no longer break rendering, opponent range textareas capped at 50,000 characters.
+
 ### Solver range class weights (step 2a)
 - `toTexasSolverRange` now weights a 169 class as summed combo weight / board-compatible combo count, and prunes by expected combos with a name tiebreak.
 - Why: TexasSolver applies a class weight to every combo of the class. The old per-class average over present combos overstated partial classes (2 of 12 AQo combos at weight 1 became `AQo:1`), and equal weights were pruned in input order (a 28-class range became `22-99`).
