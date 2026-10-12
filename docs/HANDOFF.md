@@ -5,7 +5,7 @@ Last updated: 2026-10-12
 ## Resume here (2026-10-11, branch fix/solver-quality)
 
 - 2026-10-12: the legacy DCFR job API now handles IP roots and validated intermediate histories through the adapter's `--json` mode (former Next TODO 1; CHANGELOG). Full `npm test` with `DCFR_ADAPTER_PATH`: 353 passed, 2 skipped; lint and tsc clean.
-- 2026-10-12: CI `adapter` matrix job (ubuntu-latest, windows-latest) builds the adapter on the pinned 1.99.0 toolchain (`tools/dcfr-adapter/rust-toolchain.toml`), runs its cargo tests and the `DCFR_ADAPTER_PATH` vitest integration tests; the adapter accepts the extension-less binary name off Windows. Verified locally on Windows only (5 cargo tests, 37 vitest); not yet run on GitHub. The matchup-export TODO was dropped (the preflop packs cover those spots).
+- 2026-10-12: CI `adapter` matrix job (ubuntu-latest, windows-latest) builds the adapter on the pinned 1.99.0 toolchain (`tools/dcfr-adapter/rust-toolchain.toml`), runs its cargo tests and the `DCFR_ADAPTER_PATH` vitest integration tests; the adapter accepts the extension-less binary name off Windows. Pushed 2026-10-12; CI run 38202332894 passed all four jobs (web, solver-wasm, adapter ubuntu, adapter windows). The matchup-export TODO was dropped (the preflop packs cover those spots).
 - Local MSVC env on 2026-10-12: only `C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat` exists (no VS 18, no onecore append needed); the VS 18 command below is out of date.
 - Roadmap phases 1-4 done (see "Real-time roadmap" below). Phase 5a (multiway model EV) done. Phase 5b (flop library) code done, library not generated yet. All committed locally, not pushed.
 - Flop library (2026-10-11 pilot): 53 BTN vs BB flops generated locally (gitignored). The 10 s budget only reached 8-10 iterations at 1.6-3.1% exploitability on these wide ranges, so the build uses `--budget-ms 30000`: 28-29 iterations, median 0.23%, max 0.39%, ~30 s and ~72 KB per flop (90 s gives 0.018%). Full build: ~15 h and ~125 MB per scenario, heaviest flops first:
@@ -112,7 +112,6 @@ Plan (reordered): 2a range weights (done) -> 1 presets/budget (done) -> 4 model 
 ## Next TODO
 
 1. Add a true multiway counterfactual backend; both bundled local solvers are heads-up only.
-2. Check the first GitHub run of the new `adapter` CI job (ubuntu + windows); the branch is not pushed yet.
 
 ## Session startup
 
