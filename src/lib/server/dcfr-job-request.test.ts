@@ -89,7 +89,7 @@ describe("runDcfrAdapter",()=>{
     const childProcess=await import("node:child_process");
     const { EventEmitter }=await import("node:events");
     const { PassThrough }=await import("node:stream");
-    process.env.DCFR_ADAPTER_PATH="C:/bin/rangelab-dcfr-adapter.exe";
+    process.env.DCFR_ADAPTER_PATH=`/opt/bin/rangelab-dcfr-adapter${process.platform==="win32"?".exe":""}`;
     vi.mocked(childProcess.spawn).mockImplementation(()=>{
       const child=Object.assign(new EventEmitter(),{stdout:new PassThrough(),stderr:new PassThrough(),stdin:new PassThrough(),kill:vi.fn()});
       const envelope={ok:true,result:{source:"dcfr-native",player:"ip",best_action:"fold",exploitability:0.1,strategy:[{action:"fold",frequency:1,evChips:0}]}};

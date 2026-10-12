@@ -50,9 +50,6 @@ jobs:
       - name: Rust tests (dcfr-core, dcfr-wasm)
         working-directory: tools/dcfr-wasm
         run: cargo test --release --locked --workspace
-      - name: Native adapter tests (real rayon, --json mode)
-        working-directory: tools/dcfr-adapter
-        run: cargo test --release --locked
       - name: Preflop solver tests (6/8-max rules, export)
         working-directory: tools/rangelab-preflop
         run: cargo test --release --locked
@@ -60,3 +57,41 @@ jobs:
         run: node scripts/build-solver-wasm.mjs
       - name: Fail if the committed module is stale
         run: git diff --exit-code -- public/solver
+
+  adapter:
+    name: Native adapter (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            exe_suffix: ""
+          - os: windows-latest
+            exe_suffix: ".exe"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Install the pinned Rust toolchain
+        working-directory: tools/dcfr-adapter
+        run: rustup toolchain install
+      - name: Build the adapter
+        working-directory: tools/dcfr-adapter
+        run: cargo build --release --locked
+      # One test at a time: deadline.rs measures wall-clock time and shares the runner's cores with nothing else.
+      - name: Adapter tests (real rayon, --json mode, deadline)
+        working-directory: tools/dcfr-adapter
+        run: cargo test --release --locked -- --test-threads=1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # These tests skip without DCFR_ADAPTER_PATH, so the web job never runs them against a real binary.
+      - name: Integration tests against the built adapter
+        env:
+          DCFR_ADAPTER_PATH: ${{ github.workspace }}/tools/dcfr-adapter/target/release/rangelab-dcfr-adapter${{ matrix.exe_suffix }}
+        run: npx vitest run src/lib/server/solver-integration.test.ts src/lib/server/run-dcfr-adapter.test.ts src/lib/server/dcfr-job-request.test.ts

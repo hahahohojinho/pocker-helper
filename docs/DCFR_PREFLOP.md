@@ -41,7 +41,7 @@ At 1,000 iterations some hand classes have no sampled strategy and RangeLab corr
 
 RangeLab bundles `src/data/dcfr-6max-100bb-rfi-v1.json`, generated on 2026-08-28 with 100,000,000 iterations, seed 42, and revision `4ade6a9e15a841c41867afde1258b9d110cd6fb1`. The completed run produced 2,266,541 information sets at 45,822 iterations per second and exported five complete RFI charts (UTG, HJ, CO, BTN, and SB), 845 rows total.
 
-This dataset is the default for matching 100bb unopened RFI decisions. User-imported validated datasets override it, and reset restores it. Spots outside those five RFI charts continue to use the explicitly labeled `baseline-v1` heuristic until matchup conversion is implemented. The generated blueprint and intermediate chart/matchup exports remain ignored build artifacts; only the normalized 152 KB strategy JSON is committed.
+This dataset is the default for matching 100bb unopened RFI decisions. User-imported validated datasets override it, and reset restores it. Spots outside those five RFI charts are answered by the 6-max/8-max packs below when they match, otherwise by the explicitly labeled `baseline-v1` heuristic. (The earlier plan to convert the RFI run's 30 SRP/3-bet/4-bet matchup exports was dropped on 2026-10-12: the packs cover those spots up to facing a 4-bet.) The generated blueprint and intermediate chart/matchup exports remain ignored build artifacts; only the normalized 152 KB strategy JSON is committed.
 
 ## Convert to RangeLab v2
 

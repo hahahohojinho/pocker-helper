@@ -2,6 +2,12 @@
 
 ## Unreleased - fix/solver-quality (2026-10-11)
 
+### CI builds and tests the native adapter on Linux and Windows (2026-10-12)
+- New `adapter` matrix job: pinned toolchain (`tools/dcfr-adapter/rust-toolchain.toml`, 1.99.0 like the wasm build), `cargo build/test --release --locked` (tests single-threaded because `deadline.rs` measures wall time), then the vitest integration tests with `DCFR_ADAPTER_PATH` pointing at the built binary. The adapter test step moved out of `solver-wasm` so it does not run twice on Windows.
+- `isAdapterExecutable`: the spawned binary must be `rangelab-dcfr-adapter.exe` on Windows (case-insensitive) and `rangelab-dcfr-adapter` elsewhere (case-sensitive); before, Linux binaries were always rejected.
+- No `actions/cache` step: actions are SHA-pinned and the cache action's SHA was not verified. Add one if the job is slow.
+- Dropped the TODO to convert the RFI run's 30 matchup exports into schema v2 spots: the 6-max/8-max packs cover them up to facing a 4-bet, and the exports are no longer on disk.
+
 ### Local DCFR job API solves every heads-up node (2026-10-12)
 - Legacy solver jobs sent to the local DCFR adapter are converted to its `--json` request (`src/lib/server/dcfr-job-request.ts`) instead of the flag-based mode, so IP roots and intermediate histories are solved; previously only Hero-OOP street roots with nothing to call were accepted.
 - The street history is replayed with OOP acting first and rejected if it folds, ends the street, or contains an illegal check/call/bet/raise, a missing or non-increasing amount, an amount over the stack, or a raise of an all-in. Call amounts are recomputed, and a bet covering the shorter stack becomes all-in (code review finding). Stacks come from the two players (role by `actorSeat`) or default to the effective stack. Returned actions must be legal at the node.

@@ -8,11 +8,19 @@ import { wasmResponseToSolverJson, type WasmSolveRequest, type WasmSolveResponse
 
 const MAX_OUTPUT_BYTES=4*1024*1024;
 
+const adapterFileName=(platform:NodeJS.Platform)=>platform==="win32"?"rangelab-dcfr-adapter.exe":"rangelab-dcfr-adapter";
+
+/** Only the adapter binary may be spawned; Windows file names are case-insensitive, others are not. */
+export function isAdapterExecutable(path:string,platform:NodeJS.Platform=process.platform){
+  const name=basename(path);
+  return (platform==="win32"?name.toLowerCase():name)===adapterFileName(platform);
+}
+
 function adapterExecutable(){
   const configured=process.env.DCFR_ADAPTER_PATH;
   if(!configured)throw new Error("DCFR_ADAPTER_PATH is not configured.");
   const executable=resolve(configured);
-  if(basename(executable).toLowerCase()!=="rangelab-dcfr-adapter.exe")throw new Error("DCFR_ADAPTER_PATH must point to rangelab-dcfr-adapter.exe.");
+  if(!isAdapterExecutable(executable))throw new Error(`DCFR_ADAPTER_PATH must point to ${adapterFileName(process.platform)}.`);
   return executable;
 }
 
