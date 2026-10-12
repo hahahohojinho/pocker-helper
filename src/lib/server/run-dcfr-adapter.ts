@@ -2,30 +2,11 @@ import { spawn } from "node:child_process";
 import { basename, resolve } from "node:path";
 import { parseSolverResult } from "../solver-adapter";
 import { resolveSolverTimeoutMs } from "../solver-presets";
-import { validateTexasSolverJob, type TexasSolverJob } from "../texas-solver-config";
+import type { TexasSolverJob } from "../texas-solver-config";
+import { buildDcfrJobRequest } from "./dcfr-job-request";
 import { wasmResponseToSolverJson, type WasmSolveRequest, type WasmSolveResponse } from "../wasm-solver/request";
 
 const MAX_OUTPUT_BYTES=4*1024*1024;
-const SCALE=100;
-
-export function buildDcfrAdapterArgs(job:TexasSolverJob){
-  validateTexasSolverJob(job);
-  if(job.players&&job.players.length>2)throw new Error("Local DCFR adapter supports heads-up jobs only.");
-  if(job.actionHistory?.length)throw new Error("Local DCFR adapter currently supports street root nodes only.");
-  if(job.node.toCall!==0)throw new Error("Local DCFR adapter requires an OOP street root with nothing to call.");
-  const integer=(value:number)=>String(Math.max(1,Math.round(value*SCALE)));
-  return [
-    "--board",job.node.board.join(""),
-    "--hero",job.node.heroHole.join(""),
-    "--oop-range",job.ranges.oop,
-    "--ip-range",job.ranges.ip,
-    "--pot",integer(job.node.pot),
-    "--stack",integer(job.node.effectiveStack),
-    "--iterations",String(job.iterations),
-    "--bet-percent",String(Math.round(job.tree.betPercent[0])),
-    "--raise-percent",String(Math.round(job.tree.raisePercent[0])),
-  ];
-}
 
 function adapterExecutable(){
   const configured=process.env.DCFR_ADAPTER_PATH;
@@ -63,12 +44,11 @@ function runAdapterProcess(run:AdapterRun){
   });
 }
 
+/** Solves a legacy solver job at any heads-up node by converting it to the adapter's `--json` request. */
 export async function runDcfrAdapter(job:TexasSolverJob,timeoutMs=resolveSolverTimeoutMs(process.env.SOLVER_TIMEOUT_MS),signal?:AbortSignal){
-  const raw=await runAdapterProcess({args:buildDcfrAdapterArgs(job),timeoutMs,signal});
-  const parsed=parseSolverResult(raw);
-  if(parsed.evSource!=="solver")throw new Error("DCFR adapter response must include EV for every action.");
-  const candidates=new Set(job.node.candidateActions);
-  if(parsed.actions.some(action=>!candidates.has(action.action)))throw new Error("DCFR adapter returned an action outside candidateActions.");
+  const {request,legalActions}=buildDcfrJobRequest(job);
+  const raw=await runDcfrJsonAdapter(request,{threads:job.threads,timeoutMs,signal});
+  if(parseSolverResult(raw).actions.some(action=>!legalActions.has(action.action)))throw new Error("DCFR adapter returned an action that is not legal at this node.");
   return raw;
 }
 

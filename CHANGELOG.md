@@ -2,6 +2,12 @@
 
 ## Unreleased - fix/solver-quality (2026-10-11)
 
+### Local DCFR job API solves every heads-up node (2026-10-12)
+- Legacy solver jobs sent to the local DCFR adapter are converted to its `--json` request (`src/lib/server/dcfr-job-request.ts`) instead of the flag-based mode, so IP roots and intermediate histories are solved; previously only Hero-OOP street roots with nothing to call were accepted.
+- The street history is replayed with OOP acting first and rejected if it folds, ends the street, or contains an illegal check/call/bet/raise, a missing or non-increasing amount, an amount over the stack, or a raise of an all-in. Call amounts are recomputed, and a bet covering the shorter stack becomes all-in (code review finding). Stacks come from the two players (role by `actorSeat`) or default to the effective stack. Returned actions must be legal at the node.
+- Why: the UI already solves heads-up spots through `--json` when the adapter is advertised; routing the job API the same way gives one code path and one EV basis. TypeScript-only: the Rust flag mode is left in the binary (it was in use by the flop library build) but is no longer called. `buildDcfrAdapterArgs` was removed.
+- Security review: no new issues; pre-existing items remain open (adapter stderr in client errors, no time budget on the job path, range type checks, sizes rounding to 0%).
+
 ### Flop library code (phase 5b)
 - Precomputed heads-up flops answer instantly when the spot is exactly the stored one; otherwise the card shows why and the live solver answers. New `src/lib/flop-library` (suit canonicalization of the 1755 flop classes, strict file validation, lookup, cached loader with retry suppression), `FlopLibraryCard` in the postflop panel, the generator `scripts/build-flop-library.mjs`, and `src/data/flop-library-manifest.json` (BTN/CO/SB vs BB single-raised pots, 6-max 100bb).
 - dcfr-core: `hero` is optional in the request (single-node solves still require it), solving is shared through `solve_tree`, and `solve_nodes_json` exports every combo's strategy and per-action EV at up to 8 nodes from one solve, always measuring exploitability. The native adapter exposes it as `--json-nodes`.

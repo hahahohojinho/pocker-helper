@@ -4,6 +4,7 @@ Last updated: 2026-10-12
 
 ## Resume here (2026-10-11, branch fix/solver-quality)
 
+- 2026-10-12: the legacy DCFR job API now handles IP roots and validated intermediate histories through the adapter's `--json` mode (former Next TODO 1; CHANGELOG). Full `npm test` with `DCFR_ADAPTER_PATH`: 353 passed, 2 skipped; lint and tsc clean.
 - Roadmap phases 1-4 done (see "Real-time roadmap" below). Phase 5a (multiway model EV) done. Phase 5b (flop library) code done, library not generated yet. All committed locally, not pushed.
 - Flop library (2026-10-11 pilot): 53 BTN vs BB flops generated locally (gitignored). The 10 s budget only reached 8-10 iterations at 1.6-3.1% exploitability on these wide ranges, so the build uses `--budget-ms 30000`: 28-29 iterations, median 0.23%, max 0.39%, ~30 s and ~72 KB per flop (90 s gives 0.018%). Full build: ~15 h and ~125 MB per scenario, heaviest flops first:
   `node scripts/build-flop-library.mjs --scenarios 6max-100bb-srp-btn-bb --budget-ms 30000` (resumable; then the CO and SB scenarios).
@@ -44,9 +45,8 @@ The bundled dataset is installed by default. A valid browser-imported dataset ov
 Current supported scope:
 
 - heads-up only;
-- Hero is OOP;
-- flop, turn, or river street root;
-- `toCall=0` and no action history;
+- Hero OOP or IP;
+- flop, turn, or river street root or a validated intermediate action history (see docs/SOLVER_INTEGRATION.md);
 - 1 to 5,000 iterations through the shared job validator.
 
 Configure it with:
@@ -57,7 +57,7 @@ $env:ALLOW_LOCAL_SOLVER_API='1'
 npm run dev
 ```
 
-Backend precedence is remote HTTP counterfactual backend, local DCFR adapter, then local TexasSolver. Unsupported DCFR IP roots, intermediate nodes, and multiway jobs are rejected rather than mislabeled as solver EV.
+Backend precedence is remote HTTP counterfactual backend, local DCFR adapter, then local TexasSolver. Legacy jobs go through the adapter's `--json` mode, so IP roots and validated intermediate histories are solved (2026-10-12); multiway jobs are rejected rather than mislabeled as solver EV.
 
 On the current Windows installation, release linking required preserving the Developer Prompt SDK paths and appending the installed OneCore CRT directory:
 
@@ -105,14 +105,13 @@ Plan (reordered): 2a range weights (done) -> 1 presets/budget (done) -> 4 model 
 - Model EV is a one-street heuristic (no future betting); equity itself is not invalidated when cards change.
 - Multiway model EV limits: opponents fold/call independently (real callers tighten behind a caller), no raises after the bet, no overcall/squeeze on a hero call (labeled), side pots not separated, unlikely caller subsets share one all-callers equity, the alpha^(1/k) default fold split is uncalibrated. Local solvers stay heads-up only; 3+ players show the model EV with a notice.
 - Equity still runs synchronously on the main thread; ranges whose heavy combos all collide with dealt cards fall back to a full scan per sample and can freeze the UI for seconds.
-- Deferred security items: no Host allowlist against DNS rebinding (would block LAN access), 512MB solver output read into memory, no request body size limit, solver error text returned to the client.
+- Deferred security items: no Host allowlist against DNS rebinding (would block LAN access), 512MB solver output read into memory, no request body size limit, solver error text returned to the client; the legacy DCFR job path has no `timeBudgetMs` (only `SOLVER_TIMEOUT_MS`).
 
 ## Next TODO
 
-1. Extend the local DCFR adapter to IP roots and validated intermediate action histories.
-2. Decide whether to convert and bundle the 30 generated SRP/3-bet/4-bet matchup exports into strategy schema v2 spots.
-3. Add a true multiway counterfactual backend; both bundled local solvers are heads-up only.
-4. Add CI jobs that build the Rust adapter and run its conditional integration test on Windows and Linux.
+1. Decide whether to convert and bundle the 30 generated SRP/3-bet/4-bet matchup exports into strategy schema v2 spots.
+2. Add a true multiway counterfactual backend; both bundled local solvers are heads-up only.
+3. Add CI jobs that build the Rust adapter and run its conditional integration test on Windows and Linux.
 
 ## Session startup
 
