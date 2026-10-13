@@ -112,7 +112,8 @@ Plan (reordered): 2a range weights (done) -> 1 presets/budget (done) -> 4 model 
 
 ## Next TODO
 
-1. Add a true multiway counterfactual backend; both bundled local solvers are heads-up only.
+1. After the flop library build finishes (CPU free): measure live turn/river solve time and exploitability on the native adapter for typical heads-up spots and calibrate `src/lib/solver-presets.ts`. Requirement (user, 2026-10-13): turn/river answers within 10 s; precomputing turn/river was rejected (~2.5 months for turns alone).
+2. Add a true multiway counterfactual backend; both bundled local solvers are heads-up only.
 
 ## Session startup
 
