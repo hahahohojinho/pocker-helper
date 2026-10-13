@@ -2,6 +2,10 @@
 
 ## Unreleased - fix/solver-quality (2026-10-11)
 
+### Live turn/river solve time measured (2026-10-14)
+- Native adapter `--json`, 12 threads, 4.5 s budget, root node, wall time including process start: BTN vs BB SRP ranges, turn 270-340 iterations in 4.5 s at 0.004% exploitability, river 1000 iterations in 1.2 s at <=0.002%; 100% vs 100% ranges, turn 194-240 iterations at <=0.016% (2 s budget: <=0.08%), river 1.7 s.
+- Why: the user requires turn/river answers within 10 s and rejected precomputing turns/rivers (~2.5 months of CPU). The current `DCFR_TIME_BUDGET_MS` (4500) already meets it with exploitability far below the 1% "ok" threshold, so only the preset comment changed.
+
 ### CI builds and tests the native adapter on Linux and Windows (2026-10-12)
 - New `adapter` matrix job: pinned toolchain (`tools/dcfr-adapter/rust-toolchain.toml`, 1.99.0 like the wasm build), `cargo build/test --release --locked` (tests single-threaded because `deadline.rs` measures wall time), then the vitest integration tests with `DCFR_ADAPTER_PATH` pointing at the built binary. The adapter test step moved out of `solver-wasm` so it does not run twice on Windows.
 - `isAdapterExecutable`: the spawned binary must be `rangelab-dcfr-adapter.exe` on Windows (case-insensitive) and `rangelab-dcfr-adapter` elsewhere (case-sensitive); before, Linux binaries were always rejected.

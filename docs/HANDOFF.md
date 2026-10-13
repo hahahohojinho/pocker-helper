@@ -4,6 +4,7 @@ Last updated: 2026-10-12
 
 ## Resume here (2026-10-11, branch fix/solver-quality)
 
+- 2026-10-14: live turn/river on the native adapter measured (12 threads, adapter wall time, current 4.5 s budget): SRP ranges turn 4.5 s at 0.004%, river 1.2 s at <=0.002%; 100% vs 100% ranges turn 4.5 s at <=0.016%, river 1.7 s. The 10 s turn/river requirement is met without a budget change; numbers recorded in `src/lib/solver-presets.ts`. Not measured: the full UI round trip and slower CPUs (the deadline still bounds time there, only accuracy drops).
 - 2026-10-12: the legacy DCFR job API now handles IP roots and validated intermediate histories through the adapter's `--json` mode (former Next TODO 1; CHANGELOG). Full `npm test` with `DCFR_ADAPTER_PATH`: 353 passed, 2 skipped; lint and tsc clean.
 - 2026-10-12: CI `adapter` matrix job (ubuntu-latest, windows-latest) builds the adapter on the pinned 1.99.0 toolchain (`tools/dcfr-adapter/rust-toolchain.toml`), runs its cargo tests and the `DCFR_ADAPTER_PATH` vitest integration tests; the adapter accepts the extension-less binary name off Windows. Pushed 2026-10-12; CI run 38202332894 passed all four jobs (web, solver-wasm, adapter ubuntu, adapter windows). The matchup-export TODO was dropped (the preflop packs cover those spots).
 - Local MSVC env on 2026-10-12: only `C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat` exists (no VS 18, no onecore append needed); the VS 18 command below is out of date.
@@ -103,7 +104,7 @@ Goal: on the user's PC, answer each decision in 6-max/8-max within 5 s from boar
 
 Plan (reordered): 2a range weights (done) -> 1 presets/budget (done) -> 4 model EV (done) -> 5 equity perf (done) -> 3 observed bet sizes (done). All planned steps are committed on `fix/solver-quality` (not pushed). See CHANGELOG.md.
 
-- Solver budgets in `src/lib/solver-presets.ts` are uncalibrated; run one local TexasSolver/DCFR solve per street and tune iterations and `SOLVER_TIMEOUT_MS`.
+- Native DCFR turn/river budgets were measured 2026-10-14 (see Resume here); TexasSolver/legacy DCFR budgets in `src/lib/solver-presets.ts` remain uncalibrated.
 - Manual checks needing a solver binary: isomorphism=1 keeps the exact Hero combo in the dump; an observed-size tree resolves a bet -> raise -> call history end to end; solve times per street fit `SOLVER_TIMEOUT_MS`.
 - Histories with more than 4 raises exceed TexasSolver's default `raise_limit=4` and will be reported as a missing size.
 - Model EV is a one-street heuristic (no future betting); equity itself is not invalidated when cards change.
@@ -113,7 +114,7 @@ Plan (reordered): 2a range weights (done) -> 1 presets/budget (done) -> 4 model 
 
 ## Next TODO
 
-1. After the flop library build finishes (CPU free): measure live turn/river solve time and exploitability on the native adapter for typical heads-up spots and calibrate `src/lib/solver-presets.ts`. Requirement (user, 2026-10-13): turn/river answers within 10 s; precomputing turn/river was rejected (~2.5 months for turns alone).
+1. Let the flop library build finish (resumed 2026-10-14 ~06:50 KST, node PID 20392 after a short pause for the turn/river benchmark), then restart `next start` so the new files are served.
 2. Add a true multiway counterfactual backend; both bundled local solvers are heads-up only.
 
 ## Session startup

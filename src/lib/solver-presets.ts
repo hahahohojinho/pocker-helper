@@ -32,6 +32,9 @@ const budgets:Record<SolverBackend,Record<SolverStreet,{iterations:number;accura
   // 4s at 0.03% pot exploitability; flop 12 iterations 22s at 1.6%. DCFR has no early stop, so accuracy is informational.
   wasm:{flop:{iterations:100,accuracy:1,timeBudgetMs:DCFR_TIME_BUDGET_MS},turn:{iterations:300,accuracy:0.5,timeBudgetMs:DCFR_TIME_BUDGET_MS},river:{iterations:500,accuracy:0.3,timeBudgetMs:DCFR_TIME_BUDGET_MS}},
   // Native adapter --json with rayon, same ranges: river 1000 in 0.5s; turn 200 in 1.3s at 0.008%; flop 60 in 14s at 0.04%.
+  // 2026-10-14, 12 threads, BTN vs BB SRP ranges, end-to-end adapter wall time: turn 4.5s 270-340 iterations at 0.004%;
+  // river 1000 iterations in 1.2s at <=0.002%. 100% vs 100% ranges: turn 4.5s 194-240 iterations at <=0.016% (2s: <=0.08%),
+  // river 1.7s. Both streets answer well inside the 10 s requirement at this budget.
   native:{flop:{iterations:300,accuracy:0.5,timeBudgetMs:DCFR_TIME_BUDGET_MS},turn:{iterations:500,accuracy:0.3,timeBudgetMs:DCFR_TIME_BUDGET_MS},river:{iterations:1000,accuracy:0.3,timeBudgetMs:DCFR_TIME_BUDGET_MS}},
 };
 
