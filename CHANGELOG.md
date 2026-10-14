@@ -2,6 +2,9 @@
 
 ## Unreleased - fix/solver-quality (2026-10-11)
 
+### Flop library generated (2026-10-14)
+- `node scripts/build-flop-library.mjs --budget-ms 30000` finished all three 6-max 100bb SRP scenarios (BTN/CO/SB vs BB), 1755 canonical flops each, 0 failures, 379 MB, local only (gitignored). Exploitability median/max: BTN 0.058/0.521%, CO 0.060/0.392%, SB 0.050/0.359%. Run 2026-10-11 to 2026-10-14 with several resumes after PC shutdowns.
+
 ### Live turn/river solve time measured (2026-10-14)
 - Native adapter `--json`, 12 threads, 4.5 s budget, root node, wall time including process start: BTN vs BB SRP ranges, turn 270-340 iterations in 4.5 s at 0.004% exploitability, river 1000 iterations in 1.2 s at <=0.002%; 100% vs 100% ranges, turn 194-240 iterations at <=0.016% (2 s budget: <=0.08%), river 1.7 s.
 - Why: the user requires turn/river answers within 10 s and rejected precomputing turns/rivers (~2.5 months of CPU). The current `DCFR_TIME_BUDGET_MS` (4500) already meets it with exploitability far below the 1% "ok" threshold, so only the preset comment changed.
