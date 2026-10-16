@@ -2,6 +2,13 @@
 
 ## Unreleased - fix/solver-quality (2026-10-11)
 
+### 3-way river: earlier all-ins and the NLHE no-reopen rule (2026-10-17)
+- Players all-in from an earlier street are now part of the 3-way river solve: they start with a zero stack, cannot act, and only win the street-start layers they paid into (`potLayers`, validated as a main pot for everyone plus nested side pots that add up to `pot`). The panel builds the layers from each seat's earlier contributions, snapped to chips, merging levels with the same players (folded blinds).
+- An all-in raise below the last full raise no longer reopens raising for players who already acted (NLHE and the UI's rule); before, it reopened it (labelled simplification). Tree-sized raises always count as full.
+- The panel skips the multiway solve when only Hero can still bet (nothing to solve; the tree only checks).
+- Turn 3-way decision: a river subtree with one bet size and no raises costs ~4 ms per iteration (measured), so the full turn tree would be ~3.8 s per iteration (estimated), far from 10 s. The user chose river robustness first; the turn stays on MODEL EV.
+- Reviews: the first version sent one layer per folded-blind level and would have been rejected for ordinary 3-way pots (fixed by merging), float contributions could create empty layers (snapped to chips), and the Rust request now requires nested layers.
+
 ### Native 3-player river solver (2026-10-16)
 - New crate `tools/multiway-core` linked into `rangelab-dcfr-adapter` (`--json-multiway`, `--capabilities`). Reuses only dcfr-solver's cards, evaluator, and range parser; dcfr-solver's postflop solver is two-player only and the submodule stays unmodified.
 - Rules: dcfr-solver sizing, rounding, minimum raise, and all-in collapse for 2-3 players in action order; side pots by street commitment. Simplification: an incomplete all-in raise reopens the action.
