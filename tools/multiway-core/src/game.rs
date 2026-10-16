@@ -2,8 +2,9 @@
 //!
 //! Players are indexed in postflop action order. Bet sizing matches dcfr-solver: a bet is a fraction of the current
 //! pot, a raise adds a fraction of the pot after calling on top of the largest bet, and a size that needs the whole
-//! stack becomes the all-in branch. Simplification: any all-in above the current bet reopens raising for everyone
-//! (NLHE does not reopen after an incomplete raise).
+//! stack becomes the all-in branch. As in NLHE, an all-in raise smaller than the last full raise does not reopen
+//! raising for players who already acted; they may only call or fold. Players all-in from an earlier street start
+//! with a zero stack and only contest the pot layers they are eligible for.
 
 use std::fmt;
 
@@ -37,6 +38,8 @@ pub struct Rules {
     pub players: usize,
     /// Chips in the pot at the start of the street.
     pub pot: i32,
+    /// That pot split into main and side pots from earlier streets; amounts sum to `pot`.
+    pub start_layers: Vec<Layer>,
     /// Stacks at the start of the street.
     pub stacks: [i32; MAX_PLAYERS],
     /// `bet_sizes[depth]`: depth 0 = bet, 1 = first raise, ...; deeper levels reuse the last list.
@@ -56,6 +59,10 @@ pub struct State {
     pub pending: u8,
     pub to_act: usize,
     pub raises: u8,
+    /// Players who may not raise: they acted before an incomplete all-in raise.
+    pub raise_closed: u8,
+    /// Increment of the last full bet or raise; an all-in raise below it is incomplete.
+    pub last_full: i32,
 }
 
 /// Rounds half up, as dcfr-solver's `compute_bet_amount`.
@@ -67,7 +74,10 @@ fn sized(size: [i32; 2], pot: i32) -> i64 {
 impl State {
     pub fn root(rules: &Rules) -> State {
         let all = (1u8 << rules.players) - 1;
-        State { bets: [0; MAX_PLAYERS], stacks: rules.stacks, folded: 0, allin: 0, pending: all, to_act: 0, raises: 0 }
+        let allin = (0..rules.players).filter(|&q| rules.stacks[q] == 0).fold(0u8, |mask, q| mask | (1 << q));
+        let pending = all & !allin;
+        let to_act = (0..rules.players).find(|&q| pending & (1 << q) != 0).unwrap_or(0);
+        State { bets: [0; MAX_PLAYERS], stacks: rules.stacks, folded: 0, allin, pending, to_act, raises: 0, raise_closed: 0, last_full: 0 }
     }
 
     fn max_bet(&self) -> i32 {
@@ -110,7 +120,7 @@ impl State {
         } else {
             actions.push(Action::Check);
         }
-        if self.raises >= rules.max_raises || !others_can_act {
+        if self.raises >= rules.max_raises || !others_can_act || self.raise_closed & (1 << p) != 0 {
             return actions;
         }
         let basis = if to_call > 0 { pot + to_call } else { pot };
@@ -161,9 +171,19 @@ impl State {
         if s.stacks[p] == 0 && action != Action::Fold {
             s.allin |= bit;
         }
+        let already_acted = s.active(rules) & !s.allin & !s.pending & !bit;
         s.pending &= !bit;
         if s.bets[p] > max_bet {
             s.raises += 1;
+            // Tree sizes satisfy the minimum raise up to a chip of rounding, so only an all-in can be incomplete.
+            // Like the UI, each all-in is judged on its own: several short all-ins never add up to a reopening raise.
+            let increment = s.bets[p] - max_bet;
+            if matches!(action, Action::Bet(_)) || increment >= s.last_full {
+                s.last_full = increment;
+                s.raise_closed = 0;
+            } else {
+                s.raise_closed |= already_acted;
+            }
             s.pending = s.active(rules) & !s.allin & !bit;
         }
         if s.pending != 0 {
@@ -180,22 +200,27 @@ pub struct Layer {
     pub eligible: u8,
 }
 
-/// Main pot plus side pots by street commitment; the street-start pot goes to the main pot. Folded chips stay in.
+/// The street-start layers (restricted to players still in) plus this street's main and side pots by commitment.
+/// Folded chips stay in; chips nobody else matched return to their owner through the top layer.
 pub fn pot_layers(rules: &Rules, state: &State) -> Vec<Layer> {
     let active = state.active(rules);
-    let mut levels: Vec<i32> = (0..rules.players).filter(|&q| active & (1 << q) != 0).map(|q| state.bets[q]).collect();
+    let mut layers: Vec<Layer> = Vec::new();
+    for layer in rules.start_layers.iter().filter(|layer| layer.amount > 0.0) {
+        // A side pot whose players all folded goes to the layer below; the main pot always has someone left.
+        let live = layer.eligible & active;
+        match layers.last_mut() {
+            Some(below) if live == 0 => below.amount += layer.amount,
+            _ => layers.push(Layer { amount: layer.amount, eligible: if live != 0 { live } else { active } }),
+        }
+    }
+    let mut levels: Vec<i32> = (0..rules.players).filter(|&q| active & (1 << q) != 0 && state.bets[q] > 0).map(|q| state.bets[q]).collect();
     levels.sort_unstable();
     levels.dedup();
-    let mut layers = Vec::new();
     let mut previous = 0;
     for (index, &level) in levels.iter().enumerate() {
         let mut amount: i64 = (0..rules.players).map(|q| (state.bets[q].min(level) - state.bets[q].min(previous)) as i64).sum();
-        // Chips folded players put in above the top live level go to the top layer.
         if index + 1 == levels.len() {
             amount += (0..rules.players).map(|q| (state.bets[q] - state.bets[q].min(level)) as i64).sum::<i64>();
-        }
-        if index == 0 {
-            amount += rules.pot as i64;
         }
         let eligible = (0..rules.players).filter(|&q| active & (1 << q) != 0 && state.bets[q] >= level).fold(0u8, |mask, q| mask | (1 << q));
         if amount > 0 {
@@ -284,7 +309,8 @@ mod tests {
     use super::*;
 
     fn rules(players: usize, stacks: [i32; 3]) -> Rules {
-        Rules { players, pot: 300, stacks, bet_sizes: vec![vec![[1, 2]], vec![[3, 5]]], max_raises: 2, allin_always: false }
+        let all = (1u8 << players) - 1;
+        Rules { players, pot: 300, start_layers: vec![Layer { amount: 300.0, eligible: all }], stacks, bet_sizes: vec![vec![[1, 2]], vec![[3, 5]]], max_raises: 2, allin_always: false }
     }
 
     fn play(rules: &Rules, actions: &[Action]) -> State {
@@ -314,7 +340,7 @@ mod tests {
         assert_eq!(s.pending, 0b101);
         let s = play(&r, &[Action::Check, Action::Bet([1, 2]), Action::Call, Action::Fold]);
         assert!(s.is_terminal(&r));
-        assert_eq!(pot_layers(&r, &s), vec![Layer { amount: 600.0, eligible: 0b110 }]);
+        assert_eq!(pot_layers(&r, &s), vec![Layer { amount: 300.0, eligible: 0b110 }, Layer { amount: 300.0, eligible: 0b110 }]);
     }
 
     #[test]
@@ -332,7 +358,7 @@ mod tests {
         let r = rules(3, [1000; 3]);
         let s = play(&r, &[Action::Bet([1, 2]), Action::Fold, Action::Fold]);
         assert!(s.is_terminal(&r));
-        assert_eq!(pot_layers(&r, &s), vec![Layer { amount: 450.0, eligible: 0b001 }]);
+        assert_eq!(pot_layers(&r, &s), vec![Layer { amount: 300.0, eligible: 0b001 }, Layer { amount: 150.0, eligible: 0b001 }]);
     }
 
     #[test]
@@ -343,7 +369,7 @@ mod tests {
         assert!(s.is_terminal(&r));
         assert_eq!(s.bets, [2000, 2000, 400]);
         let layers = pot_layers(&r, &s);
-        assert_eq!(layers, vec![Layer { amount: 300.0 + 1200.0, eligible: 0b111 }, Layer { amount: 3200.0, eligible: 0b011 }]);
+        assert_eq!(layers, vec![Layer { amount: 300.0, eligible: 0b111 }, Layer { amount: 1200.0, eligible: 0b111 }, Layer { amount: 3200.0, eligible: 0b011 }]);
         let total: f64 = layers.iter().map(|layer| layer.amount).sum();
         assert_eq!(total, 300.0 + 4400.0);
     }
@@ -357,7 +383,35 @@ mod tests {
         assert!(s.is_terminal(&r));
         // 0 put 3000 but only 500 can be called: 2500 goes back through the top layer.
         let layers = pot_layers(&r, &s);
-        assert_eq!(layers, vec![Layer { amount: 1800.0, eligible: 0b111 }, Layer { amount: 2500.0, eligible: 0b001 }]);
+        assert_eq!(layers, vec![Layer { amount: 300.0, eligible: 0b111 }, Layer { amount: 1500.0, eligible: 0b111 }, Layer { amount: 2500.0, eligible: 0b001 }]);
+    }
+
+    #[test]
+    fn incomplete_all_in_raise_does_not_reopen_raising() {
+        // 0 bets 150, 1 calls, 2 shoves 200: a 50 raise is below the 150 bet, so 0 and 1 may only call or fold.
+        let r = Rules { allin_always: true, max_raises: 3, ..rules(3, [3000, 3000, 200]) };
+        let s = play(&r, &[Action::Bet([1, 2]), Action::Call, Action::AllIn]);
+        assert_eq!(s.to_act, 0);
+        assert_eq!(s.actions(&r), vec![Action::Fold, Action::Call]);
+        // A shove that is a full raise (450 over 150) reopens it.
+        let r = Rules { allin_always: true, max_raises: 3, ..rules(3, [3000, 3000, 600]) };
+        let s = play(&r, &[Action::Bet([1, 2]), Action::Call, Action::AllIn]);
+        assert!(s.actions(&r).contains(&Action::AllIn));
+        assert!(s.actions(&r).len() > 2);
+    }
+
+    #[test]
+    fn earlier_all_in_player_only_contests_the_layers_they_are_in() {
+        // Player 2 went all-in earlier: 200 main pot for everyone, 100 side pot for 0 and 1.
+        let r = Rules { pot: 300, start_layers: vec![Layer { amount: 200.0, eligible: 0b111 }, Layer { amount: 100.0, eligible: 0b011 }], ..rules(3, [1000, 1000, 0]) };
+        let root = State::root(&r);
+        assert_eq!(root.allin, 0b100);
+        assert_eq!(root.pending, 0b011);
+        let s = play(&r, &[Action::Bet([1, 2]), Action::Call]);
+        assert!(s.is_terminal(&r));
+        assert_eq!(pot_layers(&r, &s), vec![Layer { amount: 200.0, eligible: 0b111 }, Layer { amount: 100.0, eligible: 0b011 }, Layer { amount: 300.0, eligible: 0b011 }]);
+        let s = play(&r, &[Action::Bet([1, 2]), Action::Fold]);
+        assert_eq!(pot_layers(&r, &s), vec![Layer { amount: 200.0, eligible: 0b101 }, Layer { amount: 100.0, eligible: 0b001 }, Layer { amount: 150.0, eligible: 0b001 }]);
     }
 
     #[test]
@@ -367,7 +421,7 @@ mod tests {
         assert!(s.is_terminal(&r));
         let s = play(&r, &[Action::Bet([1, 2]), Action::Call]);
         assert!(s.is_terminal(&r));
-        assert_eq!(pot_layers(&r, &s), vec![Layer { amount: 600.0, eligible: 0b11 }]);
+        assert_eq!(pot_layers(&r, &s), vec![Layer { amount: 300.0, eligible: 0b11 }, Layer { amount: 300.0, eligible: 0b11 }]);
     }
 
     #[test]

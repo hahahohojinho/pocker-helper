@@ -4,7 +4,7 @@ use dcfr_solver::card::{combo_index, parse_card, parse_cards, Hand};
 use dcfr_solver::range::Range;
 use serde::Deserialize;
 
-use crate::game::{Action, MAX_PLAYERS};
+use crate::game::{Action, Layer, MAX_PLAYERS};
 
 pub const MAX_ITERATIONS: u32 = 5000;
 pub const MAX_RAISES: u8 = 4;
@@ -28,6 +28,9 @@ struct RawRequest {
     /// In postflop action order.
     players: Vec<RawPlayer>,
     pot: i32,
+    /// Main and side pots from earlier streets (needed when a player is already all-in); default: one pot for all.
+    #[serde(default)]
+    pot_layers: Option<Vec<RawLayer>>,
     iterations: u32,
     bet_sizes: Vec<Vec<[i32; 2]>>,
     max_raises: u8,
@@ -47,6 +50,14 @@ struct RawPlayer {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+struct RawLayer {
+    amount: i32,
+    /// Indexes into `players`.
+    eligible: Vec<usize>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct RawStep {
     action: String,
     #[serde(default)]
@@ -59,6 +70,7 @@ pub struct MultiwayRequest {
     pub hero_seat: usize,
     pub ranges: Vec<Vec<f64>>,
     pub pot: i32,
+    pub start_layers: Vec<Layer>,
     pub stacks: [i32; MAX_PLAYERS],
     pub iterations: u32,
     pub bet_sizes: Vec<Vec<[i32; 2]>>,
@@ -98,6 +110,42 @@ fn parse_hero(hero: &str, board: Hand) -> Result<usize, String> {
     Ok(combo_index(first, second) as usize)
 }
 
+fn start_layers(raw: Option<&[RawLayer]>, pot: i32, players: usize) -> Result<Vec<Layer>, String> {
+    let everyone = (1u8 << players) - 1;
+    let Some(raw) = raw else { return Ok(vec![Layer { amount: f64::from(pot), eligible: everyone }]) };
+    if raw.is_empty() || raw.len() > players {
+        return Err(format!("potLayers needs 1..={players} layers"));
+    }
+    let mut total: i64 = 0;
+    let mut layers = Vec::with_capacity(raw.len());
+    for layer in raw {
+        if !(1..=MAX_CHIPS).contains(&layer.amount) {
+            return Err(format!("potLayers amounts must be 1..={MAX_CHIPS} chips"));
+        }
+        let mut eligible = 0u8;
+        for &index in &layer.eligible {
+            if index >= players || eligible & (1 << index) != 0 {
+                return Err("potLayers eligible must list distinct player indexes".into());
+            }
+            eligible |= 1 << index;
+        }
+        // Main pot first (everyone still in), then nested side pots: each layer's players are a subset of the last.
+        let previous = layers.last().map_or(everyone, |layer: &Layer| layer.eligible);
+        if layers.is_empty() && eligible != everyone {
+            return Err("the first pot layer must include every player".into());
+        }
+        if eligible == 0 || eligible & !previous != 0 {
+            return Err("each side pot's players must be a subset of the previous layer's".into());
+        }
+        total += i64::from(layer.amount);
+        layers.push(Layer { amount: f64::from(layer.amount), eligible });
+    }
+    if total != i64::from(pot) {
+        return Err("potLayers must add up to pot".into());
+    }
+    Ok(layers)
+}
+
 impl MultiwayRequest {
     pub fn parse(json: &str) -> Result<MultiwayRequest, String> {
         if json.len() > MAX_REQUEST_BYTES {
@@ -125,8 +173,9 @@ impl MultiwayRequest {
             if range.weights.iter().any(|weight| !(0.0..=1.0).contains(weight)) {
                 return Err("range weights must be between 0 and 1".into());
             }
-            if !(1..=MAX_CHIPS).contains(&player.stack) {
-                return Err(format!("stacks must be 1..={MAX_CHIPS} chips"));
+            // 0 means all-in on an earlier street; that player can no longer act.
+            if !(0..=MAX_CHIPS).contains(&player.stack) {
+                return Err(format!("stacks must be 0..={MAX_CHIPS} chips"));
             }
             ranges.push(range.weights.iter().map(|&weight| f64::from(weight)).collect::<Vec<f64>>());
             stacks[seat] = player.stack;
@@ -153,12 +202,16 @@ impl MultiwayRequest {
             .map(|sizes| sizes.iter().map(|&size| fraction(size, "bet size")).collect::<Result<Vec<_>, _>>())
             .collect::<Result<Vec<_>, _>>()?;
         let history = raw.history.iter().map(parse_step).collect::<Result<Vec<_>, _>>()?;
+        if stacks[raw.hero_seat] == 0 {
+            return Err("Hero has no chips left to act with".into());
+        }
+        let start_layers = start_layers(raw.pot_layers.as_deref(), raw.pot, raw.players.len())?;
         let hero_index = parse_hero(&raw.hero, board)?;
         if !(ranges[raw.hero_seat][hero_index] > 0.0) {
             return Err("hero combo is not in Hero's range".into());
         }
         Ok(MultiwayRequest {
-            board, hero_index, hero_seat: raw.hero_seat, ranges, pot: raw.pot, stacks, iterations: raw.iterations,
+            board, hero_index, hero_seat: raw.hero_seat, ranges, pot: raw.pot, start_layers, stacks, iterations: raw.iterations,
             bet_sizes, max_raises: raw.max_raises, history, time_budget_ms: raw.time_budget_ms,
         })
     }

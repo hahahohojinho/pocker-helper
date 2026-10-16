@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseSolverResult } from "../solver-adapter";
-import { buildMultiwaySolveRequest, multiwayResponseToSolverJson, type MultiwaySolveInput } from "./multiway-request";
+import { buildMultiwaySolveRequest, multiwayResponseToSolverJson, streetStartPotLayers, type MultiwaySolveInput } from "./multiway-request";
 
 const input=(history:MultiwaySolveInput["history"],stacks=[97.5,97.5,97.5]):MultiwaySolveInput=>({
   board:["Ks","7d","2c","5h","3s"],heroHole:["Qc","Jc"],heroIndex:2,
@@ -38,9 +38,31 @@ describe("buildMultiwaySolveRequest",()=>{
   it("rejects unsupported spots before they reach the solver",()=>{
     expect(()=>buildMultiwaySolveRequest({...input([]),board:["Ks","7d","2c","5h"]})).toThrow("Board");
     expect(()=>buildMultiwaySolveRequest({...input([]),heroIndex:3})).toThrow("Hero");
-    expect(()=>buildMultiwaySolveRequest(input([],[97.5,0,97.5]))).toThrow("positive");
+    expect(()=>buildMultiwaySolveRequest(input([],[97.5,97.5,0]))).toThrow("positive");
     expect(()=>buildMultiwaySolveRequest(input([{player:5,action:"check",amount:0}]))).toThrow("unknown player");
     expect(()=>buildMultiwaySolveRequest(input([{player:0,action:"bet",amount:4},{player:1,action:"raise",amount:5}]))).toThrow("최소 레이즈");
+  });
+});
+
+describe("earlier-street side pots",()=>{
+  it("splits the pot by contribution and keeps a player all-in earlier at a zero stack",()=>{
+    // Seats 0-2 still in (solver order 2,0,1); seat 1 went all-in for 20; seat 3 folded after putting in 30.
+    const committed=new Map([[0,50],[1,20],[2,50],[3,30]]);
+    const layers=streetStartPotLayers({committed,players:[2,0,1],pot:150.5});
+    // 20 x4 = 80 (+0.5 dead money) for everyone; 10 x3 + 20 x2 = 70 for seats 0 and 2 (one pot: same players).
+    expect(layers).toEqual([{amount:80.5,eligible:[0,1,2]},{amount:70,eligible:[0,1]}]);
+    const request=buildMultiwaySolveRequest({...input([],[97.5,97.5,0]),heroIndex:0,pot:150.5,potLayers:layers});
+    expect(request.players.map(player=>player.stack)).toEqual([9750,9750,0]);
+    expect(request.potLayers).toEqual([{amount:8050,eligible:[0,1,2]},{amount:7000,eligible:[0,1]}]);
+  });
+  it("sends no layers for a single pot, including folded blinds and float noise",()=>{
+    expect(streetStartPotLayers({committed:new Map([[0,10],[1,10],[2,10]]),players:[0,1,2],pot:30})).toBeUndefined();
+    // Folded 0.5, 1, and 3 are separate levels with the same live players; 97.3-84.9 and 100.7-88.3 are both 12.4.
+    const committed=new Map([[0,0.5],[1,1],[2,3],[3,97.3-84.9],[4,100.7-88.3],[5,12.4]]);
+    expect(streetStartPotLayers({committed,players:[3,4,5],pot:41.7})).toBeUndefined();
+  });
+  it("rejects contributions above the pot",()=>{
+    expect(()=>streetStartPotLayers({committed:new Map([[0,50],[1,20],[2,50]]),players:[0,1,2],pot:100})).toThrow("exceed");
   });
 });
 

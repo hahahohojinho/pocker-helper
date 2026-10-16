@@ -1,4 +1,5 @@
 import type { PostflopActionType } from "../postflop-machine";
+import { calculatePotLayers } from "../pots";
 import { CHIPS_PER_BB, MAX_RAISES, cardCodes, fraction, mergeSizes, toChips, type Fraction, type WasmHistoryAction } from "./request";
 
 /** The native multiway solver supports this many players on the river. */
@@ -13,12 +14,17 @@ export interface MultiwaySolveInput {
   players:{range:string;stack:number}[];
   /** Pot at the start of the street, in BB. */
   pot:number;
+  /**
+   * That pot split into main and side pots (BB; `eligible` indexes `players`), needed when a player went all-in on an
+   * earlier street. Omitted: one pot everyone can win.
+   */
+  potLayers?:{amount:number;eligible:number[]}[];
   /** Current-street actions; `player` indexes `players`, `amount` is the actor's street-total commitment in BB. */
   history:MultiwayHistoryStep[];
   iterations:number;betPercent:number[];raisePercent:number[];timeBudgetMs?:number;
 }
 export interface MultiwaySolveRequest {
-  board:string;hero:string;heroSeat:number;players:{range:string;stack:number}[];pot:number;iterations:number;
+  board:string;hero:string;heroSeat:number;players:{range:string;stack:number}[];pot:number;potLayers?:{amount:number;eligible:number[]}[];iterations:number;
   betSizes:Fraction[][];maxRaises:number;history:WasmHistoryAction[];timeBudgetMs?:number;
 }
 
@@ -65,11 +71,50 @@ function encodeHistory(input:MultiwaySolveInput,pot:number):Encoding{
   return {history,sizesByDepth,aggressions};
 }
 
+/** Layers in chips; rounding goes to the main pot so the layers add up to the pot exactly. */
+function chipLayers(layers:MultiwaySolveInput["potLayers"],pot:number,players:number){
+  if(!layers||layers.length<=1)return undefined;
+  if(layers.some(layer=>!layer.eligible.length||layer.eligible.some(index=>!Number.isInteger(index)||index<0||index>=players)))throw new Error("Pot layers must name the players who can win them.");
+  const chips=layers.map(layer=>({amount:toChips(layer.amount),eligible:[...new Set(layer.eligible)]}));
+  chips[0]={...chips[0],amount:chips[0].amount+pot-chips.reduce((sum,layer)=>sum+layer.amount,0)};
+  if(chips.some(layer=>!(layer.amount>0)))throw new Error("Pot layers must be positive.");
+  return chips;
+}
+
+/**
+ * Splits the street-start pot by what each seat put in on earlier streets, so a player already all-in only contests
+ * the layers they paid into. `committed` covers every seat (folded ones are dead money); `players` are the seats
+ * still in, in solver order. Chips outside the contributions (antes) go to the main pot; a layer nobody still in can
+ * win (only folded contributors) merges into the layer below. Returns undefined when there is a single pot.
+ */
+export function streetStartPotLayers(input:{committed:ReadonlyMap<number,number>;players:number[];pot:number}){
+  // Contributions come from BB subtraction; snapping to chips keeps equal amounts equal.
+  const committed=new Map([...input.committed].map(([seat,amount])=>[seat,toChips(amount)/CHIPS_PER_BB]));
+  const folded=new Set([...committed.keys()].filter(seat=>!input.players.includes(seat)));
+  const merged:{amount:number;eligible:number[]}[]=[];
+  for(const layer of calculatePotLayers(committed,folded)){
+    const eligible=layer.eligibleSeats.map(seat=>input.players.indexOf(seat)).sort((left,right)=>left-right);
+    const last=merged.at(-1);
+    // Levels from folded blinds and bets share their players with the layer below, so they are one pot.
+    if(last&&(!eligible.length||last.eligible.join()===eligible.join()))merged[merged.length-1]={...last,amount:last.amount+layer.amount};
+    else merged.push({amount:layer.amount,eligible});
+  }
+  const layers=merged.filter(layer=>layer.eligible.length);
+  if(layers.length<=1)return undefined;
+  const missing=input.pot-layers.reduce((sum,layer)=>sum+layer.amount,0);
+  // Chips beyond the contributions are dead money for the main pot; contributions above the pot mean bad input.
+  if(missing<-0.01)throw new Error("Earlier-street contributions exceed the pot.");
+  layers[0]={...layers[0],amount:layers[0].amount+missing};
+  return layers;
+}
+
 export function buildMultiwaySolveRequest(input:MultiwaySolveInput):MultiwaySolveRequest{
   if(input.players.length<2||input.players.length>MULTIWAY_MAX_PLAYERS)throw new Error(`The multiway solver takes 2-${MULTIWAY_MAX_PLAYERS} players.`);
   if(!Number.isInteger(input.heroIndex)||input.heroIndex<0||input.heroIndex>=input.players.length)throw new Error("Hero must be one of the players.");
   const pot=toChips(input.pot);
-  if(!(pot>0)||input.players.some(player=>!(toChips(player.stack)>0)))throw new Error("Pot and every street-start stack must be positive.");
+  // A zero stack is a player all-in from an earlier street; Hero must still have chips to act.
+  if(!(pot>0)||input.players.some(player=>!(toChips(player.stack)>=0))||!(toChips(input.players[input.heroIndex].stack)>0))throw new Error("Pot and Hero's street-start stack must be positive.");
+  const potLayers=chipLayers(input.potLayers,pot,input.players.length);
   const {history,sizesByDepth,aggressions}=encodeHistory(input,pot);
   const baseBet=input.betPercent.map(percent=>fraction(Math.round(percent),100));
   const baseRaise=input.raisePercent.map(percent=>fraction(Math.round(percent),100));
@@ -79,7 +124,7 @@ export function buildMultiwaySolveRequest(input:MultiwaySolveInput):MultiwaySolv
     hero:cardCodes(input.heroHole,[2],"Hero"),
     heroSeat:input.heroIndex,
     players:input.players.map(player=>({range:player.range,stack:toChips(player.stack)})),
-    pot,iterations:input.iterations,
+    pot,...(potLayers?{potLayers}:{}),iterations:input.iterations,
     betSizes:Array.from({length:depthCount},(_,depth)=>mergeSizes(depth===0?baseBet:baseRaise,sizesByDepth[depth])),
     maxRaises:Math.min(MAX_RAISES,Math.max(2,aggressions+1)),
     history,

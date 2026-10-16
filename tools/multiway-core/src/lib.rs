@@ -61,6 +61,7 @@ fn rules(request: &MultiwayRequest) -> Rules {
     Rules {
         players: request.ranges.len(),
         pot: request.pot,
+        start_layers: request.start_layers.clone(),
         stacks: request.stacks,
         bet_sizes: request.bet_sizes.clone(),
         max_raises: request.max_raises,

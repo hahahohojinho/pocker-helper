@@ -278,7 +278,8 @@ mod tests {
     }
 
     fn rules(players: usize, stacks: [i32; 3]) -> Rules {
-        Rules { players, pot: 1000, stacks, bet_sizes: vec![vec![[1, 2]], vec![[3, 5]]], max_raises: 2, allin_always: false }
+        let start_layers = vec![crate::game::Layer { amount: 1000.0, eligible: (1u8 << players) - 1 }];
+        Rules { players, pot: 1000, start_layers, stacks, bet_sizes: vec![vec![[1, 2]], vec![[3, 5]]], max_raises: 2, allin_always: false }
     }
 
     /// Expected net chips of each player under the average strategies, per unit of compatible deal mass.
@@ -305,6 +306,22 @@ mod tests {
         let values = expected_values(&solver);
         let total: f64 = values.iter().sum();
         assert!((total - 1000.0).abs() < 1e-6, "{values:?} sums to {total}");
+    }
+
+    #[test]
+    fn earlier_all_in_player_payoffs_still_sum_to_the_pot() {
+        // Player 2 is all-in from an earlier street: 600 main pot for everyone, 400 side pot for players 0 and 1.
+        let ranges: Vec<Vec<f64>> = SPOT.iter().map(|text| range(text)).collect();
+        let start_layers = vec![crate::game::Layer { amount: 600.0, eligible: 0b111 }, crate::game::Layer { amount: 400.0, eligible: 0b011 }];
+        let rules = Rules { start_layers, ..rules(3, [3000, 2500, 0]) };
+        let mut solver = Solver::new(rules, board("Kd9h5c2s7d"), ranges, 100_000, usize::MAX).unwrap();
+        for _ in 0..30 {
+            solver.iterate();
+        }
+        let values = expected_values(&solver);
+        assert!((values.iter().sum::<f64>() - 1000.0).abs() < 1e-6, "{values:?}");
+        // Player 2 can only win the main pot.
+        assert!(values[2] < 600.0 && values[2] > 0.0, "{values:?}");
     }
 
     #[test]

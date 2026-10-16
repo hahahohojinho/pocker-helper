@@ -42,6 +42,18 @@ fn rejects_non_river_boards_and_off_tree_histories() {
 }
 
 #[test]
+fn solves_with_a_player_all_in_from_an_earlier_street() {
+    let players = PLAYERS.replace(r#""stack":2500"#, r#""stack":0"#);
+    let request = format!(r#"{{"board":"Kd9h5c2s7d","hero":"AhKh","heroSeat":0,"players":{players},"pot":1000,"potLayers":[{{"amount":700,"eligible":[0,1,2]}},{{"amount":300,"eligible":[0,1]}}],"iterations":50,"betSizes":[[[1,2]],[[3,5]]],"maxRaises":2}}"#);
+    let response = run(&["--json-multiway"], &request);
+    assert_eq!(response["ok"], true, "{response}");
+    let bad = request.replace(r#""amount":300"#, r#""amount":200"#);
+    assert!(run(&["--json-multiway"], &bad)["error"].as_str().unwrap().contains("add up"));
+    let not_nested = request.replace(r#""eligible":[0,1,2]"#, r#""eligible":[0,2]"#);
+    assert!(run(&["--json-multiway"], &not_nested)["error"].as_str().unwrap().contains("every player"));
+}
+
+#[test]
 fn reports_capabilities() {
     let response = run(&["--capabilities"], "");
     assert_eq!(response["multiway"]["maxPlayers"], 3);
