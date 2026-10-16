@@ -9,8 +9,11 @@ import { buildWasmSolveRequest } from "../wasm-solver/request";
 import { enumerateCanonicalFlops } from "./canonical";
 import type { FlopScenario } from "./format";
 
-/** A single-raised pot the library precomputes: everyone else folds, the caller calls the open. */
-export interface ScenarioDef { id: string; label: string; tableSize: TableSize; stack: number; opener: Position; caller: Position; openSize: number; }
+/**
+ * A heads-up pot the library precomputes; everyone else folds. Single-raised: `caller` calls the open. 3-bet pot:
+ * `caller` 3-bets to `threeBetSize` and the opener calls.
+ */
+export interface ScenarioDef { id: string; label: string; tableSize: TableSize; stack: number; opener: Position; caller: Position; openSize: number; threeBetSize?: number; }
 
 /** Seat order as the table helper lays it out; seat indexes feed the recorded actions. */
 const SEATS: Record<TableSize, Position[]> = { 6: ["BTN", "SB", "BB", "UTG", "HJ", "CO"], 8: ["BTN", "SB", "BB", "UTG", "UTG+1", "MP", "HJ", "CO"] };
@@ -30,6 +33,13 @@ export const SCENARIO_DEFS: readonly ScenarioDef[] = [
   { id: "6max-100bb-srp-hj-co", label: "HJ vs CO SRP 100bb", tableSize: 6, stack: 100, opener: "HJ", caller: "CO", openSize: 2.5 },
   { id: "6max-100bb-srp-utg-co", label: "UTG vs CO SRP 100bb", tableSize: 6, stack: 100, opener: "UTG", caller: "CO", openSize: 2.5 },
   { id: "6max-100bb-srp-utg-hj", label: "UTG vs HJ SRP 100bb", tableSize: 6, stack: 100, opener: "UTG", caller: "HJ", openSize: 2.5 },
+  // Third batch (2026-10-17): the most common 3-bet pots, 3-bet to the packs' 9bb.
+  { id: "6max-100bb-3bp-co-btn", label: "CO vs BTN 3BP 100bb", tableSize: 6, stack: 100, opener: "CO", caller: "BTN", openSize: 2.5, threeBetSize: 9 },
+  { id: "6max-100bb-3bp-btn-sb", label: "BTN vs SB 3BP 100bb", tableSize: 6, stack: 100, opener: "BTN", caller: "SB", openSize: 2.5, threeBetSize: 9 },
+  { id: "6max-100bb-3bp-btn-bb", label: "BTN vs BB 3BP 100bb", tableSize: 6, stack: 100, opener: "BTN", caller: "BB", openSize: 2.5, threeBetSize: 9 },
+  { id: "6max-100bb-3bp-co-bb", label: "CO vs BB 3BP 100bb", tableSize: 6, stack: 100, opener: "CO", caller: "BB", openSize: 2.5, threeBetSize: 9 },
+  { id: "6max-100bb-3bp-co-sb", label: "CO vs SB 3BP 100bb", tableSize: 6, stack: 100, opener: "CO", caller: "SB", openSize: 2.5, threeBetSize: 9 },
+  { id: "6max-100bb-3bp-hj-btn", label: "HJ vs BTN 3BP 100bb", tableSize: 6, stack: 100, opener: "HJ", caller: "BTN", openSize: 2.5, threeBetSize: 9 },
 ];
 
 /** The preflop actions the table helper records for this line, including the implicit folds of skipped seats. */
@@ -39,12 +49,14 @@ export function scenarioActions(def: ScenarioDef): PlayerAction[] {
     ({ id: `${position}-${type}`, street: "preflop", seat: seats.indexOf(position), position, type, amount, ...(implicit ? { implicit: true } : {}) });
   const order = ACTION_ORDER[def.tableSize];
   const openerAt = order.indexOf(def.opener), callerAt = order.indexOf(def.caller);
-  return [
+  const opened = [
     ...order.slice(0, openerAt).map(position => act(position, "fold", 0, true)),
     act(def.opener, "open", def.openSize),
     ...order.slice(openerAt + 1, callerAt).map(position => act(position, "fold", 0, true)),
-    act(def.caller, "call", def.openSize),
   ];
+  if (def.threeBetSize === undefined) return [...opened, act(def.caller, "call", def.openSize)];
+  // Seats behind the 3-bettor fold, then the action is back on the opener.
+  return [...opened, act(def.caller, "3bet", def.threeBetSize), ...order.slice(callerAt + 1).map(position => act(position, "fold", 0, true)), act(def.opener, "call", def.threeBetSize)];
 }
 
 /**

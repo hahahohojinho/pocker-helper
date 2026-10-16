@@ -2,6 +2,11 @@
 
 ## Unreleased - fix/solver-quality (2026-10-11)
 
+### Flop library: 3-bet pots (2026-10-17)
+- `ScenarioDef.threeBetSize`: a scenario can be a 3-bet pot (the caller 3-bets, seats behind fold, the opener calls). Added CO vs BTN, BTN vs SB, BTN vs BB, CO vs BB, CO vs SB, and HJ vs BTN at the packs' 9bb 3-bet (pot 18.5-19.5bb, 91bb behind), with the same flop tree. 17 scenarios in total.
+- Why: 3-bet pots are common heads-up flops and live 9 s solves stay above 1% exploitability there too (not measured separately; same tree size class).
+- The full test run once failed `multiway-integration.test.ts` while the library build used every core (solve got too few iterations); it passed 3 of 3 runs alone. CI runs without that load.
+
 ### Heads-up flop: 9 s live budget and 8 more library scenarios (2026-10-17)
 - Measured live heads-up flops outside the library (native, 12 threads, BTN/CO vs BB SRP ranges, K72/T94/876/AA5): 4.5 s gave 3-6 iterations at 4.6-17.9% exploitability, 8 s 1.0-7.2%, 9 s 0.8-4.6%; one wide flop iteration takes ~0.6 s. Turn/river converge far below 1% in 4.5 s.
 - Why: the user asked whether live solving alone would do within 10 s; it does not for flops, so the precomputed library stays, and live flops get most of the 10 s limit (native flop budget 9 s, answer target 5 s -> 10 s). Turn/river keep 4.5 s.
