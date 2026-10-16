@@ -4,6 +4,7 @@ import { parseSolverResult } from "../solver-adapter";
 import { resolveSolverTimeoutMs } from "../solver-presets";
 import type { TexasSolverJob } from "../texas-solver-config";
 import { buildDcfrJobRequest } from "./dcfr-job-request";
+import { multiwayResponseToSolverJson, type MultiwaySolveRequest, type MultiwaySolveResponse } from "../wasm-solver/multiway-request";
 import { wasmResponseToSolverJson, type WasmSolveRequest, type WasmSolveResponse } from "../wasm-solver/request";
 
 const MAX_OUTPUT_BYTES=4*1024*1024;
@@ -76,4 +77,49 @@ export async function runDcfrJsonAdapter(request:WasmSolveRequest,options:{threa
   const normalized=wasmResponseToSolverJson(envelope);
   if(parseSolverResult(normalized).evSource!=="solver")throw new Error("DCFR adapter response must include EV for every action.");
   return normalized;
+}
+
+/** Solves a 2-3 player river request with the adapter's `--json-multiway` mode; returns normalized solver JSON. */
+export async function runMultiwayJsonAdapter(request:MultiwaySolveRequest,options:{threads:number;timeoutMs?:number;signal?:AbortSignal}){
+  const raw=await runAdapterProcess({
+    args:["--json-multiway"],stdin:JSON.stringify(request),signal:options.signal,
+    timeoutMs:options.timeoutMs??resolveSolverTimeoutMs(process.env.SOLVER_TIMEOUT_MS),
+    env:adapterEnvironment(options.threads),
+  });
+  let envelope:MultiwaySolveResponse;
+  try{envelope=JSON.parse(raw) as MultiwaySolveResponse;}catch{throw new Error("DCFR adapter returned invalid JSON.");}
+  const normalized=multiwayResponseToSolverJson(envelope);
+  if(parseSolverResult(normalized).evSource!=="solver")throw new Error("DCFR adapter response must include EV for every action.");
+  return normalized;
+}
+
+export interface AdapterMultiwayCapability { maxPlayers:number;streets:("flop"|"turn"|"river")[]; }
+
+const CAPABILITY_TIMEOUT_MS=5_000;
+/** A failed probe (older binary, timeout) is retried after this long instead of on every GET. */
+const CAPABILITY_RETRY_MS=60_000;
+// One probe per configured path; kept on globalThis so dev-mode module re-evaluation does not respawn the binary.
+const capabilityCache=globalThis as typeof globalThis&{__rangelabAdapterCapability?:{path:string;value:Promise<AdapterMultiwayCapability|null>;expiresAt?:number}};
+
+/** Parses `--capabilities` output; anything unexpected means no multiway support. */
+export function parseAdapterCapabilities(raw:string):AdapterMultiwayCapability|null{
+  try{
+    const multiway=(JSON.parse(raw) as {multiway?:{maxPlayers?:unknown;streets?:unknown}}).multiway;
+    const streets=Array.isArray(multiway?.streets)?multiway.streets.filter((street):street is "flop"|"turn"|"river"=>street==="flop"||street==="turn"||street==="river"):[];
+    return multiway&&Number.isInteger(multiway.maxPlayers)&&(multiway.maxPlayers as number)>=3&&streets.length?{maxPlayers:multiway.maxPlayers as number,streets}:null;
+  }catch{return null;}
+}
+
+/** Multiway support of the configured adapter; an older binary without `--capabilities` reports none. */
+export function adapterMultiwayCapability():Promise<AdapterMultiwayCapability|null>{
+  const path=process.env.DCFR_ADAPTER_PATH??"";
+  const cached=capabilityCache.__rangelabAdapterCapability;
+  if(cached&&cached.path===path&&(cached.expiresAt===undefined||Date.now()<cached.expiresAt))return cached.value;
+  const value=runAdapterProcess({args:["--capabilities"],timeoutMs:CAPABILITY_TIMEOUT_MS,env:adapterEnvironment(1)}).then(parseAdapterCapabilities,()=>null).then(capability=>{
+    const entry=capabilityCache.__rangelabAdapterCapability;
+    if(!capability&&entry?.value===value)entry.expiresAt=Date.now()+CAPABILITY_RETRY_MS;
+    return capability;
+  });
+  capabilityCache.__rangelabAdapterCapability={path,value};
+  return value;
 }

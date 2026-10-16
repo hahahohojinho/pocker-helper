@@ -12,7 +12,7 @@
 | 포스트플랍 | 구현 | 플랍·턴·리버 순서와 스트리트 간 상태 유지 |
 | Equity | 구현 | 7-card hand ranking + Monte Carlo, 다중 상대 가중 레인지 지원 |
 | 상대 레인지 | 기초 구현 | 프리플랍 액션·사이징 및 포스트플랍 made hand·draw·blocker 휴리스틱으로 자동 갱신; 직접 편집 가능 |
-| Solver | 구현 | Heads-up은 브라우저 내장 DCFR(WASM)로 모든 스트리트·노드를 풀고 액션별 Solver EV와 수렴도를 표시. Multiway는 외부 counterfactual backend, 로컬 TexasSolver/DCFR adapter는 선택 사항 |
+| Solver | 구현 | Heads-up은 브라우저 내장 DCFR(WASM)로 모든 스트리트·노드를 풀고 액션별 Solver EV와 수렴도를 표시. 리버 3인 Multiway는 네이티브 DCFR adapter(`--json-multiway`, 3인 CFR, 최대 BR 이득 표시)가 풀고, 그 외 Multiway는 외부 counterfactual backend. 로컬 TexasSolver/DCFR adapter는 선택 사항 |
 
 현재 추천과 자동 레인지는 휴리스틱 baseline입니다. 화면의 `NOT GTO`, `ACTION BASELINE`, `MODEL EV` 표시는 솔버 결과와 추정값을 구분하는 의도적인 표기입니다.
 
@@ -85,7 +85,7 @@ GTO 추천 카드는 그대로 두고, 그 아래에 주황색 "EXPLOIT" 카드�
 ## 현재 남은 GTO 정확도 작업
 
 - `baseline-v1`을 자체 solve 또는 정식 라이선스의 6-max 프리플랍 데이터로 교체
-- 실제 multiway counterfactual solver 서비스 배포 및 운영 설정
+- 플랍/턴 multiway solver (현재 로컬은 리버 3인만) 및 외부 multiway counterfactual 서비스 운영 설정
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

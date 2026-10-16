@@ -1,0 +1,16 @@
+[package]
+name = "rangelab-multiway-core"
+version = "0.1.0"
+edition = "2021"
+description = "Native 3-player river solver for RangeLab: N-player betting rules, card-removal showdown kernels, and DCFR."
+publish = false
+
+[dependencies]
+dcfr-solver = { path = "../dcfr-solver" }
+rayon = "1.10"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+rand = { version = "0.8", features = ["small_rng"] }
+rangelab-dcfr-core = { path = "../dcfr-core" }

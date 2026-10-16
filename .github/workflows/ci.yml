@@ -85,6 +85,10 @@ jobs:
       - name: Adapter tests (real rayon, --json mode, deadline)
         working-directory: tools/dcfr-adapter
         run: cargo test --release --locked -- --test-threads=1
+      # Kernel checks against brute force, the heads-up cross-check with dcfr-core, and 3-way convergence.
+      - name: Multiway solver tests
+        working-directory: tools/multiway-core
+        run: cargo test --release --locked
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
@@ -94,4 +98,4 @@ jobs:
       - name: Integration tests against the built adapter
         env:
           DCFR_ADAPTER_PATH: ${{ github.workspace }}/tools/dcfr-adapter/target/release/rangelab-dcfr-adapter${{ matrix.exe_suffix }}
-        run: npx vitest run src/lib/server/solver-integration.test.ts src/lib/server/run-dcfr-adapter.test.ts src/lib/server/dcfr-job-request.test.ts
+        run: npx vitest run src/lib/server/solver-integration.test.ts src/lib/server/run-dcfr-adapter.test.ts src/lib/server/dcfr-job-request.test.ts src/lib/server/multiway-integration.test.ts

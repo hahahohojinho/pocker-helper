@@ -41,19 +41,22 @@ export const MAX_SOLVER_BODY_BYTES=300*1024;
 
 export class SolverBodyTooLargeError extends Error {}
 
-export type SolverBody={kind:"dcfr-json";request:Record<string,unknown>}|{kind:"job";job:Record<string,unknown>};
+export type SolverBody={kind:"dcfr-json"|"multiway-json";request:Record<string,unknown>}|{kind:"job";job:Record<string,unknown>};
 
-/** Parses a POST body: `{kind:"dcfr-json",request}` for the native adapter, anything else as a legacy solver job. */
+/**
+ * Parses a POST body: `{kind:"dcfr-json",request}` or `{kind:"multiway-json",request}` for the native adapter, anything
+ * else as a legacy solver job.
+ */
 export function parseSolverBody(text:string):SolverBody{
   if(new TextEncoder().encode(text).byteLength>MAX_SOLVER_BODY_BYTES)throw new SolverBodyTooLargeError(`Solver request exceeds ${MAX_SOLVER_BODY_BYTES} bytes.`);
   let value:unknown;
   try{value=JSON.parse(text);}catch{throw new Error("Solver request is not valid JSON.");}
   if(!value||typeof value!=="object"||Array.isArray(value))throw new Error("Solver request must be a JSON object.");
   const body=value as Record<string,unknown>;
-  if(body.kind!=="dcfr-json")return {kind:"job",job:body};
+  if(body.kind!=="dcfr-json"&&body.kind!=="multiway-json")return {kind:"job",job:body};
   const request=body.request;
-  if(!request||typeof request!=="object"||Array.isArray(request)||!Number.isInteger((request as Record<string,unknown>).iterations))throw new Error("dcfr-json request needs an object with integer iterations.");
-  return {kind:"dcfr-json",request:request as Record<string,unknown>};
+  if(!request||typeof request!=="object"||Array.isArray(request)||!Number.isInteger((request as Record<string,unknown>).iterations))throw new Error(`${body.kind} request needs an object with integer iterations.`);
+  return {kind:body.kind,request:request as Record<string,unknown>};
 }
 
 /** Whether the native adapter accepts dcfr-json requests: configured, not shadowed by a remote backend, and allowed. */

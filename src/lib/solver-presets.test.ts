@@ -116,6 +116,8 @@ describe("solver tree size limits",()=>{
 describe("solver request body",()=>{
   it("routes dcfr-json bodies and keeps legacy jobs",()=>{
     expect(parseSolverBody('{"kind":"dcfr-json","request":{"iterations":10}}')).toEqual({kind:"dcfr-json",request:{iterations:10}});
+    expect(parseSolverBody('{"kind":"multiway-json","request":{"iterations":10}}')).toEqual({kind:"multiway-json",request:{iterations:10}});
+    expect(()=>parseSolverBody('{"kind":"multiway-json","request":{}}')).toThrow("multiway-json request needs");
     expect(parseSolverBody('{"node":{}}')).toEqual({kind:"job",job:{node:{}}});
   });
   it("rejects oversized, malformed, and incomplete bodies",()=>{

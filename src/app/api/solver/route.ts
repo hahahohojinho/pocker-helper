@@ -3,12 +3,13 @@ import { NextResponse } from "next/server";
 import type { TexasSolverJob } from "@/lib/texas-solver-config";
 import { runTexasSolverDetailed } from "@/lib/server/run-texas-solver";
 import { runCounterfactualBackend } from "@/lib/server/run-counterfactual-backend";
-import { runDcfrAdapter, runDcfrJsonAdapter } from "@/lib/server/run-dcfr-adapter";
+import { adapterMultiwayCapability, runDcfrAdapter, runDcfrJsonAdapter, runMultiwayJsonAdapter } from "@/lib/server/run-dcfr-adapter";
 import { resolveSolverThreads, resolveSolverTimeoutMs } from "@/lib/solver-presets";
 import { clampSolverBudget, isTrustedSolverRequest, nativeJsonSolverEnabled, nativeTimeBudget, parseSolverBody, readSolverBody, SolverBodyTooLargeError, tryAcquireSolverSlot } from "@/lib/solver-guard";
 
 /** The adapter is killed this long after its time budget if it has not exited. */
 const ADAPTER_TIMEOUT_SLACK_MS=10_000;
+import type { MultiwaySolveRequest } from "@/lib/wasm-solver/multiway-request";
 import type { WasmSolveRequest } from "@/lib/wasm-solver/request";
 
 export const runtime="nodejs";
@@ -17,7 +18,10 @@ export async function GET(){
   const dcfrConfigured=Boolean(process.env.DCFR_ADAPTER_PATH);
   const configuredMaximum=Number(process.env.COUNTERFACTUAL_EV_BACKEND_MAX_PLAYERS??8);
   const maxPlayers=remoteConfigured?Math.min(8,Math.max(2,Number.isInteger(configuredMaximum)?configuredMaximum:8)):2;
-  return NextResponse.json({backend:remoteConfigured?"counterfactual":dcfrConfigured?"dcfr":"texassolver",maxPlayers:dcfrConfigured&&!remoteConfigured?2:maxPlayers,nativeJson:nativeJsonSolverEnabled(process.env)},{headers:{"cache-control":"no-store"}});
+  const nativeJson=nativeJsonSolverEnabled(process.env);
+  // `maxPlayers` describes the job API; the native multiway mode is advertised separately.
+  const nativeMultiway=nativeJson?await adapterMultiwayCapability():null;
+  return NextResponse.json({backend:remoteConfigured?"counterfactual":dcfrConfigured?"dcfr":"texassolver",maxPlayers:dcfrConfigured&&!remoteConfigured?2:maxPlayers,nativeJson,nativeMultiway},{headers:{"cache-control":"no-store"}});
 }
 export async function POST(request:Request){
   const receivedAt=Date.now();
@@ -27,7 +31,7 @@ export async function POST(request:Request){
   let body:ReturnType<typeof parseSolverBody>;
   try{body=parseSolverBody(await readSolverBody(request));}
   catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Invalid solver request."},{status:error instanceof SolverBodyTooLargeError?413:400});}
-  if(body.kind==="dcfr-json")return solveNativeJson(body.request,request.signal,receivedAt);
+  if(body.kind!=="job")return solveNativeJson(body.kind,body.request,request.signal,receivedAt);
   try{
     const requested=body.job as unknown as TexasSolverJob;
     const dcfrConfigured=Boolean(process.env.DCFR_ADAPTER_PATH);
@@ -46,8 +50,11 @@ export async function POST(request:Request){
   }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Solver execution failed."},{status:400});}
 }
 
-/** Native multi-threaded solve of the in-browser solver's request format; dcfr-core validates the request itself. */
-async function solveNativeJson(raw:Record<string,unknown>,signal:AbortSignal,receivedAt:number){
+/**
+ * Native multi-threaded solve of the in-browser solver's request format (`dcfr-json`) or a 2-3 player river request
+ * (`multiway-json`); the Rust crates validate the request themselves.
+ */
+async function solveNativeJson(kind:"dcfr-json"|"multiway-json",raw:Record<string,unknown>,signal:AbortSignal,receivedAt:number){
   if(!nativeJsonSolverEnabled(process.env))return NextResponse.json({error:"Native DCFR solver is not enabled."},{status:404});
   const release=tryAcquireSolverSlot(process.env.SOLVER_MAX_CONCURRENCY);
   if(!release)return NextResponse.json({error:"다른 Solver 작업이 실행 중입니다. 완료 후 다시 시도하세요."},{status:429});
@@ -56,7 +63,10 @@ async function solveNativeJson(raw:Record<string,unknown>,signal:AbortSignal,rec
     const threads=resolveSolverThreads(availableParallelism(),process.env.SOLVER_MAX_THREADS,availableParallelism());
     const timeBudgetMs=nativeTimeBudget(raw.timeBudgetMs,process.env.SOLVER_MAX_BUDGET_MS,Date.now()-receivedAt);
     const timeoutMs=Math.min(resolveSolverTimeoutMs(process.env.SOLVER_TIMEOUT_MS),timeBudgetMs+ADAPTER_TIMEOUT_SLACK_MS);
-    const output=await runDcfrJsonAdapter({...raw,iterations,timeBudgetMs} as unknown as WasmSolveRequest,{threads,signal,timeoutMs});
+    const options={threads,signal,timeoutMs};
+    const output=kind==="multiway-json"
+      ?await runMultiwayJsonAdapter({...raw,iterations,timeBudgetMs} as unknown as MultiwaySolveRequest,options)
+      :await runDcfrJsonAdapter({...raw,iterations,timeBudgetMs} as unknown as WasmSolveRequest,options);
     return new NextResponse(output,{headers:{"content-type":"application/json","cache-control":"no-store"}});
   }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Native solver failed."},{status:400});}
   finally{release();}

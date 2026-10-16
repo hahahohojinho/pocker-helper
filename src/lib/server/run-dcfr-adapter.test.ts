@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isAdapterExecutable } from "./run-dcfr-adapter";
+import { isAdapterExecutable, parseAdapterCapabilities } from "./run-dcfr-adapter";
 
 describe("isAdapterExecutable",()=>{
   it.each<[NodeJS.Platform,string,boolean]>([
@@ -13,5 +13,14 @@ describe("isAdapterExecutable",()=>{
     ["linux","/opt/bin/sh",false],
   ])("%s %s -> %s",(platform,path,expected)=>{
     expect(isAdapterExecutable(path,platform)).toBe(expected);
+  });
+});
+
+describe("parseAdapterCapabilities",()=>{
+  it("reads the multiway mode and ignores unknown streets",()=>{
+    expect(parseAdapterCapabilities('{"json":true,"multiway":{"maxPlayers":3,"streets":["river","preflop"]}}')).toEqual({maxPlayers:3,streets:["river"]});
+  });
+  it.each(["","not json",'{"json":true}','{"multiway":{"maxPlayers":2,"streets":["river"]}}','{"multiway":{"maxPlayers":3,"streets":[]}}'])("reports no multiway support for %j",raw=>{
+    expect(parseAdapterCapabilities(raw)).toBeNull();
   });
 });

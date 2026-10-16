@@ -275,6 +275,7 @@ version = "0.1.0"
 dependencies = [
  "dcfr-solver",
  "rangelab-dcfr-core",
+ "rangelab-multiway-core",
  "serde_json",
 ]
 
@@ -283,6 +284,16 @@ name = "rangelab-dcfr-core"
 version = "0.1.0"
 dependencies = [
  "dcfr-solver",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "rangelab-multiway-core"
+version = "0.1.0"
+dependencies = [
+ "dcfr-solver",
+ "rayon",
  "serde",
  "serde_json",
 ]

@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 dcfr-solver = { path = "../dcfr-solver" }
 rangelab-dcfr-core = { path = "../dcfr-core" }
+rangelab-multiway-core = { path = "../multiway-core" }
 serde_json = "1"
 
 [profile.release]

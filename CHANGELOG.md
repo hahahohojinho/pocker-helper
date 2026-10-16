@@ -2,6 +2,16 @@
 
 ## Unreleased - fix/solver-quality (2026-10-11)
 
+### Native 3-player river solver (2026-10-16)
+- New crate `tools/multiway-core` linked into `rangelab-dcfr-adapter` (`--json-multiway`, `--capabilities`). Reuses only dcfr-solver's cards, evaluator, and range parser; dcfr-solver's postflop solver is two-player only and the submodule stays unmodified.
+- Rules: dcfr-solver sizing, rounding, minimum raise, and all-in collapse for 2-3 players in action order; side pots by street commitment. Simplification: an incomplete all-in raise reopens the action.
+- Showdown: exact card removal in O(52) per Hero combo via inclusion-exclusion over shared cards (sets below/tied/any), tested against an O(n^3) brute force. Solver: vector-form DCFR (1.5, 0, 2), alternating updates, average strategy weighted by own reach; 2-player results match dcfr-core root and facing-bet EVs within 1% of the pot.
+- Convergence is reported as the largest per-player best-response gain (% of pot) because 3-player CFR has no Nash guarantee; the UI shows `MAX BR GAIN` and `SOLVER EV · 3-WAY CFR` instead of exploitability.
+- App: `POST /api/solver` `{kind:"multiway-json"}`, `GET` advertises `nativeMultiway` (probe cached; failures retried after 60 s). The panel solves 3-player rivers natively; it now keys solver choice on the seats that started the street, so a same-street fold no longer sends a 3-player street to the heads-up solver with the folder's action mislabeled.
+- Measured (12 threads, 4.5 s): SRP ranges 261-344 iterations at <= 0.019% pot; 100% ranges at 2 s <= 0.075%.
+- Why: the user required turn/river answers within 10 s and asked for a real multiway backend; river 3-way fits easily, turn 3-way needs ~0.5-2 s per iteration on the full tree (planner estimate, not measured) and flop 3-way does not fit, so both stay on MODEL EV for now. MCCFR was rejected (noisy per-combo EV under a deadline).
+- Reviews: code review found the average strategy was not weighted by own reach (fixed), a short all-in counted as a raise in the TS encoder (fixed), and a near-zero mass check (relative threshold now). Security review: storage cap lowered to 1 GB including node overhead, the solve stops once the budget is spent even below 3 iterations.
+
 ### Flop library generated (2026-10-14)
 - `node scripts/build-flop-library.mjs --budget-ms 30000` finished all three 6-max 100bb SRP scenarios (BTN/CO/SB vs BB), 1755 canonical flops each, 0 failures, 379 MB, local only (gitignored). Exploitability median/max: BTN 0.058/0.521%, CO 0.060/0.392%, SB 0.050/0.359%. Run 2026-10-11 to 2026-10-14 with several resumes after PC shutdowns.
 

@@ -4,11 +4,11 @@ import type { PostflopActionType } from "../postflop-machine";
 /** The wasm solver works in integer chips; RangeLab amounts are BB, so 1 chip = 1/100 BB. */
 export const CHIPS_PER_BB=100;
 /** dcfr-solver's tree accepts at most four bets/raises per street. */
-const MAX_RAISES=4;
+export const MAX_RAISES=4;
 const MAX_SIZES_PER_DEPTH=6;
 
 type Role="oop"|"ip";
-type Fraction=[number,number];
+export type Fraction=[number,number];
 
 export interface WasmHistoryStep { role:Role;action:PostflopActionType;amount:number; }
 export interface WasmSolveInput {
@@ -24,18 +24,18 @@ export interface WasmSolveInput {
 export type WasmHistoryAction={action:"check"|"call"|"fold"|"allin"}|{action:"bet"|"raise";size:Fraction};
 export interface WasmSolveRequest { board:string;hero:string;oopRange:string;ipRange:string;pot:number;stacks:[number,number];iterations:number;betSizes:Fraction[][];maxRaises:number;history:WasmHistoryAction[];timeBudgetMs?:number;iterationCostNs?:number; }
 
-const toChips=(bb:number)=>Math.round(bb*CHIPS_PER_BB);
+export const toChips=(bb:number)=>Math.round(bb*CHIPS_PER_BB);
 const greatestCommonDivisor=(left:number,right:number):number=>right===0?left:greatestCommonDivisor(right,left%right);
 
 /** Reduced fraction, so equal sizes have one representation; the solver matches actions by exact fraction. */
-function fraction(numerator:number,denominator:number):Fraction{
+export function fraction(numerator:number,denominator:number):Fraction{
   const divisor=greatestCommonDivisor(numerator,denominator);
   return [numerator/divisor,denominator/divisor];
 }
 
 const sameFraction=(left:Fraction,right:Fraction)=>left[0]===right[0]&&left[1]===right[1];
 
-function cardCodes(codes:string[],expected:number[],label:string){
+export function cardCodes(codes:string[],expected:number[],label:string){
   const cards=codes.map(parseCard);
   if(!expected.includes(cards.length)||cards.some(card=>!card))throw new Error(`${label} cards are invalid.`);
   return (cards as NonNullable<ReturnType<typeof parseCard>>[]).map(card=>card.code).join("");
@@ -76,7 +76,7 @@ function encodeHistory(input:WasmSolveInput,pot:number):HistoryEncoding{
   return {history,sizesByDepth,aggressions};
 }
 
-function mergeSizes(base:Fraction[],observed:Fraction[]=[]){
+export function mergeSizes(base:Fraction[],observed:Fraction[]=[]){
   const merged=[...base];
   for(const size of observed)if(!merged.some(existing=>sameFraction(existing,size)))merged.push(size);
   if(merged.length>MAX_SIZES_PER_DEPTH)throw new Error(`Too many bet sizes at one raise level (max ${MAX_SIZES_PER_DEPTH}).`);

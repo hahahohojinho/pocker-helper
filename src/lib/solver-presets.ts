@@ -1,7 +1,10 @@
 import type { TexasSolverTree } from "./texas-solver-config";
 
-/** "wasm" is the in-browser DCFR solver; "native" is the same solver multi-threaded behind /api/solver, as are the rest. */
-export type SolverBackend="texassolver"|"dcfr"|"counterfactual"|"wasm"|"native";
+/**
+ * "wasm" is the in-browser DCFR solver; "native" is the same solver multi-threaded behind /api/solver, as are the rest.
+ * "multiway" is the adapter's 3-player river mode (`--json-multiway`).
+ */
+export type SolverBackend="texassolver"|"dcfr"|"counterfactual"|"wasm"|"native"|"multiway";
 export type SolverStreet="flop"|"turn"|"river";
 export type ExploitabilityLevel="ok"|"warn"|"bad"|"unknown";
 
@@ -24,6 +27,7 @@ const WARN_EXPLOITABILITY=5;
  */
 /** Leaves headroom inside the 5 s answer target for range building, the request, and rendering. */
 const DCFR_TIME_BUDGET_MS=4500;
+const NATIVE_BUDGETS={flop:{iterations:300,accuracy:0.5,timeBudgetMs:DCFR_TIME_BUDGET_MS},turn:{iterations:500,accuracy:0.3,timeBudgetMs:DCFR_TIME_BUDGET_MS},river:{iterations:1000,accuracy:0.3,timeBudgetMs:DCFR_TIME_BUDGET_MS}};
 const budgets:Record<SolverBackend,Record<SolverStreet,{iterations:number;accuracy:number;timeBudgetMs?:number}>>={
   texassolver:{flop:{iterations:200,accuracy:1},turn:{iterations:300,accuracy:0.5},river:{iterations:500,accuracy:0.5}},
   dcfr:{flop:{iterations:300,accuracy:1},turn:{iterations:500,accuracy:0.5},river:{iterations:1000,accuracy:0.5}},
@@ -35,7 +39,10 @@ const budgets:Record<SolverBackend,Record<SolverStreet,{iterations:number;accura
   // 2026-10-14, 12 threads, BTN vs BB SRP ranges, end-to-end adapter wall time: turn 4.5s 270-340 iterations at 0.004%;
   // river 1000 iterations in 1.2s at <=0.002%. 100% vs 100% ranges: turn 4.5s 194-240 iterations at <=0.016% (2s: <=0.08%),
   // river 1.7s. Both streets answer well inside the 10 s requirement at this budget.
-  native:{flop:{iterations:300,accuracy:0.5,timeBudgetMs:DCFR_TIME_BUDGET_MS},turn:{iterations:500,accuracy:0.3,timeBudgetMs:DCFR_TIME_BUDGET_MS},river:{iterations:1000,accuracy:0.3,timeBudgetMs:DCFR_TIME_BUDGET_MS}},
+  native:NATIVE_BUDGETS,
+  // River only (flop/turn entries are unused). 2026-10-16, 12 threads, BB/CO/BTN SRP ranges, 4.5s: 261-344 iterations,
+  // max best-response gain <=0.019% of the pot; 100% ranges x3 at 2s: 118-139 iterations at <=0.075%.
+  multiway:NATIVE_BUDGETS,
 };
 
 export function getSolverPreset(backend:SolverBackend,street:SolverStreet):SolverPreset{

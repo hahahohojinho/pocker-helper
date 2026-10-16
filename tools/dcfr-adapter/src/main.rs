@@ -138,29 +138,53 @@ fn run() -> Result<(), String> {
     Ok(())
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum JsonMode {
+    Node,
+    Nodes,
+    Multiway,
+}
+
 /// `--json`: reads the same request the in-browser solver takes from stdin and prints its envelope.
 /// `--json-nodes`: reads `{"request":...,"nodes":[...]}` and prints every combo's strategy at each node.
+/// `--json-multiway`: reads a 2-3 player river request (`players` in action order) and prints its envelope.
 /// Solver errors are reported inside the envelope (exit 0); only I/O failures exit non-zero.
-fn run_json(nodes: bool) -> Result<(), String> {
-    let limit = rangelab_dcfr_core::MAX_REQUEST_BYTES;
+fn run_json(mode: JsonMode) -> Result<(), String> {
+    let limit = if mode == JsonMode::Multiway { rangelab_multiway_core::MAX_REQUEST_BYTES } else { rangelab_dcfr_core::MAX_REQUEST_BYTES };
     let mut input = String::new();
     std::io::stdin().take(limit as u64 + 1).read_to_string(&mut input).map_err(|error| format!("failed to read stdin: {error}"))?;
+    // Native solves may use more memory than the browser, but stay bounded so one request cannot exhaust the host.
+    let max_tree_bytes = 4096 * 1024 * 1024;
     let response = if input.len() > limit {
         serde_json::json!({"ok": false, "error": format!("request exceeds {limit} bytes")}).to_string()
+    } else if mode == JsonMode::Multiway {
+        // Smaller than the heads-up budget: river trees fit in a few MB, and every slot is touched each iteration.
+        rangelab_multiway_core::solve_json(&input, rangelab_multiway_core::MultiwayOptions { source: "multiway-native", max_tree_bytes: rangelab_multiway_core::MAX_TREE_BYTES })
     } else {
-        // Native solves may use more memory than the browser, but stay bounded so one request cannot exhaust the host.
-        let options = rangelab_dcfr_core::SolveOptions { source: "dcfr-native", max_tree_bytes: 4096 * 1024 * 1024 };
-        if nodes { rangelab_dcfr_core::solve_nodes_json(&input, options) } else { rangelab_dcfr_core::solve_json(&input, options) }
+        let options = rangelab_dcfr_core::SolveOptions { source: "dcfr-native", max_tree_bytes };
+        if mode == JsonMode::Nodes { rangelab_dcfr_core::solve_nodes_json(&input, options) } else { rangelab_dcfr_core::solve_json(&input, options) }
     };
     let mut stdout = std::io::stdout().lock();
     writeln!(stdout, "{response}").and_then(|_| stdout.flush()).map_err(|error| format!("failed to write stdout: {error}"))
 }
 
+/// `--capabilities`: what this binary can solve, so the server can probe an older binary without guessing.
+fn print_capabilities() -> Result<(), String> {
+    let capabilities = json!({"json": true, "multiway": {"maxPlayers": rangelab_multiway_core::MAX_PLAYERS, "streets": ["river"]}});
+    let mut stdout = std::io::stdout().lock();
+    writeln!(stdout, "{capabilities}").and_then(|_| stdout.flush()).map_err(|error| format!("failed to write stdout: {error}"))
+}
+
 fn main() {
-    let result = if env::args().any(|arg| arg == "--json-nodes") {
-        run_json(true)
-    } else if env::args().any(|arg| arg == "--json") {
-        run_json(false)
+    let has = |flag: &str| env::args().any(|arg| arg == flag);
+    let result = if has("--capabilities") {
+        print_capabilities()
+    } else if has("--json-multiway") {
+        run_json(JsonMode::Multiway)
+    } else if has("--json-nodes") {
+        run_json(JsonMode::Nodes)
+    } else if has("--json") {
+        run_json(JsonMode::Node)
     } else {
         run()
     };

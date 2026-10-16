@@ -4,6 +4,7 @@ Last updated: 2026-10-12
 
 ## Resume here (2026-10-11, branch fix/solver-quality)
 
+- 2026-10-16: native 3-player river solver (former Next TODO 2, phase 1): new crate `tools/multiway-core` (N-player rules with side pots, O(52)-per-combo 3-way showdown kernels with exact card removal, vector DCFR, best-response gains), adapter `--json-multiway` and `--capabilities`, `POST /api/solver` `multiway-json`, panel uses it for 3 players on the river (`SOLVER EV · 3-WAY CFR`, `MAX BR GAIN`). 4.5 s budget: max BR gain <= 0.019% of the pot on SRP ranges (docs/SOLVER_INTEGRATION.md). Full `npm test` with the new adapter: 376 passed, 2 skipped; cargo tests pass; lint/tsc clean. Committed locally, not pushed; CI not run yet.
 - 2026-10-14 23:30 KST: flop library build finished: 3 scenarios x 1755 flops, 0 failed, 379 MB in `public/data/flop-library` (gitignored). Exploitability median/max: BTN 0.058/0.521%, CO 0.060/0.392%, SB 0.050/0.359%.
 - 2026-10-14: live turn/river on the native adapter measured (12 threads, adapter wall time, current 4.5 s budget): SRP ranges turn 4.5 s at 0.004%, river 1.2 s at <=0.002%; 100% vs 100% ranges turn 4.5 s at <=0.016%, river 1.7 s. The 10 s turn/river requirement is met without a budget change; numbers recorded in `src/lib/solver-presets.ts`. Not measured: the full UI round trip and slower CPUs (the deadline still bounds time there, only accuracy drops).
 - 2026-10-12: the legacy DCFR job API now handles IP roots and validated intermediate histories through the adapter's `--json` mode (former Next TODO 1; CHANGELOG). Full `npm test` with `DCFR_ADAPTER_PATH`: 353 passed, 2 skipped; lint and tsc clean.
@@ -109,6 +110,7 @@ Plan (reordered): 2a range weights (done) -> 1 presets/budget (done) -> 4 model 
 - Manual checks needing a solver binary: isomorphism=1 keeps the exact Hero combo in the dump; an observed-size tree resolves a bet -> raise -> call history end to end; solve times per street fit `SOLVER_TIMEOUT_MS`.
 - Histories with more than 4 raises exceed TexasSolver's default `raise_limit=4` and will be reported as a missing size.
 - Model EV is a one-street heuristic (no future betting); equity itself is not invalidated when cards change.
+- Multiway solver limits (2026-10-16): 3-player CFR has no Nash guarantee (EV depends on the profile reached); a huge tree's first iteration is not interruptible (memory capped at 1 GB, the route kills the adapter at budget + 10 s); the same-origin guard is not authentication, keep `ALLOW_LOCAL_SOLVER_API` to loopback.
 - Multiway model EV limits: opponents fold/call independently (real callers tighten behind a caller), no raises after the bet, no overcall/squeeze on a hero call (labeled), side pots not separated, unlikely caller subsets share one all-callers equity, the alpha^(1/k) default fold split is uncalibrated. Local solvers stay heads-up only; 3+ players show the model EV with a notice.
 - Equity still runs synchronously on the main thread; ranges whose heavy combos all collide with dealt cards fall back to a full scan per sample and can freeze the UI for seconds.
 - Deferred security items: no Host allowlist against DNS rebinding (would block LAN access), 512MB solver output read into memory, no request body size limit, solver error text returned to the client; the legacy DCFR job path has no `timeBudgetMs` (only `SOLVER_TIMEOUT_MS`).
@@ -116,7 +118,7 @@ Plan (reordered): 2a range weights (done) -> 1 presets/budget (done) -> 4 model 
 ## Next TODO
 
 1. Restart `next start` (if running) so the completed flop library is served; optionally back up `public/data/flop-library` (gitignored, local only).
-2. Add a true multiway counterfactual backend; both bundled local solvers are heads-up only.
+2. Multiway follow-ups: turn 3-way (needs a coarse river subtree and a benchmark gate: max BR gain <= 2% pot in 8 s), flop 3-way (not feasible in 10 s; keeps MODEL EV), 4+ players, players all-in from an earlier street, NLHE no-reopen rule for incomplete all-in raises (now simplified to reopen). Push and confirm CI (`Multiway solver tests` step, `multiway-integration.test.ts`).
 
 ## Session startup
 
