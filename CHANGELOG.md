@@ -4,7 +4,7 @@
 
 ### Flop library: 3-bet pots (2026-10-17)
 - `ScenarioDef.threeBetSize`: a scenario can be a 3-bet pot (the caller 3-bets, seats behind fold, the opener calls). Added CO vs BTN, BTN vs SB, BTN vs BB, CO vs BB, CO vs SB, and HJ vs BTN at the packs' 9bb 3-bet (pot 18.5-19.5bb, 91bb behind), with the same flop tree. 17 scenarios in total.
-- Why: 3-bet pots are common heads-up flops and live 9 s solves stay above 1% exploitability there too (not measured separately; same tree size class).
+- Why: 3-bet pots are common heads-up flops. Live 9 s solves there were not measured; they are expected to converge somewhat better than SRP (lower SPR, smaller tree) but not to the library's <=0.5%.
 - The full test run once failed `multiway-integration.test.ts` while the library build used every core (solve got too few iterations); it passed 3 of 3 runs alone. CI runs without that load.
 
 ### Heads-up flop: 9 s live budget and 8 more library scenarios (2026-10-17)
