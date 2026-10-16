@@ -11,8 +11,12 @@ describe("time-budgeted solve requests",()=>{
     expect(buildWasmSolveRequest(input)).not.toHaveProperty("timeBudgetMs");
     expect(buildWasmSolveRequest({...input,timeBudgetMs:4500.4,iterationCostNs:300})).toMatchObject({timeBudgetMs:4500,iterationCostNs:300});
   });
-  it("gives every DCFR preset a budget inside the 5 second target",()=>{
-    for(const backend of ["wasm","native"] as const)for(const street of ["flop","turn","river"] as const)expect(getSolverPreset(backend,street).timeBudgetMs).toBeLessThan(5000);
+  it("keeps every DCFR preset inside the 10 second answer limit and turn/river near 5 seconds",()=>{
+    for(const backend of ["wasm","native","multiway"] as const)for(const street of ["flop","turn","river"] as const){
+      const budget=getSolverPreset(backend,street).timeBudgetMs!;
+      expect(budget).toBeLessThan(10_000);
+      if(street!=="flop"||backend==="wasm")expect(budget).toBeLessThan(5000);
+    }
   });
   it("passes iterations, stop reason, and work units through the normalized result",()=>{
     const raw=wasmResponseToSolverJson({ok:true,result:{source:"dcfr-native",player:"oop",best_action:"bet",exploitability:null,iterations:22,stoppedBy:"deadline",elapsedMs:4310,workUnits:7_572_480,strategy:[{action:"bet",frequency:0.6,evChips:120},{action:"check",frequency:0.4,evChips:110}]}});

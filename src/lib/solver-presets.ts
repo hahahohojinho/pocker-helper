@@ -27,7 +27,13 @@ const WARN_EXPLOITABILITY=5;
  */
 /** Leaves headroom inside the 5 s answer target for range building, the request, and rendering. */
 const DCFR_TIME_BUDGET_MS=4500;
-const NATIVE_BUDGETS={flop:{iterations:300,accuracy:0.5,timeBudgetMs:DCFR_TIME_BUDGET_MS},turn:{iterations:500,accuracy:0.3,timeBudgetMs:DCFR_TIME_BUDGET_MS},river:{iterations:1000,accuracy:0.3,timeBudgetMs:DCFR_TIME_BUDGET_MS}};
+/**
+ * Native flops outside the library get most of the 10 s answer limit: one wide-range flop iteration takes ~0.6 s.
+ * 2026-10-17, 12 threads, BTN/CO vs BB SRP ranges, 4 boards: 4.5s 3-6 iterations at 4.6-17.9% exploitability;
+ * 8s 7-12 at 1.0-7.2%; 9s 8-15 at 0.8-4.6% (adapter wall 7.8-8.6s). The library (30 s per flop) reaches <=0.5%.
+ */
+const NATIVE_FLOP_BUDGET_MS=9000;
+const NATIVE_BUDGETS={flop:{iterations:300,accuracy:0.5,timeBudgetMs:NATIVE_FLOP_BUDGET_MS},turn:{iterations:500,accuracy:0.3,timeBudgetMs:DCFR_TIME_BUDGET_MS},river:{iterations:1000,accuracy:0.3,timeBudgetMs:DCFR_TIME_BUDGET_MS}};
 const budgets:Record<SolverBackend,Record<SolverStreet,{iterations:number;accuracy:number;timeBudgetMs?:number}>>={
   texassolver:{flop:{iterations:200,accuracy:1},turn:{iterations:300,accuracy:0.5},river:{iterations:500,accuracy:0.5}},
   dcfr:{flop:{iterations:300,accuracy:1},turn:{iterations:500,accuracy:0.5},river:{iterations:1000,accuracy:0.5}},

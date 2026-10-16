@@ -2,6 +2,12 @@
 
 ## Unreleased - fix/solver-quality (2026-10-11)
 
+### Heads-up flop: 9 s live budget and 8 more library scenarios (2026-10-17)
+- Measured live heads-up flops outside the library (native, 12 threads, BTN/CO vs BB SRP ranges, K72/T94/876/AA5): 4.5 s gave 3-6 iterations at 4.6-17.9% exploitability, 8 s 1.0-7.2%, 9 s 0.8-4.6%; one wide flop iteration takes ~0.6 s. Turn/river converge far below 1% in 4.5 s.
+- Why: the user asked whether live solving alone would do within 10 s; it does not for flops, so the precomputed library stays, and live flops get most of the 10 s limit (native flop budget 9 s, answer target 5 s -> 10 s). Turn/river keep 4.5 s.
+- Library scenarios: added BB vs HJ/UTG, BTN vs CO/HJ/UTG, CO vs HJ/UTG, and HJ vs UTG single-raised pots (6-max 100bb, 2.5bb opens). The three existing scenarios are unchanged, so their 5,265 solved flops stay valid.
+- Not reviewed by the reviewer agents: configuration-only change (scenario list, one budget constant, labels, test bound).
+
 ### 3-way river: earlier all-ins and the NLHE no-reopen rule (2026-10-17)
 - Players all-in from an earlier street are now part of the 3-way river solve: they start with a zero stack, cannot act, and only win the street-start layers they paid into (`potLayers`, validated as a main pot for everyone plus nested side pots that add up to `pot`). The panel builds the layers from each seat's earlier contributions, snapped to chips, merging levels with the same players (folded blinds).
 - An all-in raise below the last full raise no longer reopens raising for players who already acted (NLHE and the UI's rule); before, it reopened it (labelled simplification). Tree-sized raises always count as full.

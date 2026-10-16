@@ -21,6 +21,15 @@ export const SCENARIO_DEFS: readonly ScenarioDef[] = [
   { id: "6max-100bb-srp-btn-bb", label: "BTN vs BB SRP 100bb", tableSize: 6, stack: 100, opener: "BTN", caller: "BB", openSize: 2.5 },
   { id: "6max-100bb-srp-co-bb", label: "CO vs BB SRP 100bb", tableSize: 6, stack: 100, opener: "CO", caller: "BB", openSize: 2.5 },
   { id: "6max-100bb-srp-sb-bb", label: "SB vs BB SRP 100bb", tableSize: 6, stack: 100, opener: "SB", caller: "BB", openSize: 3.5 },
+  // Second batch (2026-10-17): early-position opens defended by the BB, then cold calls in position.
+  { id: "6max-100bb-srp-hj-bb", label: "HJ vs BB SRP 100bb", tableSize: 6, stack: 100, opener: "HJ", caller: "BB", openSize: 2.5 },
+  { id: "6max-100bb-srp-utg-bb", label: "UTG vs BB SRP 100bb", tableSize: 6, stack: 100, opener: "UTG", caller: "BB", openSize: 2.5 },
+  { id: "6max-100bb-srp-co-btn", label: "CO vs BTN SRP 100bb", tableSize: 6, stack: 100, opener: "CO", caller: "BTN", openSize: 2.5 },
+  { id: "6max-100bb-srp-hj-btn", label: "HJ vs BTN SRP 100bb", tableSize: 6, stack: 100, opener: "HJ", caller: "BTN", openSize: 2.5 },
+  { id: "6max-100bb-srp-utg-btn", label: "UTG vs BTN SRP 100bb", tableSize: 6, stack: 100, opener: "UTG", caller: "BTN", openSize: 2.5 },
+  { id: "6max-100bb-srp-hj-co", label: "HJ vs CO SRP 100bb", tableSize: 6, stack: 100, opener: "HJ", caller: "CO", openSize: 2.5 },
+  { id: "6max-100bb-srp-utg-co", label: "UTG vs CO SRP 100bb", tableSize: 6, stack: 100, opener: "UTG", caller: "CO", openSize: 2.5 },
+  { id: "6max-100bb-srp-utg-hj", label: "UTG vs HJ SRP 100bb", tableSize: 6, stack: 100, opener: "UTG", caller: "HJ", openSize: 2.5 },
 ];
 
 /** The preflop actions the table helper records for this line, including the implicit folds of skipped seats. */
