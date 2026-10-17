@@ -29,6 +29,8 @@ pub const MAX_TREE_BYTES: u64 = 1024 * 1024 * 1024;
 /// Regret and strategy-sum storage per decision slot (two f64).
 const BYTES_PER_SLOT: u64 = 16;
 const MIB: u64 = 1024 * 1024;
+/** How far past the time budget the convergence pass may run; presets leave >5 s to the 10 s answer limit. */
+const CONVERGENCE_SLACK: Duration = Duration::from_millis(1000);
 
 #[derive(Clone, Copy)]
 pub struct MultiwayOptions<'a> {
@@ -147,9 +149,10 @@ pub fn solve(request: &MultiwayRequest, options: MultiwayOptions) -> Result<Valu
     }).collect();
     let best_action = grouped.iter().max_by(|left, right| left.1 .0.total_cmp(&right.1 .0)).map(|(key, _)| *key).unwrap_or("check");
 
-    // The best-response pass costs about two iterations; skip it when it would overrun the budget.
+    // The best-response pass costs about two iterations. It may run up to CONVERGENCE_SLACK past the budget (the
+    // budget is well inside the answer limit); under CPU load iteration times vary and a strict check skipped it.
     let room = match (budget, estimate) {
-        (Some(budget), Some(estimate)) => start.elapsed() + estimate * 2 <= budget + estimate / 2,
+        (Some(budget), Some(estimate)) => start.elapsed() + estimate * 2 <= budget + CONVERGENCE_SLACK,
         _ => true,
     };
     let convergence = room.then(|| {

@@ -2,6 +2,11 @@
 
 ## Unreleased - fix/solver-quality (2026-10-11)
 
+### Live solves stay fast while the flop library builds (2026-10-17)
+- Browser E2E of the 3-way river (CO open, BTN and BB call, checks to the river) worked end to end, but with the library build running at normal priority the 4.5 s solve got only 5-8 iterations and a max best-response gain of 8.6-18% of the pot. `build-flop-library.mjs` now lowers its own priority to below normal (Windows priority class / POSIX nice, inherited by the adapter processes); the same solve then got 305-313 iterations at 0.01%. The earlier one-off `multiway-integration.test.ts` failure under the build load no longer occurs.
+- The 3-way convergence pass (best response, ~2 iterations) may now run up to 1 s past the time budget instead of being skipped whenever it did not fit exactly; under load it was skipped and the UI showed "수렴도 미확인". The 4.5 s budget leaves more than 5 s to the 10 s answer limit.
+- Not reviewed by the reviewer agents: two small changes (a priority call and a slack constant).
+
 ### Flop library: 3-bet pots (2026-10-17)
 - `ScenarioDef.threeBetSize`: a scenario can be a 3-bet pot (the caller 3-bets, seats behind fold, the opener calls). Added CO vs BTN, BTN vs SB, BTN vs BB, CO vs BB, CO vs SB, and HJ vs BTN at the packs' 9bb 3-bet (pot 18.5-19.5bb, 91bb behind), with the same flop tree. 17 scenarios in total.
 - Why: 3-bet pots are common heads-up flops. Live 9 s solves there were not measured; they are expected to converge somewhat better than SRP (lower SPR, smaller tree) but not to the library's <=0.5%.

@@ -6,10 +6,12 @@
 // adapter (`--json-nodes`, uses every core), and writes public/data/flop-library/<scenario>/<board>.json plus an
 // index.json listing finished flops. Flops are solved heaviest first, so a partial run covers the common boards.
 // Valid files are skipped on re-run; `--redo-above` re-solves files whose exploitability exceeds that % of the pot.
-// Needs a release adapter: cargo build --release in tools/dcfr-adapter. Do not run while other long jobs need the CPU.
+// Needs a release adapter: cargo build --release in tools/dcfr-adapter. Runs at below-normal priority (inherited by
+// the adapter processes), so live solves in the app keep their speed while it runs.
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { constants as osConstants, setPriority } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -203,8 +205,18 @@ export async function runScenario(spec, flops, options, deps) {
   return { solved, failed, pending: pending.length };
 }
 
+/**
+ * Lowers this process's priority; children started afterwards inherit it (Windows below-normal class, POSIX nice).
+ * Measured 2026-10-17: with the build at normal priority a 4.5 s 3-way river solve in the app got 5-8 iterations
+ * (max best-response gain 8.6-18% of the pot); below normal it got 305-313 (0.01%).
+ */
+function yieldToLiveSolves() {
+  try { setPriority(0, osConstants.priority.PRIORITY_BELOW_NORMAL); } catch (error) { console.error(`Could not lower priority: ${error.message}`); }
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  yieldToLiveSolves();
   if (!existsSync(options.adapter)) throw new Error(`Adapter not found at ${options.adapter}; run cargo build --release in tools/dcfr-adapter.`);
   const manifest = JSON.parse(readFileSync(options.manifest, "utf8"));
   const specs = manifest.scenarios.filter(spec => !options.scenarios || options.scenarios.includes(spec.id));
