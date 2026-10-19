@@ -2,7 +2,7 @@
 name = "rangelab-multiway-core"
 version = "0.1.0"
 edition = "2021"
-description = "Native 3-player river solver for RangeLab: N-player betting rules, card-removal showdown kernels, and DCFR."
+description = "Native 3-player turn (river checked down) and river solver for RangeLab: N-player rules, card-removal showdown kernels, and DCFR."
 publish = false
 
 [dependencies]

@@ -170,7 +170,7 @@ fn run_json(mode: JsonMode) -> Result<(), String> {
 
 /// `--capabilities`: what this binary can solve, so the server can probe an older binary without guessing.
 fn print_capabilities() -> Result<(), String> {
-    let capabilities = json!({"json": true, "multiway": {"maxPlayers": rangelab_multiway_core::MAX_PLAYERS, "streets": ["river"]}});
+    let capabilities = json!({"json": true, "multiway": {"maxPlayers": rangelab_multiway_core::MAX_PLAYERS, "streets": ["river", "turn"]}});
     let mut stdout = std::io::stdout().lock();
     writeln!(stdout, "{capabilities}").and_then(|_| stdout.flush()).map_err(|error| format!("failed to write stdout: {error}"))
 }

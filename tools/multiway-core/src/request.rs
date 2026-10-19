@@ -153,11 +153,12 @@ impl MultiwayRequest {
         }
         let raw: RawRequest = serde_json::from_str(json).map_err(|error| format!("invalid request: {error}"))?;
         let cards = parse_cards(&raw.board).ok_or("invalid board")?;
-        if cards.len() != 5 {
-            return Err("the multiway solver supports the river (5 board cards) only".into());
+        // Turn solves check the river down (an approximation reported in the result); flops are not supported.
+        if !(4..=5).contains(&cards.len()) {
+            return Err("the multiway solver supports the turn and river (4 or 5 board cards) only".into());
         }
         let board = cards.iter().fold(Hand::new(), |hand, &card| hand.add(card));
-        if board.count() != 5 {
+        if board.count() as usize != cards.len() {
             return Err("board cards must differ".into());
         }
         if !(2..=MAX_PLAYERS).contains(&raw.players.len()) {

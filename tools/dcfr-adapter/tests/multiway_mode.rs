@@ -54,8 +54,25 @@ fn solves_with_a_player_all_in_from_an_earlier_street() {
 }
 
 #[test]
+fn rejects_turn_trees_too_large_to_answer_in_time() {
+    // Every hand class for every player, three sizes per level, four raise levels.
+    let ranks = "AKQJT98765432".as_bytes();
+    let mut classes = Vec::new();
+    for (row, &high) in ranks.iter().enumerate() {
+        for &low in &ranks[row..] {
+            let (high, low) = (high as char, low as char);
+            if high == low { classes.push(format!("{high}{low}")) } else { classes.push(format!("{high}{low}s")); classes.push(format!("{high}{low}o")) }
+        }
+    }
+    let full = classes.join(",");
+    let request = format!(r#"{{"board":"Kd9h5c2s","hero":"AhJh","heroSeat":2,"players":[{{"range":"{full}","stack":9000}},{{"range":"{full}","stack":9000}},{{"range":"{full}","stack":9000}}],"pot":1000,"iterations":10,"betSizes":[[[1,3],[3,4],[5,4]],[[3,5],[1,1]],[[3,5],[1,1]],[[1,1]]],"maxRaises":4,"history":[{{"action":"check"}},{{"action":"check"}}],"timeBudgetMs":1000}}"#);
+    let response = run(&["--json-multiway"], &request);
+    assert!(response["error"].as_str().unwrap_or_default().contains("too large to answer in time"), "{response}");
+}
+
+#[test]
 fn reports_capabilities() {
     let response = run(&["--capabilities"], "");
     assert_eq!(response["multiway"]["maxPlayers"], 3);
-    assert_eq!(response["multiway"]["streets"][0], "river");
+    assert_eq!(response["multiway"]["streets"], serde_json::json!(["river", "turn"]));
 }

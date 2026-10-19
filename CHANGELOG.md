@@ -2,6 +2,12 @@
 
 ## Unreleased - fix/solver-quality (2026-10-11)
 
+### 3-way turn with the river checked down (2026-10-19)
+- The multiway solver accepts turn boards: turn betting is solved, the river is assumed checked down, and every showdown is averaged over the river cards. Results carry `riverModel: "checkdown"`; the panel labels them `리버 체크다운 근사`. The adapter advertises streets `["river", "turn"]`; 3-way turns get an 8 s budget.
+- Why: a played river on the 3-way turn would cost ~3.8 s per iteration (estimate), and the user wanted 3-way turns covered. Measured bias against the full heads-up turn solve (dcfr-core): best action matched in 25 of 29 spots, EVs off up to ~0.9bb, so the result is shown as an approximation, not solver-exact.
+- Speed: computing the 48 river cards in parallel with a sequential, allocation-free kernel (`values_sequential`) made 3-way turns 3-5x faster (4.5 s: 3-8 -> 18 iterations; 8 s: 7-18 -> 34-35).
+- Reviews: security review (HIGH) - a wide turn request could make one iteration outlast the server timeout; requests above 20M kernel units per iteration are now rejected (calibrated at ~40 ns per unit). Code review - added a test comparing turn showdowns with an explicit per-river loop, a length check on the sequential kernel, and fixed stale comments. Not done: per-call allocation of 48 vectors in `terminal` (measured cost acceptable).
+
 ### Live solves stay fast while the flop library builds (2026-10-17)
 - Browser E2E of the 3-way river (CO open, BTN and BB call, checks to the river) worked end to end, but with the library build running at normal priority the 4.5 s solve got only 5-8 iterations and a max best-response gain of 8.6-18% of the pot. `build-flop-library.mjs` now lowers its own priority to below normal (Windows priority class / POSIX nice, inherited by the adapter processes); the same solve then got 305-313 iterations at 0.01%. The earlier one-off `multiway-integration.test.ts` failure under the build load no longer occurs.
 - The 3-way convergence pass (best response, ~2 iterations) may now run up to 1 s past the time budget instead of being skipped whenever it did not fit exactly; under load it was skipped and the UI showed "수렴도 미확인". The 4.5 s budget leaves more than 5 s to the 10 s answer limit.

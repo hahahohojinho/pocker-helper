@@ -15,7 +15,8 @@ describe("time-budgeted solve requests",()=>{
     for(const backend of ["wasm","native","multiway"] as const)for(const street of ["flop","turn","river"] as const){
       const budget=getSolverPreset(backend,street).timeBudgetMs!;
       expect(budget).toBeLessThan(10_000);
-      if(street!=="flop"||backend==="wasm")expect(budget).toBeLessThan(5000);
+      // Live flops and 3-way turns use most of the 10 s limit; everything else stays near 5 s.
+      if((street!=="flop"&&!(backend==="multiway"&&street==="turn"))||backend==="wasm")expect(budget).toBeLessThan(5000);
     }
   });
   it("passes iterations, stop reason, and work units through the normalized result",()=>{

@@ -36,7 +36,8 @@ describe("buildMultiwaySolveRequest",()=>{
     expect(short.maxRaises).toBe(3);
   });
   it("rejects unsupported spots before they reach the solver",()=>{
-    expect(()=>buildMultiwaySolveRequest({...input([]),board:["Ks","7d","2c","5h"]})).toThrow("Board");
+    expect(()=>buildMultiwaySolveRequest({...input([]),board:["Ks","7d","2c"]})).toThrow("Board");
+    expect(buildMultiwaySolveRequest({...input([]),board:["Ks","7d","2c","5h"]}).board).toBe("Ks7d2c5h");
     expect(()=>buildMultiwaySolveRequest({...input([]),heroIndex:3})).toThrow("Hero");
     expect(()=>buildMultiwaySolveRequest(input([],[97.5,97.5,0]))).toThrow("positive");
     expect(()=>buildMultiwaySolveRequest(input([{player:5,action:"check",amount:0}]))).toThrow("unknown player");
@@ -77,6 +78,8 @@ describe("multiwayResponseToSolverJson",()=>{
     expect(parsed.maxBrGain).toBe(0.02);
     expect(parsed.exploitability).toBeUndefined();
     expect(parsed.stoppedBy).toBe("deadline");
+    expect(parsed.riverModel).toBeUndefined();
+    expect(parseSolverResult(multiwayResponseToSolverJson({...ok,result:{...ok.result,riverModel:"checkdown"}})).riverModel).toBe("checkdown");
   });
   it("omits convergence it did not measure and surfaces solver errors",()=>{
     expect(parseSolverResult(multiwayResponseToSolverJson({...ok,result:{...ok.result,convergence:null}})).maxBrGain).toBeUndefined();

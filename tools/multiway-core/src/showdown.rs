@@ -1,4 +1,5 @@
-//! Terminal values on the river with exact card removal between all players.
+//! Showdown values on a 5-card board with exact card removal between all players (turn solves call it once per
+//! river card).
 //!
 //! For a Hero combo `h` and two opponents with reach vectors `x` and `y`, the mass of opponent pairs `(a, b)` that
 //! share no card with `h` or with each other, with `a` in set S and `b` in set T, is
@@ -190,7 +191,7 @@ fn values3(board: &Board, hero: &[u16], x: &[f64], y: &[f64], coeffs: &Coeffs) -
     }
     let (snapshots, index_of) = rank_sets(board, hero, x, y);
     hero.par_iter().zip(index_of.par_iter()).with_min_len(MIN_CHUNK)
-        .map(|(&h, &snapshot)| hand3(board, h, x, y, &snapshots[snapshot], &any, coeffs))
+        .map(|(&h, &snapshot)| hand3(board, h, x, y, &snapshots[snapshot].0, &snapshots[snapshot].1, &any, coeffs))
         .collect()
 }
 
@@ -211,7 +212,7 @@ fn pair_mass_any(board: &Board, h: u16, x: &[f64], y: &[f64], any: &Sets) -> f64
     ax * ay - shared + d
 }
 
-fn hand3(board: &Board, h: u16, x: &[f64], y: &[f64], (below, tied): &(Sets, Sets), any: &Sets, coeffs: &Coeffs) -> f64 {
+fn hand3(board: &Board, h: u16, x: &[f64], y: &[f64], below: &Sets, tied: &Sets, any: &Sets, coeffs: &Coeffs) -> f64 {
     let (h1, h2) = combo_from_index(h);
     let rank = board.group[h as usize];
     let (xh, yh) = (x[h as usize], y[h as usize]);
@@ -272,16 +273,59 @@ fn values2(board: &Board, hero: &[u16], x: &[f64], coeffs: &Coeffs) -> Vec<f64> 
     }
     let (snapshots, index_of) = if coeffs.needs_ranks() { rank_sets(board, hero, x, x) } else { (Vec::new(), Vec::new()) };
     hero.par_iter().enumerate().with_min_len(MIN_CHUNK).map(|(position, &h)| {
-        let (h1, h2) = combo_from_index(h);
-        let xh = x[h as usize];
-        let mass = any.without(h1, h2) + xh;
-        if !coeffs.needs_ranks() {
-            return coeffs.z * mass;
-        }
-        let (below, tied) = &snapshots[index_of[position]];
-        let share = below.x.without(h1, h2) + (tied.x.without(h1, h2) + xh) / 2.0;
-        coeffs.z * mass + coeffs.head[0] * share
+        let sets = snapshots.get(index_of.get(position).copied().unwrap_or(usize::MAX));
+        hand2(h, x, &any, sets.map(|(below, tied)| (below, tied)), coeffs)
     }).collect()
+}
+
+fn hand2(h: u16, x: &[f64], any: &Profile, ranks: Option<(&Sets, &Sets)>, coeffs: &Coeffs) -> f64 {
+    let (h1, h2) = combo_from_index(h);
+    let xh = x[h as usize];
+    let mass = any.without(h1, h2) + xh;
+    let Some((below, tied)) = ranks else { return coeffs.z * mass };
+    let share = below.x.without(h1, h2) + (tied.x.without(h1, h2) + xh) / 2.0;
+    coeffs.z * mass + coeffs.head[0] * share
+}
+
+/// Same as `values`, single-threaded and without per-hand snapshots: for callers that parallelize across boards
+/// (the turn's river cards), where per-call allocation and rayon overhead dominated.
+pub fn values_sequential(board: &Board, hero: &[u16], opponents: &[&[f64]], coeffs: &Coeffs) -> Vec<f64> {
+    let (x, y, three) = match opponents {
+        [x] => (*x, *x, false),
+        [x, y] => (*x, *y, true),
+        _ => panic!("1 or 2 opponents"),
+    };
+    let mut any = Sets::ZERO;
+    for &combo in &board.live {
+        any.add(combo, x, y);
+    }
+    let mut out = Vec::with_capacity(hero.len());
+    if !coeffs.needs_ranks() {
+        out.extend(hero.iter().map(|&h| if three { coeffs.z * pair_mass_any(board, h, x, y, &any) } else { hand2(h, x, &any.x, None, coeffs) }));
+        return out;
+    }
+    let live = &board.live;
+    let mut below = Sets::ZERO;
+    let (mut start, mut next) = (0, 0);
+    while start < live.len() && next < hero.len() {
+        let rank = board.group[live[start] as usize];
+        let mut end = start;
+        let mut tied = Sets::ZERO;
+        while end < live.len() && board.group[live[end] as usize] == rank {
+            tied.add(live[end], x, y);
+            end += 1;
+        }
+        while next < hero.len() && board.group[hero[next] as usize] == rank {
+            let h = hero[next];
+            out.push(if three { hand3(board, h, x, y, &below, &tied, &any, coeffs) } else { hand2(h, x, &any.x, Some((&below, &tied)), coeffs) });
+            next += 1;
+        }
+        below.plus(&tied);
+        start = end;
+    }
+    // `hero` must be board-live and sorted by strength (`Board::sort_by_strength`), or values would shift.
+    debug_assert_eq!(out.len(), hero.len());
+    out
 }
 
 #[cfg(test)]
@@ -342,8 +386,10 @@ mod tests {
             let hero = board.sort_by_strength(&board.live.iter().copied().step_by(37).collect::<Vec<_>>());
             for coeffs in [Coeffs { z: 1.0, ..Default::default() }, Coeffs { z: -0.3, head: [2.0, -1.5], all: 4.0 }, Coeffs { head: [0.0, 1.0], ..Default::default() }] {
                 let got = values(&board, &hero, &[&x, &y], &coeffs);
+                let sequential = values_sequential(&board, &hero, &[&x, &y], &coeffs);
                 for (position, &h) in hero.iter().enumerate() {
                     assert_close(got[position], brute3(&board, h, &x, &y, &coeffs));
+                    assert_close(sequential[position], got[position]);
                 }
             }
         }
@@ -357,6 +403,7 @@ mod tests {
         let hero = board.sort_by_strength(&board.live.iter().copied().step_by(29).collect::<Vec<_>>());
         let coeffs = Coeffs { z: -0.25, head: [1.75, 0.0], all: 0.0 };
         let got = values(&board, &hero, &[&x], &coeffs);
+        assert_eq!(values_sequential(&board, &hero, &[&x], &coeffs), got);
         for (position, &h) in hero.iter().enumerate() {
             let expected: f64 = board.live.iter().filter(|&&a| !overlaps(a, h)).map(|&a| {
                 let (gh, ga) = (board.group[h as usize], board.group[a as usize]);

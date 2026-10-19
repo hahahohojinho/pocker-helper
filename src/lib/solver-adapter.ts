@@ -7,7 +7,8 @@ export interface SolverActionResult { action:PostflopActionType;frequency:number
  * `iterations`, `stoppedBy`, `elapsedMs`, and `workUnits` describe how a time-budgeted DCFR solve ran. Multiway solves
  * report `maxBrGain` (largest single-player best-response gain, % of the pot) instead of `exploitability`.
  */
-export interface SolverResult { iterations?:number;stoppedBy?:"deadline"|"iterations";elapsedMs?:number;workUnits?:number;source:"texassolver"|"openspiel"|"dcfr-wasm"|"dcfr-native"|"multiway-native"|"flop-library"|"imported";actions:SolverActionResult[];bestAction:PostflopActionType;exploitability?:number;maxBrGain?:number;evSource:"solver"|"unavailable"; }
+/** `riverModel` "checkdown": a multiway turn solve that assumes no river betting, so its EVs are approximate. */
+export interface SolverResult { riverModel?:"checkdown";iterations?:number;stoppedBy?:"deadline"|"iterations";elapsedMs?:number;workUnits?:number;source:"texassolver"|"openspiel"|"dcfr-wasm"|"dcfr-native"|"multiway-native"|"flop-library"|"imported";actions:SolverActionResult[];bestAction:PostflopActionType;exploitability?:number;maxBrGain?:number;evSource:"solver"|"unavailable"; }
 export interface SolverHistoryAction { action:PostflopActionType;amount?:number; }
 
 const validActions=new Set<PostflopActionType>(["fold","check","bet","call","raise"]);
@@ -107,5 +108,5 @@ export function parseSolverResult(raw:string):SolverResult{
   actions=actions.map(item=>({...item,frequency:item.frequency/total*100}));
   const requested=typeof data.best_action==="string"?data.best_action:typeof data.bestAction==="string"?data.bestAction:null;
   const bestAction=(requested&&validActions.has(requested as PostflopActionType)?requested:actions.toSorted((a,b)=>b.frequency-a.frequency)[0].action) as PostflopActionType;
-  return {source:data.source==="texassolver"||data.source==="openspiel"||data.source==="dcfr-wasm"||data.source==="dcfr-native"||data.source==="multiway-native"||data.source==="flop-library"?data.source:"imported",actions,bestAction,exploitability:typeof data.exploitability==="number"?data.exploitability:undefined,maxBrGain:finiteNumber(data.maxBrGain),evSource:actions.every(action=>typeof action.ev==="number")?"solver":"unavailable",...solveTiming(data)};
+  return {source:data.source==="texassolver"||data.source==="openspiel"||data.source==="dcfr-wasm"||data.source==="dcfr-native"||data.source==="multiway-native"||data.source==="flop-library"?data.source:"imported",actions,bestAction,exploitability:typeof data.exploitability==="number"?data.exploitability:undefined,maxBrGain:finiteNumber(data.maxBrGain),...(data.riverModel==="checkdown"?{riverModel:"checkdown" as const}:{}),evSource:actions.every(action=>typeof action.ev==="number")?"solver":"unavailable",...solveTiming(data)};
 }

@@ -2,7 +2,7 @@ import type { PostflopActionType } from "../postflop-machine";
 import { calculatePotLayers } from "../pots";
 import { CHIPS_PER_BB, MAX_RAISES, cardCodes, fraction, mergeSizes, toChips, type Fraction, type WasmHistoryAction } from "./request";
 
-/** The native multiway solver supports this many players on the river. */
+/** The native multiway solver supports this many players on the turn (river checked down) and river. */
 export const MULTIWAY_MAX_PLAYERS=3;
 
 export interface MultiwayHistoryStep { player:number;action:PostflopActionType;amount:number; }
@@ -120,7 +120,7 @@ export function buildMultiwaySolveRequest(input:MultiwaySolveInput):MultiwaySolv
   const baseRaise=input.raisePercent.map(percent=>fraction(Math.round(percent),100));
   const depthCount=Math.max(2,sizesByDepth.length);
   return {
-    board:cardCodes(input.board,[5],"Board"),
+    board:cardCodes(input.board,[4,5],"Board"),
     hero:cardCodes(input.heroHole,[2],"Hero"),
     heroSeat:input.heroIndex,
     players:input.players.map(player=>({range:player.range,stack:toChips(player.stack)})),
@@ -134,6 +134,8 @@ export function buildMultiwaySolveRequest(input:MultiwaySolveInput):MultiwaySolv
 
 export type MultiwaySolveResponse={ok:true;result:{
   source:string;player:number;players:number;best_action:string;heroUnreached?:boolean;iterations?:number;
+  /** "checkdown": a turn solve that models the river as checked down (approximate EV). */
+  riverModel?:"checkdown"|"played";
   stoppedBy?:"deadline"|"iterations";elapsedMs?:number;strategy:{action:string;frequency:number;evChips:number}[];
   convergence:{metric:"maxBrGainPctPot";maxBrGain:number;brGain:number[]}|null;
 }}|{ok:false;error:string};
@@ -149,6 +151,7 @@ export function multiwayResponseToSolverJson(response:MultiwaySolveResponse){
     // Omitted when the best-response pass did not fit in the time budget.
     ...(result.convergence&&Number.isFinite(result.convergence.maxBrGain)?{maxBrGain:result.convergence.maxBrGain}:{}),
     iterations:result.iterations,stoppedBy:result.stoppedBy,
+    ...(result.riverModel==="checkdown"?{riverModel:"checkdown"}:{}),
     ...(result.heroUnreached?{note:"평균 전략에서 Hero 핸드는 이 라인에 도달하지 않습니다. 빈도 대신 EV가 가장 높은 액션을 표시합니다."}:{}),
   });
 }

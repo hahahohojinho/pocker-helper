@@ -33,6 +33,8 @@ const DCFR_TIME_BUDGET_MS=4500;
  * 8s 7-12 at 1.0-7.2%; 9s 8-15 at 0.8-4.6% (adapter wall 7.8-8.6s). The library (30 s per flop) reaches <=0.5%.
  */
 const NATIVE_FLOP_BUDGET_MS=9000;
+/** 3-way turns (river check-down model) need ~0.23 s per iteration; 8 s reaches the 1% "ok" level on SRP ranges. */
+const MULTIWAY_TURN_BUDGET_MS=8000;
 const NATIVE_BUDGETS={flop:{iterations:300,accuracy:0.5,timeBudgetMs:NATIVE_FLOP_BUDGET_MS},turn:{iterations:500,accuracy:0.3,timeBudgetMs:DCFR_TIME_BUDGET_MS},river:{iterations:1000,accuracy:0.3,timeBudgetMs:DCFR_TIME_BUDGET_MS}};
 const budgets:Record<SolverBackend,Record<SolverStreet,{iterations:number;accuracy:number;timeBudgetMs?:number}>>={
   texassolver:{flop:{iterations:200,accuracy:1},turn:{iterations:300,accuracy:0.5},river:{iterations:500,accuracy:0.5}},
@@ -46,9 +48,10 @@ const budgets:Record<SolverBackend,Record<SolverStreet,{iterations:number;accura
   // river 1000 iterations in 1.2s at <=0.002%. 100% vs 100% ranges: turn 4.5s 194-240 iterations at <=0.016% (2s: <=0.08%),
   // river 1.7s. Both streets answer well inside the 10 s requirement at this budget.
   native:NATIVE_BUDGETS,
-  // River only (flop/turn entries are unused). 2026-10-16, 12 threads, BB/CO/BTN SRP ranges, 4.5s: 261-344 iterations,
-  // max best-response gain <=0.019% of the pot; 100% ranges x3 at 2s: 118-139 iterations at <=0.075%.
-  multiway:NATIVE_BUDGETS,
+  // River: 2026-10-16, 12 threads, BB/CO/BTN SRP ranges, 4.5s: 261-344 iterations, max best-response gain <=0.019% of
+  // the pot; 100% ranges x3 at 2s: 118-139 iterations at <=0.075%. Turn (river checked down, an approximation):
+  // 2026-10-19, same ranges, 4.5s: 18 iterations at 1.1-1.4%; 8s: 34-35 at 0.34-0.46%. The flop entry is unused.
+  multiway:{...NATIVE_BUDGETS,turn:{iterations:500,accuracy:0.5,timeBudgetMs:MULTIWAY_TURN_BUDGET_MS}},
 };
 
 export function getSolverPreset(backend:SolverBackend,street:SolverStreet):SolverPreset{

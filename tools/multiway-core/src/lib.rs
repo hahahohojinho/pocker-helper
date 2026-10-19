@@ -29,6 +29,10 @@ pub const MAX_TREE_BYTES: u64 = 1024 * 1024 * 1024;
 /// Regret and strategy-sum storage per decision slot (two f64).
 const BYTES_PER_SLOT: u64 = 16;
 const MIB: u64 = 1024 * 1024;
+/// Upper bound on `Solver::work_per_iteration`. Measured 2026-10-19 (12 threads): ~36-43 ns per unit; a 3-way SRP turn
+/// is ~4.5M units (0.19 s per iteration), two sizes with three raise levels 40.7M (1.4 s). At 20M (~0.8 s) the
+/// minimum iterations plus the EV and best-response passes stay inside the server's budget + 10 s kill.
+pub const MAX_WORK_PER_ITERATION: u64 = 20_000_000;
 /** How far past the time budget the convergence pass may run; presets leave >5 s to the 10 s answer limit. */
 const CONVERGENCE_SLACK: Duration = Duration::from_millis(1000);
 
@@ -79,6 +83,11 @@ pub fn solve(request: &MultiwayRequest, options: MultiwayOptions) -> Result<Valu
         "multiway solver tree needs more than {} MB or {MAX_TREE_NODES} nodes; narrow the ranges or use fewer bet sizes and raises",
         options.max_tree_bytes / MIB
     ))?;
+    // The deadline is checked between iterations, so one iteration must stay well inside the time limit.
+    let work = solver.work_per_iteration();
+    if work > MAX_WORK_PER_ITERATION {
+        return Err("multiway solver tree is too large to answer in time; narrow the ranges or use fewer bet sizes and raises".into());
+    }
     let hero = request.hero_seat;
     let (node, path) = solver.tree.walk(&request.history).ok_or("history does not reach a decision node in the multiway tree")?;
     let actions = match &solver.tree.nodes[node as usize] {
@@ -173,6 +182,9 @@ pub fn solve(request: &MultiwayRequest, options: MultiwayOptions) -> Result<Valu
         "stoppedBy": stopped_by,
         "elapsedMs": start.elapsed().as_millis() as u64,
         "treeBytes": solver.slots() as u64 * BYTES_PER_SLOT,
+        "workUnits": work,
         "heroUnreached": hero_unreached,
+        // Turn solves model the river as checked down (no river betting); EVs are biased, not solver-exact.
+        "riverModel": if solver.checks_down_river() { "checkdown" } else { "played" },
     }))
 }

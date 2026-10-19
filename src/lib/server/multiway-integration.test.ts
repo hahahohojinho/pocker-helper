@@ -7,7 +7,7 @@ const dcfrAdapterAvailable=Boolean(process.env.DCFR_ADAPTER_PATH);
 
 describe.skipIf(!dcfrAdapterAvailable)("native multiway adapter",()=>{
   it("advertises the 3-player river mode",async()=>{
-    expect(await adapterMultiwayCapability()).toEqual({maxPlayers:3,streets:["river"]});
+    expect(await adapterMultiwayCapability()).toEqual({maxPlayers:3,streets:["river","turn"]});
   });
   it("solves Hero facing a bet and call on a 3-way river within the budget",async()=>{
     const request=buildMultiwaySolveRequest({

@@ -7,15 +7,27 @@
 use dcfr_solver::card::{Hand, NUM_COMBOS};
 
 use crate::game::{Node, Rules, Tree, TooLarge};
-use crate::showdown::{values, Board, Coeffs};
+use rayon::prelude::*;
+
+use crate::showdown::{values, values_sequential, Board, Coeffs};
 
 /// DCFR discounting (Brown & Sandholm 2019): positive regrets t^1.5/(t^1.5+1), negative 1/2, strategy (t/(t+1))^2.
 const ALPHA: f64 = 1.5;
 const GAMMA: f64 = 2.0;
 
+/// One possible river card for a turn solve: its board and each player's combos sorted by that board's strength.
+struct River {
+    board: Board,
+    combos: Vec<Vec<u16>>,
+    /// Position of each sorted combo in the player's turn-ordered `Solver::combos`.
+    local: Vec<Vec<usize>>,
+}
+
 pub struct Solver {
     pub rules: Rules,
     pub board: Board,
+    /// Turn solves only: showdowns are averaged over every river card with no river betting (check-down model).
+    rivers: Vec<River>,
     pub tree: Tree,
     /// Street-start range per player over all 1326 combos (board-blocked combos are zero).
     pub ranges: Vec<Vec<f64>>,
@@ -61,7 +73,26 @@ impl Solver {
         let tree = Tree::build(&rules, live, max_nodes, max_slots)?;
         let regrets: Vec<Vec<f64>> = (0..rules.players).map(|player| vec![0.0; tree.slots[player]]).collect();
         let strategy_sums = regrets.clone();
-        Ok(Solver { rules, board, tree, ranges, combos, regrets, strategy_sums, iterations: 0 })
+        let rivers = if board_cards.count() == 4 { rivers(board_cards, &combos) } else { Vec::new() };
+        Ok(Solver { rules, board, tree, rivers, ranges, combos, regrets, strategy_sums, iterations: 0 })
+    }
+
+    /// Kernel work per iteration: each player's combos at every terminal, times the river cards at turn showdowns.
+    /// One unit is one Hero combo through one terminal kernel, so this predicts iteration time before solving.
+    pub fn work_per_iteration(&self) -> u64 {
+        let combos: u64 = self.combos.iter().map(|held| held.len() as u64).sum();
+        self.tree.nodes.iter().map(|node| match node {
+            Node::Terminal { layers, .. } => {
+                let showdown = layers.iter().any(|layer| layer.eligible.count_ones() > 1);
+                combos * if showdown && !self.rivers.is_empty() { self.rivers.len() as u64 } else { 1 }
+            }
+            Node::Decision { .. } => 0,
+        }).sum()
+    }
+
+    /// Whether showdowns are turn check-downs (an approximation) rather than river showdowns.
+    pub fn checks_down_river(&self) -> bool {
+        !self.rivers.is_empty()
     }
 
     pub fn slots(&self) -> usize {
@@ -94,7 +125,22 @@ impl Solver {
     fn terminal(&self, id: u32, player: usize, reach: &[Vec<f64>]) -> Vec<f64> {
         let coeffs = self.coeffs(&self.tree.nodes[id as usize], player);
         let opponents: Vec<&[f64]> = self.opponents(player).iter().map(|&other| reach[other].as_slice()).collect();
-        values(&self.board, &self.combos[player], &opponents, &coeffs)
+        let showdown = coeffs.head != [0.0; 2] || coeffs.all != 0.0;
+        if !showdown || self.rivers.is_empty() {
+            return values(&self.board, &self.combos[player], &opponents, &coeffs);
+        }
+        // Each river card is equally likely among those no player holds: 52 - 4 board - 2 per player. Combos that
+        // hold the card are blocked on its board, so summing over all rivers and dividing gives the expectation.
+        let unseen = (52 - 4 - 2 * self.rules.players) as f64;
+        let per_river: Vec<Vec<f64>> = self.rivers.par_iter().map(|river| values_sequential(&river.board, &river.combos[player], &opponents, &coeffs)).collect();
+        let mut total = vec![0.0; self.combos[player].len()];
+        for (river, river_values) in self.rivers.iter().zip(per_river) {
+            for (position, value) in river_values.into_iter().enumerate() {
+                total[river.local[player][position]] += value;
+            }
+        }
+        total.iter_mut().for_each(|value| *value /= unseen);
+        total
     }
 
     /// Compatible opponent reach per combo of `player`: the divisor that turns values into per-combo EV.
@@ -263,6 +309,22 @@ impl Solver {
     }
 }
 
+/// Every river card for a turn board, with each player's combos re-sorted for that river's showdown.
+fn rivers(turn: Hand, combos: &[Vec<u16>]) -> Vec<River> {
+    (0..52u8).filter(|&card| !turn.contains(card)).map(|card| {
+        let board = Board::new(turn.add(card));
+        let mut sorted = Vec::with_capacity(combos.len());
+        let mut local = Vec::with_capacity(combos.len());
+        for held in combos {
+            let order = board.sort_by_strength(held);
+            let index: std::collections::HashMap<u16, usize> = held.iter().enumerate().map(|(position, &combo)| (combo, position)).collect();
+            local.push(order.iter().map(|combo| index[combo]).collect());
+            sorted.push(order);
+        }
+        River { board, combos: sorted, local }
+    }).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -306,6 +368,45 @@ mod tests {
         let values = expected_values(&solver);
         let total: f64 = values.iter().sum();
         assert!((total - 1000.0).abs() < 1e-6, "{values:?} sums to {total}");
+    }
+
+    #[test]
+    fn turn_showdown_averages_every_river_card() {
+        // Reference: an explicit loop over river cards with its own sorting and scatter by combo id.
+        let ranges: Vec<Vec<f64>> = SPOT.iter().map(|text| range(text)).collect();
+        let turn = board("Kd9h5c2s");
+        let solver = Solver::new(rules(3, [3000, 2500, 4000]), turn, ranges.clone(), 100_000, usize::MAX).unwrap();
+        let (check_down, _) = solver.tree.walk(&[crate::game::Action::Check; 3]).unwrap();
+        for player in 0..3 {
+            let got = solver.terminal(check_down, player, &solver.ranges);
+            let coeffs = solver.coeffs(&solver.tree.nodes[check_down as usize], player);
+            let opponents: Vec<&[f64]> = solver.opponents(player).iter().map(|&other| solver.ranges[other].as_slice()).collect();
+            let mut expected = vec![0.0; NUM_COMBOS];
+            for card in (0..52u8).filter(|&card| !turn.contains(card)) {
+                let river = Board::new(turn.add(card));
+                let hero = river.sort_by_strength(&solver.combos[player]);
+                for (combo, value) in hero.iter().zip(values(&river, &hero, &opponents, &coeffs)) {
+                    expected[*combo as usize] += value / 42.0;
+                }
+            }
+            for (local, &combo) in solver.combos[player].iter().enumerate() {
+                let want = expected[combo as usize];
+                assert!((got[local] - want).abs() <= 1e-9 * want.abs().max(1.0), "player {player} combo {combo}: {} vs {want}", got[local]);
+            }
+        }
+    }
+
+    #[test]
+    fn turn_check_down_payoffs_sum_to_the_pot() {
+        // Averaging showdowns over the river cards must keep the game zero-sum (denominator 52 - 4 - 2 x players).
+        let ranges: Vec<Vec<f64>> = SPOT.iter().map(|text| range(text)).collect();
+        let mut solver = Solver::new(rules(3, [3000, 2500, 4000]), board("Kd9h5c2s"), ranges, 100_000, usize::MAX).unwrap();
+        assert!(solver.checks_down_river());
+        for _ in 0..10 {
+            solver.iterate();
+        }
+        let values = expected_values(&solver);
+        assert!((values.iter().sum::<f64>() - 1000.0).abs() < 1e-6, "{values:?}");
     }
 
     #[test]
