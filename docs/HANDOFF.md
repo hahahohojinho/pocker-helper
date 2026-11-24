@@ -1,8 +1,10 @@
 # RangeLab Handoff
 
-Last updated: 2026-10-12
+Last updated: 2026-11-13
 
 ## Resume here (2026-10-11, branch fix/solver-quality)
+
+- 2026-11-13: flop library finished (17/17 scenarios, all flops <=0.5% after a 90 s redo of 919 3BP flops); adapter exe rebuilt.
 
 - 2026-10-19: 3-way turn solved with the river checked down (approximation, labelled `리버 체크다운 근사`); heads-up bias check vs dcfr-core: best action 25/29 spots, EV off up to ~0.9bb (docs/SOLVER_INTEGRATION.md). Kernel parallelized over river cards (3-5x faster); 8 s turn budget gives <= 0.46% max BR gain; browser E2E 8.3 s. Security review HIGH (unbounded turn iteration) fixed with a 20M work-unit cap; code review: river-averaging reference test added. Default adapter exe still locked by the library build (rebuild after).
 - 2026-10-17: browser E2E (scratch script, playwright from the global npm root, `next dev` on port 3902 with `DCFR_ADAPTER_PATH`): CO open, BTN call, BB call, checks to the river, Hero CO -> `네이티브 3-WAY SOLVER 실행`, result `SOLVER EV · 3-WAY CFR` with `MAX BR GAIN`. Found and fixed: (1) with the library build at normal priority the live solve got 5-8 iterations (max BR gain 8.6-18%); `build-flop-library.mjs` now lowers its own priority (children inherit), after which the same solve got 305-313 iterations at 0.01%; (2) the convergence pass was skipped under load; it may now run up to 1 s past the budget (`CONVERGENCE_SLACK`). The app's default adapter exe (`tools/dcfr-adapter/target/release`) is locked by the build and lacks fix (2); rebuild it after the build finishes.
@@ -14,7 +16,7 @@ Last updated: 2026-10-12
 - 2026-10-12: the legacy DCFR job API now handles IP roots and validated intermediate histories through the adapter's `--json` mode (former Next TODO 1; CHANGELOG). Full `npm test` with `DCFR_ADAPTER_PATH`: 353 passed, 2 skipped; lint and tsc clean.
 - 2026-10-12: CI `adapter` matrix job (ubuntu-latest, windows-latest) builds the adapter on the pinned 1.99.0 toolchain (`tools/dcfr-adapter/rust-toolchain.toml`), runs its cargo tests and the `DCFR_ADAPTER_PATH` vitest integration tests; the adapter accepts the extension-less binary name off Windows. Pushed 2026-10-12; CI run 38202332894 passed all four jobs (web, solver-wasm, adapter ubuntu, adapter windows). The matchup-export TODO was dropped (the preflop packs cover those spots).
 - Local MSVC env on 2026-10-12: only `C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat` exists (no VS 18, no onecore append needed); the VS 18 command below is out of date.
-- Roadmap phases 1-4 done (see "Real-time roadmap" below). Phase 5a (multiway model EV) done. Phase 5b (flop library) code done, library not generated yet. All committed locally, not pushed.
+- Roadmap phases 1-4 done (see "Real-time roadmap" below). Phase 5a (multiway model EV) done. Phase 5b (flop library) code done; build in progress (5/17 scenarios on 2026-10-19). Pushed through 4682871 (3-way turn) on 2026-10-19; CI run 39266777650 passed all jobs.
 - Flop library (2026-10-11 pilot): 53 BTN vs BB flops generated locally (gitignored). The 10 s budget only reached 8-10 iterations at 1.6-3.1% exploitability on these wide ranges, so the build uses `--budget-ms 30000`: 28-29 iterations, median 0.23%, max 0.39%, ~30 s and ~72 KB per flop (90 s gives 0.018%). Full build: ~15 h and ~125 MB per scenario, heaviest flops first:
   `node scripts/build-flop-library.mjs --scenarios 6max-100bb-srp-btn-bb --budget-ms 30000` (resumable; then the CO and SB scenarios).
 - Full build started 2026-10-11 18:41 KST as a detached process (node PID 24692 at start): `node scripts/build-flop-library.mjs --budget-ms 30000`, all three scenarios in manifest order, ~44 h. Progress: `artifacts/flop-library/logs/<scenario>.log` (one line per flop); runner output in `artifacts/flop-library/logs/run.out`/`run.err`. To stop: end the node process and its `rangelab-dcfr-adapter.exe`. To resume after a stop or reboot: run the same command; finished flops are skipped.
@@ -108,7 +110,7 @@ Goal: on the user's PC, answer each decision in 6-max/8-max within 5 s from boar
 
 ## Known issues (2026-10-11 solver quality review, branch fix/solver-quality)
 
-Plan (reordered): 2a range weights (done) -> 1 presets/budget (done) -> 4 model EV (done) -> 5 equity perf (done) -> 3 observed bet sizes (done). All planned steps are committed on `fix/solver-quality` (not pushed). See CHANGELOG.md.
+Plan (reordered): 2a range weights (done) -> 1 presets/budget (done) -> 4 model EV (done) -> 5 equity perf (done) -> 3 observed bet sizes (done). All planned steps are committed and pushed on `fix/solver-quality`. See CHANGELOG.md.
 
 - Native DCFR turn/river budgets were measured 2026-10-14 (see Resume here); TexasSolver/legacy DCFR budgets in `src/lib/solver-presets.ts` remain uncalibrated.
 - Manual checks needing a solver binary: isomorphism=1 keeps the exact Hero combo in the dump; an observed-size tree resolves a bet -> raise -> call history end to end; solve times per street fit `SOLVER_TIMEOUT_MS`.
@@ -121,8 +123,8 @@ Plan (reordered): 2a range weights (done) -> 1 presets/budget (done) -> 4 model 
 
 ## Next TODO
 
-1. Keep the flop library build running until all 17 scenarios have 1755 flops (`artifacts/flop-library/logs/<scenario>.log`; resume with the same command after a shutdown), then restart `next start` and back up `public/data/flop-library` (gitignored, local only). Next library candidates: 4-bet pots, other stack depths, 8-max.
-2. Multiway follow-ups: flop 3-way (not feasible in 10 s; keeps MODEL EV), 4+ players (MODEL EV), turn with a played river (too slow: ~3.8 s per iteration estimated). Turn 3-way measured 2026-10-17: river subtree with 1 bet size and no raises costs ~4 ms per iteration, so a full turn tree is ~3.8 s per iteration (estimate: 48 cards x ~20 lines); user chose to keep turn on MODEL EV for now (options: river check-down approximation, or kernel/isomorphism optimization).
+1. Flop library: DONE 2026-11-13. 17 scenarios x 1755 = 29835 flops, 1.8 GB in `public/data/flop-library` (gitignored, local only); after the 90 s `--redo-above 0.5` pass every flop is <=0.5% (mean 0.097%). Logon task removed; default release adapter rebuilt 2026-11-13 (capabilities report 3-way river+turn). Left: back up `public/data/flop-library` off this disk (location not chosen yet), restart the app (no `next start` was running). Next library candidates: limp pots (SB limp vs BB, iso pots), 4-bet pots, other stack depths, 8-max.
+2. Multiway follow-ups: 3-way turn is done with the river checked down (4682871). Still open: flop 3-way (not feasible in 10 s; keeps MODEL EV), 4+ players (MODEL EV), turn with a played river (~3.8 s per iteration estimated; would need kernel/isomorphism optimization).
 
 ## Session startup
 

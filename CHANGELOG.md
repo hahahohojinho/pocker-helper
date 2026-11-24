@@ -2,6 +2,11 @@
 
 ## Unreleased - fix/solver-quality (2026-10-11)
 
+### Flop library complete (2026-11-13)
+- All 17 scenarios (11 SRP, 6 3BP at 9bb) x 1755 flops = 29835 solutions, 1.8 GB, local only (gitignored). The 30 s pass left 919 3BP flops above 0.5% of the pot (blind 3-bettor spots were worst: CO vs SB up to 2.25%, CO vs BB up to 2.26%); one `--redo-above 0.5 --budget-ms 90000` pass brought every flop to <=0.5% (mean 0.097%).
+- Why the redo: 1% is the app's "ok" line, and blind 3-bet pots got only 15-40 iterations in 30 s; re-solving only those flops cost ~23 h instead of a full 90 s rebuild.
+- Operations: the build ran 10-11 to 11-13 with many PC shutdowns; a logon Task Scheduler task (`artifacts/flop-library/resume-build.ps1`, gitignored, now removed) resumed it and chained the redo pass.
+
 ### 3-way turn with the river checked down (2026-10-19)
 - The multiway solver accepts turn boards: turn betting is solved, the river is assumed checked down, and every showdown is averaged over the river cards. Results carry `riverModel: "checkdown"`; the panel labels them `리버 체크다운 근사`. The adapter advertises streets `["river", "turn"]`; 3-way turns get an 8 s budget.
 - Why: a played river on the 3-way turn would cost ~3.8 s per iteration (estimate), and the user wanted 3-way turns covered. Measured bias against the full heads-up turn solve (dcfr-core): best action matched in 25 of 29 spots, EVs off up to ~0.9bb, so the result is shown as an approximation, not solver-exact.
