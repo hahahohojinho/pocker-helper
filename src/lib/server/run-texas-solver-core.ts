@@ -11,10 +11,11 @@ export async function runTexasSolver(job:TexasSolverJob,timeoutMs=120_000){
   if(!configured)throw new Error("TEXAS_SOLVER_PATH가 설정되지 않았습니다.");
   const executable=resolve(configured);
   if(basename(executable).toLowerCase()!=="console_solver.exe")throw new Error("console_solver.exe 경로만 허용합니다.");
+  const commands=buildTexasSolverCommands(job,"output_result.json");
   const workDir=await mkdtemp(join(tmpdir(),"rangelab-solver-"));
   const inputPath=join(workDir,"input.txt");const outputPath=join(workDir,"output_result.json");
-  await writeFile(inputPath,buildTexasSolverCommands(job,"output_result.json"),"utf8");
   try{
+    await writeFile(inputPath,commands,"utf8");
     await new Promise<void>((resolveRun,reject)=>{
       const child=spawn(executable,["-i",inputPath],{cwd:workDir,windowsHide:true,stdio:["ignore","pipe","pipe"]});
       let stderr="";child.stderr.on("data",chunk=>{stderr+=String(chunk).slice(0,4000)});

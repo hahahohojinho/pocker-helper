@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { basename, resolve } from "node:path";
 import { parseSolverResult } from "../solver-adapter";
+import { parseCard } from "../equity";
 import { validateTexasSolverJob, type TexasSolverJob } from "../texas-solver-config";
 
 const MAX_OUTPUT_BYTES=4*1024*1024;
@@ -11,10 +12,12 @@ export function buildDcfrAdapterArgs(job:TexasSolverJob){
   if(job.players&&job.players.length>2)throw new Error("Local DCFR adapter supports heads-up jobs only.");
   if(job.actionHistory?.length)throw new Error("Local DCFR adapter currently supports street root nodes only.");
   if(job.node.toCall!==0)throw new Error("Local DCFR adapter requires an OOP street root with nothing to call.");
+  if(!job.tree.betPercent.length||!job.tree.raisePercent.length)throw new Error("Local DCFR adapter requires one bet size and one raise size.");
   const integer=(value:number)=>String(Math.max(1,Math.round(value*SCALE)));
+  const cardCodes=(cards:string[])=>cards.map(card=>parseCard(card)!.code).join("");
   return [
-    "--board",job.node.board.join(""),
-    "--hero",job.node.heroHole.join(""),
+    "--board",cardCodes(job.node.board),
+    "--hero",cardCodes(job.node.heroHole),
     "--oop-range",job.ranges.oop,
     "--ip-range",job.ranges.ip,
     "--pot",integer(job.node.pot),

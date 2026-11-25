@@ -66,6 +66,23 @@ The adapter binary and Cargo `target` directory are intentionally not committed.
 - Browser E2E against local DCFR adapter, including `SOLVER EV` labeling: passed
 - DCFR upstream library tests from the prior integration: 107 passed, 2 ignored
 
+## Recent fixes (2026-11-25, uncommitted)
+
+- Changing the Hero seat mid-hand now resets the whole action history instead of dropping only that seat's actions.
+- Starting stack input commits on blur/Enter, must exceed the seat's committed amount, and is locked once the seat has acted or preflop is complete.
+- `validateTexasSolverJob` validates job structure, card codes, duplicates, candidate actions, numeric caps (1,000,000), tree size count (<= 8), and array/object types; ranges allow a literal space only (no `\r`/tab), max 65,536 chars.
+- DCFR adapter normalizes card codes (`As` format) before passing them, matching the TexasSolver path (the Rust parser was already case-insensitive).
+- DCFR adapter rejects empty bet/raise size lists; TexasSolver runner no longer leaks a temp dir when validation fails.
+- Verified: `npm test` 54 passed / 2 skipped (no solver binaries), lint clean, build passed. UI changes not browser-tested.
+
+## Known issues
+
+- `/api/solver` returns raw exception messages (may include solver stderr/paths). Low priority while the API is local-only.
+- Before exposing the remote counterfactual backend in production: `route.ts` skips the production guard when `COUNTERFACTUAL_EV_BACKEND_URL` is set (no auth/rate limit), the full unvalidated job object is forwarded with the server token, and `request.json()` has no body size cap.
+- `run-texas-solver-core.ts`: stdout is piped but never read (solver may block until timeout), stderr total is uncapped, and `rm` in `finally` can throw EBUSY on Windows after a timeout kill.
+- `src/lib/postflop-machine.ts` still contains unused state/validation functions; the UI uses `postflop-hand-state.ts`. Only `postflopOrder` and types are live.
+- `src/app/poker-helper.tsx`, `src/app/table-helper.tsx`, and `NextTemplate` in `page.tsx` are unused.
+
 ## Next TODO
 
 1. Extend the local DCFR adapter to IP roots and validated intermediate action histories.
