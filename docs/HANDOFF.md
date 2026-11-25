@@ -1,6 +1,6 @@
 # RangeLab Handoff
 
-Last updated: 2026-11-13
+Last updated: 2026-11-25
 
 ## Resume here (2026-10-11, branch fix/solver-quality)
 
@@ -27,15 +27,15 @@ Last updated: 2026-11-13
 - 8-max packs: all five committed 2026-10-11 (see docs/DCFR_PREFLOP.md). The preflop matrix is finished.
 - Exploit follow-ups: on-demand exploit re-solve with locked ranges, 3-bet bluff/defense adjustments, recalibrating priors in `src/lib/exploit/*.ts` from recorded hands.
 
-## Current state
+## Current state (2026-11-25, master f9b9e09 + chore/cleanup-docs)
 
-- Preflop action validation, exact pot accounting, and side pots are implemented.
-- Flop, turn, and river state transitions are implemented.
-- Weighted range equity is implemented.
-- Local TexasSolver flop/turn/river heads-up root and intermediate-node `FAST PREVIEW` is implemented.
-- Preflop strategy schema v2 distinguishes opener position, caller positions, and sizing while retaining v1 wildcard compatibility.
-- Imported strategy JSON persists in browser local storage and can be reset to the bundled dataset.
-- Remote HTTP counterfactual-EV client support remains available through `COUNTERFACTUAL_EV_BACKEND_URL`.
+- `fix/solver-quality` is fully merged into `master` and pushed; `fix/input-validation` is merged too. Both branches can be deleted.
+- Preflop: action engine with side pots; solved packs 6-max/8-max x 20/40/60/100/150bb up to facing a 4-bet; bundled 100bb RFI dataset and `baseline-v1` as fallbacks.
+- Postflop heads-up: wasm or native DCFR at any node with solver EV; flop library (17 scenarios, 6-max 100bb SRP and 3-bet pots, <=0.5%) is local only and not backed up (1.8 GB, gitignored).
+- Multiway: native 3-way river CFR, 3-way turn with river check-down approximation, model EV otherwise.
+- Opponent profiling (SQLite) and exploit advice for iso raises and flop c-bets.
+- Removed on 2026-11-25: unused `poker-helper.tsx`, `table-helper.tsx`, `NextTemplate`, Next template SVGs, and the dead state/validation functions in `postflop-machine.ts` (only `postflopOrder` and types remain; the UI uses `postflop-hand-state.ts`).
+- Superseded sections below (Bundled preflop solve, Local DCFR counterfactual EV, Last verification) describe the 2026-08 state; see CHANGELOG.md for history.
 
 ## Bundled preflop solve
 
@@ -97,7 +97,7 @@ The adapter binary and Cargo `target` directory are intentionally not committed.
 - `validateTexasSolverJob` additionally checks job structure, card codes (ASCII `^[2-9TJQKA][cdhs]$`), duplicates, candidate actions, numeric caps (1,000,000), range length (65,536), and array/object types for `actionHistory`/`players`.
 - TexasSolver runner builds commands before creating the temp dir, so failed validation no longer leaks it.
 - The DCFR CLI-args card normalization from that branch was dropped in the merge: master replaced the CLI path with the `--json` request (`dcfr-job-request.ts`), which still runs `validateTexasSolverJob`.
-- Still open: the production guard in `/api/solver` is skipped when `COUNTERFACTUAL_EV_BACKEND_URL` is set; `postflop-machine.ts` keeps unused state/validation functions (UI uses `postflop-hand-state.ts`); `poker-helper.tsx`, `table-helper.tsx`, and `NextTemplate` in `page.tsx` are unused.
+- Still open: the production guard in `/api/solver` is skipped when `COUNTERFACTUAL_EV_BACKEND_URL` is set.
 
 ## Real-time roadmap (agreed 2026-10-11)
 
