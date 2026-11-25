@@ -4,7 +4,9 @@ import type { TexasSolverJob } from "../texas-solver-config";
 import { runTexasSolver } from "./run-texas-solver-core";
 import { afterEach, vi } from "vitest";
 import { runCounterfactualBackend } from "./run-counterfactual-backend";
-import { buildDcfrAdapterArgs, runDcfrAdapter } from "./run-dcfr-adapter";
+import { runDcfrAdapter, runDcfrJsonAdapter } from "./run-dcfr-adapter";
+import { buildWasmSolveRequest } from "../wasm-solver/request";
+import { parseSolverResult } from "../solver-adapter";
 
 const solverAvailable=Boolean(process.env.TEXAS_SOLVER_PATH);
 const dcfrAdapterAvailable=Boolean(process.env.DCFR_ADAPTER_PATH);
@@ -54,14 +56,6 @@ describe("Counterfactual EV backend",()=>{
 });
 
 describe("Local DCFR counterfactual EV adapter",()=>{
-  it("builds bounded root-solve arguments and rejects unsupported nodes",()=>{
-    const node=createSolverNode({street:"river",heroHole:["As","Qh"],board:["Js","7d","2c","9h","Kd"],pot:10,toCall:0,effectiveStack:90,candidateActions:["check","bet"]});
-    const job:TexasSolverJob={node,ranges:{oop:"AQo",ip:"JJ"},tree:{betPercent:[50],raisePercent:[60],includeAllIn:false},accuracy:10,iterations:10,threads:1};
-    expect(buildDcfrAdapterArgs(job)).toContain("1000");
-    expect(()=>buildDcfrAdapterArgs({...job,actionHistory:[{action:"check"}]})).toThrow("street root");
-    expect(()=>buildDcfrAdapterArgs({...job,node:{...node,toCall:2}})).toThrow("nothing to call");
-    expect(()=>buildDcfrAdapterArgs({...job,players:[{seat:0,range:"AQo",stack:90},{seat:1,range:"JJ",stack:90},{seat:2,range:"77",stack:90}],actorSeat:0})).toThrow("heads-up");
-  });
   it.skipIf(!dcfrAdapterAvailable)("returns action-specific solver EV for a real river root",async()=>{
     const node=createSolverNode({street:"river",heroHole:["As","Qh"],board:["Js","7d","2c","9h","Kd"],pot:10,toCall:0,effectiveStack:90,candidateActions:["check","bet"]});
     const job:TexasSolverJob={node,ranges:{oop:"AQo",ip:"JJ"},tree:{betPercent:[50],raisePercent:[60],includeAllIn:false},accuracy:10,iterations:10,threads:1};
@@ -70,6 +64,25 @@ describe("Local DCFR counterfactual EV adapter",()=>{
     expect(new Set(result.strategy.map(action=>action.ev)).size).toBe(2);
     expect(result.strategy.find(action=>action.action==="bet")!.ev).toBeGreaterThan(-6);
     expect(Math.abs(result.strategy.find(action=>action.action==="check")!.ev)).toBeLessThan(0.1);
+  },35_000);
+  it.skipIf(!dcfrAdapterAvailable)("solves the IP root after a check and an intermediate node facing a bet",async()=>{
+    const node=createSolverNode({street:"river",heroHole:["As","Qh"],board:["Js","7d","2c","9h","Kd"],pot:10,toCall:0,effectiveStack:90,candidateActions:["check","bet"]});
+    const job:TexasSolverJob={node,ranges:{oop:"JJ,T9s",ip:"AQo,KK"},tree:{betPercent:[50],raisePercent:[60],includeAllIn:false},accuracy:10,iterations:50,threads:2};
+    const ipRoot=parseSolverResult(await runDcfrAdapter({...job,actionHistory:[{action:"check"}]},30_000));
+    expect(ipRoot.actions.map(action=>action.action).sort()).toEqual(["bet","check"]);
+    const facingBet=parseSolverResult(await runDcfrAdapter({...job,actionHistory:[{action:"check"},{action:"bet",amount:5},{action:"raise",amount:15}]},30_000));
+    expect(facingBet.evSource).toBe("solver");
+    expect(facingBet.actions.map(action=>action.action)).toEqual(expect.arrayContaining(["fold","call"]));
+  },65_000);
+});
+
+describe("Native DCFR adapter --json",()=>{
+  it.skipIf(!dcfrAdapterAvailable)("solves an IP node facing a bet with multi-threaded solver EV",async()=>{
+    const request=buildWasmSolveRequest({board:["Js","Td","7c","2h","3s"],heroHole:["As","Qh"],oopRange:"KK,QQ,T9s",ipRange:"AsQh,AA,JJ",pot:10,stacks:{oop:90,ip:90},history:[{role:"oop",action:"bet",amount:7}],iterations:200,betPercent:[50],raisePercent:[60]});
+    const result=parseSolverResult(await runDcfrJsonAdapter(request,{threads:2,timeoutMs:30_000}));
+    expect(result.source).toBe("dcfr-native");
+    expect(result.evSource).toBe("solver");
+    expect(result.actions.map(action=>action.action)).toEqual(expect.arrayContaining(["fold","call"]));
   },35_000);
 });
 

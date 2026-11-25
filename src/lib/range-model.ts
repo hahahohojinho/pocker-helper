@@ -4,8 +4,9 @@ import type { Position } from "./preflop";
 import { allStartingHands, lookupStrategy } from "./strategy-data";
 import { normalizeStartingHand } from "./strategy-data";
 import { bestHandScore, parseCard } from "./equity";
-import { parseWeightedRange } from "./range-equity";
+import { parseWeightedRange, type WeightedCombo } from "./range-equity";
 import type { PostflopActionType } from "./postflop-machine";
+import type { TableSize } from "./preflop-packs";
 
 export interface InferredRange {
   text: string;
@@ -15,7 +16,7 @@ export interface InferredRange {
 
 function actionProbability(type: PlayerAction["type"], amount: number, scenario: PreflopScenario, mix: ReturnType<typeof lookupStrategy>) {
   if (type === "fold") return mix.fold;
-  const benchmark = scenario === "unopened" ? 2.5 : scenario === "single-open" || scenario === "open-with-callers" ? 8 : scenario === "facing-3bet" ? 22 : 50;
+  const benchmark = scenario === "unopened" ? 2.5 : scenario === "limped" || scenario === "single-open" || scenario === "open-with-callers" ? 8 : scenario === "facing-3bet" ? 22 : 50;
   const pressure = Math.max(0, amount / benchmark - 1);
   if (["open", "3bet", "4bet", "5bet"].includes(type)) {
     const strengthTilt = 0.55 + mix.aggressive / 100;
@@ -30,15 +31,24 @@ function scenarioBefore(actions: PlayerAction[], index: number): PreflopScenario
 }
 
 /** Converts observed actions to a weighted baseline range; it is not solver GTO data. */
-export function inferRangeFromPreflop(input: { actions: PlayerAction[]; seat: number; position: Position; stack: number }): InferredRange {
+export function inferRangeFromPreflop(input: { actions: PlayerAction[]; seat: number; position: Position; stack: number; tableSize?: TableSize }): InferredRange {
   const observations = input.actions.map((action, index) => ({ action, index }))
     .filter(({ action }) => action.seat === input.seat && action.type !== "fold");
+  // An observed action a source gives zero probability for every hand (e.g. a UTG limp, which neither the solved
+  // pack nor the RFI dataset allows) carries no information from that source: fall back to the next source, and
+  // skip the observation when none explains it, so one off-model action cannot collapse the range to one hand.
+  const sourced = observations.flatMap(({ action, index }) => {
+    const scenario = scenarioBefore(input.actions, index);
+    const context = { position: input.position, stack: input.stack, scenario, ...derivePreflopSpotContext(input.actions.slice(0, index)) };
+    const explains = (tableSize: TableSize | undefined) => allStartingHands.some(hand => actionProbability(action.type, action.amount, scenario, lookupStrategy({ hand, ...context, tableSize })) > 0);
+    const options = input.tableSize === undefined ? [undefined] : [input.tableSize, undefined];
+    const chosen = options.findIndex(explains);
+    return chosen < 0 ? [] : [{ action, scenario, context: { ...context, tableSize: options[chosen] } }];
+  });
   const scores = allStartingHands.map(hand => {
     let score = 1;
-    for (const { action, index } of observations) {
-      const priorActions=input.actions.slice(0,index);
-      const mix = lookupStrategy({ hand, position: input.position, stack: input.stack, scenario: scenarioBefore(input.actions, index),...derivePreflopSpotContext(priorActions) });
-      score *= actionProbability(action.type, action.amount, scenarioBefore(input.actions, index), mix) / 100;
+    for (const { action, scenario, context } of sourced) {
+      score *= actionProbability(action.type, action.amount, scenario, lookupStrategy({ hand, ...context })) / 100;
     }
     return { hand, score };
   });
@@ -53,23 +63,36 @@ export function inferRangeFromPreflop(input: { actions: PlayerAction[]; seat: nu
   };
 }
 
-/** Applies board-aware made-hand, draw, and blocker heuristics to an already weighted range. */
-export function conditionRangeOnPostflop(input:{rangeText:string;boardCodes:string[];actions:PostflopActionType[]}):string{
-  if(input.boardCodes.length<3||!input.actions.length)return input.rangeText;
-  const board=input.boardCodes.map(parseCard);
-  if(board.some(card=>!card))return input.rangeText;
+export interface ScoredCombo { combo:WeightedCombo;strength:number;continueStrength:number;aggressionStrength:number; }
+
+/**
+ * Scores each board-compatible combo: strength is the made-hand percentile within the range, continueStrength adds
+ * draw equity, and aggressionStrength adds blocker value. Returns null when the board is incomplete or invalid.
+ */
+export function scoreRangeOnBoard(rangeText:string,boardCodes:string[]):ScoredCombo[]|null{
+  if(boardCodes.length<3)return null;
+  const board=boardCodes.map(parseCard);
+  if(board.some(card=>!card))return null;
   const boardCards=board.filter(card=>card!==null);
-  const combos=parseWeightedRange(input.rangeText).filter(combo=>{
-    const codes=new Set([...input.boardCodes.map(card=>card.toUpperCase()),...combo.cards.map(card=>card.toUpperCase())]);
-    return codes.size===input.boardCodes.length+2;
-  }).map(combo=>{const holeCards=combo.cards.map(card=>parseCard(card)!);const cards=[...holeCards,...boardCards];return {combo,score:bestHandScore(cards),draw:drawPotential(cards,input.boardCodes.length),blocker:blockerPotential(holeCards,boardCards)};});
-  if(!combos.length)return input.rangeText;
+  const combos=parseWeightedRange(rangeText).filter(combo=>{
+    const codes=new Set([...boardCodes.map(card=>card.toUpperCase()),...combo.cards.map(card=>card.toUpperCase())]);
+    return codes.size===boardCodes.length+2;
+  }).map(combo=>{const holeCards=combo.cards.map(card=>parseCard(card)!);const cards=[...holeCards,...boardCards];return {combo,score:bestHandScore(cards),draw:drawPotential(cards,boardCodes.length),blocker:blockerPotential(holeCards,boardCards)};});
   const orderedScores=[...new Set(combos.map(item=>item.score))].sort((a,b)=>a-b);
   const scorePercentile=new Map(orderedScores.map((score,index)=>[score,orderedScores.length===1?1:index/(orderedScores.length-1)]));
-  const weighted=combos.map(({combo,score,draw,blocker})=>{
+  return combos.map(({combo,score,draw,blocker})=>{
     const strength=scorePercentile.get(score)??0.5;
     const continueStrength=Math.min(1,strength+draw);
-    const aggressionStrength=Math.min(1,continueStrength+blocker*(1-continueStrength));
+    return {combo,strength,continueStrength,aggressionStrength:Math.min(1,continueStrength+blocker*(1-continueStrength))};
+  });
+}
+
+/** Applies board-aware made-hand, draw, and blocker heuristics to an already weighted range. */
+export function conditionRangeOnPostflop(input:{rangeText:string;boardCodes:string[];actions:PostflopActionType[]}):string{
+  if(!input.actions.length)return input.rangeText;
+  const scored=scoreRangeOnBoard(input.rangeText,input.boardCodes);
+  if(!scored?.length)return input.rangeText;
+  const weighted=scored.map(({combo,strength,continueStrength,aggressionStrength})=>{
     let weight=combo.weight;
     for(const action of input.actions){
       if(action==="bet"||action==="raise")weight*=0.2+0.8*aggressionStrength;
@@ -117,24 +140,48 @@ export function ensureComboInRange(rangeText:string,holeCards:string[],minimumWe
   return contains?rangeText:`${rangeText},${target.join("")}:${minimumWeight}`;
 }
 
-/** TexasSolver v0.2.0 accepts weighted 169 classes, not exact suit combos. */
-export function toTexasSolverRange(rangeText:string,requiredHoleCards?:string[],minimumWeight=0.01,maxClasses=Number.POSITIVE_INFINITY){
-  const grouped=new Map<string,{weight:number;count:number}>();
+type ParsedCard=NonNullable<ReturnType<typeof parseCard>>;
+
+function startingHandClass(first:ParsedCard,second:ParsedCard){
+  const suffix=first.rank===second.rank?"":first.suit===second.suit?"s":"o";
+  return normalizeStartingHand(`${"--23456789TJQKA"[first.rank]}${"--23456789TJQKA"[second.rank]}${suffix}`)!;
+}
+
+function parseBlockedCards(boardCodes:string[]){
+  const cards=boardCodes.map(parseCard);
+  if(cards.some(card=>!card))throw new Error("Board cards are invalid.");
+  return new Set((cards as ParsedCard[]).map(card=>card.code));
+}
+
+const unblockedComboCount=(hand:string,blocked:Set<string>)=>parseWeightedRange(hand).filter(combo=>combo.cards.every(card=>!blocked.has(card))).length;
+
+/**
+ * TexasSolver v0.2.0 accepts weighted 169 classes, not exact suit combos. A class weight is applied to every
+ * board-compatible combo, so it is the summed combo weight divided by that combo count, and pruning keeps the
+ * classes with the most expected combos.
+ */
+export function toTexasSolverRange(rangeText:string,requiredHoleCards?:string[],minimumWeight=0.01,maxClasses=Number.POSITIVE_INFINITY,boardCodes:string[]=[]){
+  const blocked=parseBlockedCards(boardCodes);
+  const grouped=new Map<string,number>();
   for(const combo of parseWeightedRange(rangeText)){
-    const first=parseCard(combo.cards[0])!;const second=parseCard(combo.cards[1])!;
-    const suffix=first.rank===second.rank?"":first.suit===second.suit?"s":"o";
-    const hand=normalizeStartingHand(`${"--23456789TJQKA"[first.rank]}${"--23456789TJQKA"[second.rank]}${suffix}`)!;
-    const current=grouped.get(hand)??{weight:0,count:0};current.weight+=combo.weight;current.count++;grouped.set(hand,current);
+    if(combo.cards.some(card=>blocked.has(card)))continue;
+    const hand=startingHandClass(parseCard(combo.cards[0])!,parseCard(combo.cards[1])!);
+    grouped.set(hand,(grouped.get(hand)??0)+combo.weight);
   }
   let requiredHand:string|undefined;
   if(requiredHoleCards){
     const cards=requiredHoleCards.map(parseCard);if(cards.length!==2||cards.some(card=>!card))throw new Error("Required hole cards are invalid.");
-    const [first,second]=cards as NonNullable<ReturnType<typeof parseCard>>[];const suffix=first.rank===second.rank?"":first.suit===second.suit?"s":"o";
-    requiredHand=normalizeStartingHand(`${"--23456789TJQKA"[first.rank]}${"--23456789TJQKA"[second.rank]}${suffix}`)!;
-    if(!grouped.has(requiredHand))grouped.set(requiredHand,{weight:minimumWeight,count:1});
+    requiredHand=startingHandClass(cards[0]!,cards[1]!);
+    if(!grouped.has(requiredHand))grouped.set(requiredHand,0);
   }
-  const ranked=[...grouped].map(([hand,value])=>({hand,weight:Math.max(minimumWeight,Math.round(value.weight/value.count*1000)/1000)})).sort((a,b)=>b.weight-a.weight);
+  const ranked=[...grouped].flatMap(([hand,comboWeight])=>{
+    const available=unblockedComboCount(hand,blocked);
+    if(!available)return [];
+    const weight=Math.min(1,Math.max(minimumWeight,Math.round(comboWeight/available*1000)/1000));
+    return [{hand,weight,expectedCombos:weight*available}];
+  }).sort((a,b)=>b.expectedCombos-a.expectedCombos||a.hand.localeCompare(b.hand));
   let selected=ranked.slice(0,Math.max(1,Math.floor(maxClasses)));
-  if(requiredHand&&!selected.some(item=>item.hand===requiredHand))selected=[...selected.slice(0,-1),ranked.find(item=>item.hand===requiredHand)!];
+  const requiredItem=ranked.find(item=>item.hand===requiredHand);
+  if(requiredItem&&!selected.includes(requiredItem))selected=[...selected.slice(0,-1),requiredItem];
   return selected.map(item=>`${item.hand}:${item.weight}`).join(",");
 }

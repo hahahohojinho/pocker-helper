@@ -1,0 +1,6 @@
+[package]
+name = "rayon"
+version = "1.12.0"
+edition = "2021"
+description = "Sequential stand-in for rayon so dcfr-solver builds for wasm32 without threads."
+publish = false

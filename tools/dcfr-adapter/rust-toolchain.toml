@@ -1,0 +1,4 @@
+# Pinned like tools/dcfr-wasm so CI and local native builds use the same compiler.
+[toolchain]
+channel = "1.99.0"
+profile = "minimal"

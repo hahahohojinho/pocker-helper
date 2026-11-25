@@ -40,21 +40,32 @@ try{
   await page.locator(".board-entry input").nth(0).fill("2c");
   await page.locator(".board-entry input").nth(1).fill("7d");
   await page.locator(".board-entry input").nth(2).fill("Jh");
-  const solverButton=page.getByRole("button",{name:/LOCAL (?:TEXASSOLVER|DCFR EV) 실행/});
-  const expectsSolverEv=(await solverButton.innerText()).includes("DCFR EV");
-  if(!(await solverButton.isEnabled()))throw new Error("Local solver button did not activate for heads-up flop Hero OOP.");
+  const solverButton=page.getByRole("button",{name:/(?:(?:브라우저|네이티브) SOLVER|LOCAL (?:TEXASSOLVER|DCFR EV)) 실행/});
+  const solverLabel=await solverButton.innerText();
+  const usesDcfr=solverLabel.includes("브라우저")||solverLabel.includes("네이티브");
+  const expectsSolverEv=solverLabel.includes("DCFR EV")||usesDcfr;
+  if(!(await solverButton.isEnabled()))throw new Error("Solver button did not activate for heads-up flop Hero OOP.");
   await solverButton.click();
+  if(solverLabel.includes("브라우저"))await page.getByRole("button",{name:/SOLVING \d+\/\d+/}).waitFor({timeout:60000});
   await Promise.race([
-    page.getByText("SOLVER STRATEGY",{exact:true}).waitFor({timeout:120000}),
-    page.locator(".validation-message").waitFor({state:"visible",timeout:120000}).then(async()=>{throw new Error(`Local solver failed: ${await page.locator(".validation-message").innerText()}`);}),
+    page.getByText("SOLVER STRATEGY",{exact:true}).waitFor({timeout:240000}),
+    page.locator(".validation-message").waitFor({state:"visible",timeout:240000}).then(async()=>{throw new Error(`Local solver failed: ${await page.locator(".validation-message").innerText()}`);}),
   ]);
   if(!(await page.locator(".equity-result").innerText()).includes("EQUITY"))throw new Error("Local solver did not calculate the range-weighted equity used for model EV.");
   if(expectsSolverEv&&!(await page.locator(".ev-panel").innerText()).includes("SOLVER EV"))throw new Error("DCFR backend result was not labeled as solver EV.");
+  if(usesDcfr&&!/\d+\.\d+s · \d+ iter/.test(await page.locator(".ev-panel").innerText()))throw new Error("DCFR result did not show solve time and iterations.");
+  if(usesDcfr&&!/EXPLOIT [\d.]+% POT/.test(await page.locator(".ev-panel").innerText()))throw new Error("In-browser solver result did not show convergence.");
   await page.locator(".postflop-actions button").filter({hasText:"Check"}).click();
   await page.locator(".postflop-actions button").filter({hasText:"Check"}).click();
   await page.locator(".advance-street").click();
   await page.locator(".board-entry input").nth(3).fill("Kh");
   if(!(await page.locator(".local-solver-button").isEnabled()))throw new Error("Local solver button did not activate for a heads-up turn root.");
+  if(usesDcfr){
+    await page.locator(".local-solver-button").click();
+    await page.locator(".solver-cancel-button").click();
+    await page.getByText("Solver 실행을 취소했습니다.").waitFor({timeout:10000});
+    if(!(await page.locator(".local-solver-button").isEnabled()))throw new Error("Solver button did not re-enable after cancelling.");
+  }
   const potText=await page.locator(".postflop-status").innerText();
   const history=await page.locator(".history-strip").innerText();
   await page.screenshot({path:"artifacts/e2e-smoke.png",fullPage:true});

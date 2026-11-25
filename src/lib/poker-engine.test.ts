@@ -9,7 +9,7 @@ import { activeStrategyDataset, allStartingHands, buildStrategyMatrix, bundledSt
 import { createSolverNode, parseSolverResult, parseTexasSolverNode, parseTexasSolverNodeAtHistory } from "./solver-adapter";
 import { calculatePokerPots, calculatePotLayers, totalPot } from "./pots";
 import { buildTexasSolverCommands } from "./texas-solver-config";
-import { buildPostflopContext, nextPostflopActor } from "./postflop-hand-state";
+import { buildPostflopContext, nextPostflopActor, seatsYetToRespond } from "./postflop-hand-state";
 import type { PostflopAction } from "./postflop-machine";
 import { attachActionEvs } from "./decision-ev";
 import { calculateRangeEquity, parseWeightedRange } from "./range-equity";
@@ -88,6 +88,20 @@ describe("postflop state persistence",()=>{
   });
 });
 
+describe("players behind a call",()=>{
+  it("lists live opponents who have not matched the bet",()=>{
+    const actions=[postAction("flop",0,"check"),postAction("flop",1,"bet",5),postAction("flop",2,"call",5)];
+    const context=buildPostflopContext({actions,street:"flop",seats:[0,1,2,3],initialRemaining:[90,90,90,90],initialPot:10});
+    expect(seatsYetToRespond(context,3,[0,1,2,3])).toEqual([0]);
+    expect(seatsYetToRespond(context,0,[0,1,2,3])).toEqual([3]);
+  });
+  it("skips folded and all-in opponents",()=>{
+    const actions=[postAction("flop",0,"bet",5),postAction("flop",1,"fold"),postAction("flop",2,"call",4)];
+    const context=buildPostflopContext({actions,street:"flop",seats:[0,1,2,3],initialRemaining:[90,90,4,90],initialPot:10});
+    expect(seatsYetToRespond(context,3,[0,1,2,3])).toEqual([]);
+  });
+});
+
 describe("169 hand strategy",()=>{
   it("loads the bundled 100M-iteration DCFR RFI dataset by default",()=>{
     clearStrategyDataset();
@@ -100,7 +114,7 @@ describe("169 hand strategy",()=>{
       {id:"2",street:"preflop",seat:1,position:"BTN",type:"call",amount:2.5},
       {id:"3",street:"preflop",seat:2,position:"SB",type:"3bet",amount:10},
     ];
-    expect(derivePreflopSpotContext(actions)).toEqual({openerPosition:"CO",callerPositions:["BTN"],actionSize:10});
+    expect(derivePreflopSpotContext(actions)).toEqual({openerPosition:"CO",callerPositions:["BTN"],actionSize:10,aggressorPosition:expect.any(String),limperPositions:[],raiseCount:2});
   });
   it("contains 169 unique normalized starting hands",()=>{
     expect(allStartingHands).toHaveLength(169);
@@ -180,10 +194,26 @@ describe("action inferred ranges",()=>{
   });
   it("aggregates exact suit combos to TexasSolver weighted 169 classes",()=>{
     const range=toTexasSolverRange("AsQh:0.5,AcQd:1,KhKc:0.75",["7s","2h"]);
-    expect(range).toContain("AQo:0.75");
-    expect(range).toContain("KK:0.75");
+    expect(range).toContain("AQo:0.125");
+    expect(range).toContain("KK:0.125");
     expect(range).toContain("72o:0.01");
     expect(range).not.toMatch(/[AKQJT2-9][cdhs][AKQJT2-9][cdhs]/);
+  });
+  it("weights a solver class by the share of its combos present in the range",()=>{
+    expect(toTexasSolverRange("AsQh:1,AcQd:1")).toBe("AQo:0.167");
+    expect(toTexasSolverRange("AQo")).toBe("AQo:1");
+  });
+  it("excludes board-blocked combos from the class denominator",()=>{
+    const unblocked="AcQc,AdQd,AhQh";
+    expect(toTexasSolverRange(unblocked,undefined,0.01,Number.POSITIVE_INFINITY,["Qs","7d","2c"])).toBe("AQs:1");
+    expect(toTexasSolverRange(unblocked)).toBe("AQs:0.75");
+  });
+  it("prunes by expected combo count independent of input order",()=>{
+    const classes="22,33,44,55,66,77,88,99,TT,AKo,AQo,AJo,KQo,KJo,QJo,JTo,T9o,98o,87o";
+    const forward=toTexasSolverRange(classes,undefined,0.01,8);
+    const reversed=toTexasSolverRange(classes.split(",").reverse().join(","),undefined,0.01,8);
+    expect(forward).toBe(reversed);
+    expect(forward.split(",").every(item=>item.slice(0,3).endsWith("o"))).toBe(true);
   });
   it("prunes solver ranges while retaining the required hero class",()=>{
     const range=toTexasSolverRange(allStartingHands.join(","),["7s","2h"],0.01,5);

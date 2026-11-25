@@ -1,2 +1,2 @@
 import "server-only";
-export { runTexasSolver } from "./run-texas-solver-core";
+export { runTexasSolver, runTexasSolverDetailed } from "./run-texas-solver-core";

@@ -5,11 +5,18 @@ import { PlayerAction, PlayerActionType, recommendFromHistory } from "@/lib/game
 import { Position } from "@/lib/preflop";
 import { availableActions, bettingAmounts, nextPosition, positionOrder, validatePreflopAction } from "@/lib/preflop-machine";
 import { activeStrategyDataset, buildStrategyMatrix, bundledStrategyDatasetId, clearStrategyDataset, nearestStackBucket, parseStrategyDatasetJson } from "@/lib/strategy-data";
+import { bucketOrder, loadPreflopPack } from "@/lib/preflop-packs";
 import PostflopPanel from "./postflop-panel";
 import { calculatePokerPots } from "@/lib/pots";
 import { deriveBettingState } from "@/lib/preflop-machine";
+import { loadSeatPlayers, parseSeatPlayers, rotateForNextHand, rotateHeroSeat, saveSeatPlayers, type SeatPlayers } from "@/lib/profiling/build-record";
+import SeatPlayersPanel from "./profiling/seat-players-panel";
+import { tendencySummary } from "./profiling/tendency-labels";
+import { useProfile } from "./profiling/use-profile";
+import PreflopExploitCard from "./exploit/preflop-exploit-card";
 
 type TableSize = 6 | 8;
+const packErrorPrefix="프리플랍 솔브 데이터를 불러오지 못했습니다";
 const positionSets: Record<TableSize, Position[]> = { 6:["BTN","SB","BB","UTG","HJ","CO"], 8:["BTN","SB","BB","UTG","UTG+1","MP","HJ","CO"] };
 const coordinates: Record<TableSize,{left:number;top:number}[]> = {
   6:[{left:50,top:92},{left:12,top:72},{left:12,top:24},{left:50,top:4},{left:88,top:24},{left:88,top:72}],
@@ -27,12 +34,24 @@ export default function TableHelperV2(){
   const [hand,setHand]=useState("AQs");
   const [stacks,setStacks]=useState<number[]>(Array(8).fill(100));
   const [validationMessage,setValidationMessage]=useState("");
-  const [,setDatasetRevision]=useState(0);
+  const [datasetRevision,setDatasetRevision]=useState(0);
   const [datasetMessage,setDatasetMessage]=useState("");
   const [stackDraft,setStackDraft]=useState<string|null>(null);
+  const [seatPlayersBySize,setSeatPlayersBySize]=useState<SeatPlayers>(()=>parseSeatPlayers(null));
+  const [seatPlayersLoaded,setSeatPlayersLoaded]=useState(false);
+  // Remounts the postflop panel (and its recorder) for each new hand.
+  const [handNumber,setHandNumber]=useState(0);
+  const [profileRevision,setProfileRevision]=useState(0);
   const positions=positionSets[tableSize??6];
+  const seatPlayers=seatPlayersBySize[tableSize??6];
+  const profile=useProfile(tableSize,seatPlayers,profileRevision);
+  const statsBySeat=useMemo(()=>seatPlayers.map(id=>id?profile.stats[id]?.totals:undefined),[seatPlayers,profile.stats]);
+  const playerName=(seat:number)=>profile.players.find(player=>player.id===seatPlayers[seat])?.name;
   const heroStack=stacks[heroSeat]??100;
-  const result=useMemo(()=>recommendFromHistory({heroPosition:positions[heroSeat],hand,effectiveStack:heroStack,actions}),[positions,heroSeat,hand,heroStack,actions]);
+  // datasetRevision re-runs the lookup once an imported dataset or a solved pack has been installed into the
+  // module-level strategy registry, which React cannot observe.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const result=useMemo(()=>recommendFromHistory({heroPosition:positions[heroSeat],hand,effectiveStack:heroStack,actions,tableSize:tableSize??undefined}),[positions,heroSeat,hand,heroStack,actions,tableSize,datasetRevision]);
   const currentPosition=nextPosition(actions,positions,stacks);
   const currentSeat=currentPosition ? positions.indexOf(currentPosition) : -1;
   const allowed=currentSeat>=0 ? availableActions(actions,positions,currentSeat,stacks) : [];
@@ -40,10 +59,40 @@ export default function TableHelperV2(){
   const bettingState=deriveBettingState(actions,positions,stacks);
   const potLayers=calculatePokerPots(bettingState.contributions,bettingState.foldedSeats,bettingState.allInSeats);
   const visibleActions=actions.filter(action=>!action.implicit);
-  const strategyMatrix=buildStrategyMatrix(positions[heroSeat],heroStack,result.scenario,result.spotContext);
+  const strategyMatrix=buildStrategyMatrix(positions[heroSeat],heroStack,result.scenario,result.spotContext,tableSize??undefined);
+
+  // Solved packs are per table size and stack bucket, so the load only re-runs when the nearest bucket changes.
+  const stackBucket=bucketOrder(heroStack)[0];
+  useEffect(()=>{
+    if(!tableSize)return;
+    let active=true;
+    const clearPackError=()=>setDatasetMessage(message=>message.startsWith(packErrorPrefix)?"":message);
+    loadPreflopPack(tableSize,stackBucket).then(pack=>{if(!active)return;clearPackError();if(pack)setDatasetRevision(value=>value+1);})
+      .catch(error=>{if(active)setDatasetMessage(error instanceof Error?`${packErrorPrefix}: ${error.message}`:`${packErrorPrefix}.`);});
+    return()=>{active=false;};
+  },[tableSize,stackBucket]);
   const datasetInfo=activeStrategyDataset();
   const stackSeat=currentSeat>=0?currentSeat:heroSeat;
   const stackLocked=currentSeat<0||actions.some(action=>action.seat===stackSeat&&!action.implicit);
+
+  useEffect(()=>{
+    let active=true;
+    queueMicrotask(()=>{if(!active)return;setSeatPlayersBySize(loadSeatPlayers());setSeatPlayersLoaded(true);});
+    return()=>{active=false;};
+  },[]);
+  // Saved only after the first load, so the empty initial state never overwrites stored assignments.
+  useEffect(()=>{if(seatPlayersLoaded)saveSeatPlayers(seatPlayersBySize);},[seatPlayersBySize,seatPlayersLoaded]);
+  // Assignments pointing at players the database no longer has (e.g. a replaced DB file) would make every save fail.
+  const playerIdsKey=profile.enabled?profile.players.map(player=>player.id).sort().join(","):null;
+  useEffect(()=>{
+    if(playerIdsKey===null||!seatPlayersLoaded)return;
+    const known=new Set(playerIdsKey.split(",").filter(Boolean));
+    queueMicrotask(()=>setSeatPlayersBySize(current=>{
+      const prune=(list:(string|null)[])=>list.map(id=>id&&known.has(id)?id:null);
+      const next={6:prune(current[6]),8:prune(current[8])};
+      return JSON.stringify(next)===JSON.stringify(current)?current:next;
+    }));
+  },[playerIdsKey,seatPlayersLoaded]);
 
   useEffect(()=>{
     let active=true;
@@ -61,6 +110,20 @@ export default function TableHelperV2(){
   }
   function resetDataset(){clearStrategyDataset();localStorage.removeItem(strategyStorageKey);setDatasetRevision(value=>value+1);setDatasetMessage("내장 DCFR 데이터로 복원하고 저장된 데이터셋을 삭제했습니다.");}
 
+  function updateSeatPlayers(next:(current:(string|null)[])=>(string|null)[]){
+    if(!tableSize)return;
+    setSeatPlayersBySize(current=>({...current,[tableSize]:next(current[tableSize])}));
+  }
+  /** One player per seat: assigning a player already seated elsewhere moves them. */
+  function assignPlayer(seat:number,playerId:string|null){updateSeatPlayers(current=>current.map((value,index)=>index===seat?playerId:playerId!==null&&value===playerId?null:value));}
+  /** The button moves one seat: players, the hero, and stacks all shift one slot, and the hand starts over. */
+  function startNextHand(){
+    if(!tableSize)return;
+    updateSeatPlayers(rotateForNextHand);
+    setHeroSeat(seat=>rotateHeroSeat(seat,tableSize));
+    setStacks(current=>rotateForNextHand(current.slice(0,tableSize)));
+    setActions([]);setSelectedSeat(3);setValidationMessage("");setHandNumber(value=>value+1);
+  }
   function enter(size:TableSize){setTableSize(size);setHeroSeat(0);setSelectedSeat(3);setActions([]);setStacks(Array(size).fill(100))}
   function selectActingSeat(seat:number){
     if(!currentPosition){setValidationMessage("프리플랍 베팅 라운드가 종료되었습니다.");return;}
@@ -95,6 +158,7 @@ export default function TableHelperV2(){
   function changeHeroSeat(seat:number){
     if(seat===heroSeat)return;
     setHeroSeat(seat);
+    updateSeatPlayers(current=>current.map((id,index)=>index===seat?null:id));
     if(actions.length){setActions([]);setValidationMessage("Hero 좌석이 바뀌어 액션 기록을 초기화했습니다.");}
   }
   function commitStack(){
@@ -118,7 +182,7 @@ export default function TableHelperV2(){
         <div className="instruction"><span>{currentPosition?"CURRENT SCENARIO":"ROUND COMPLETE"}</span><b>{currentPosition?result.scenarioLabel:"프리플랍 액션 완료"}</b><small>{currentPosition?"액션을 순서대로 입력하세요. Hero 액션도 기록하면 다음 차례로 진행됩니다.":"모든 활성 플레이어가 현재 베팅 금액을 맞췄습니다."}</small></div>
         <div className="poker-scene">
           <div className="poker-table"><div className="felt-mark"><b>RANGE<span>LAB</span></b><small>ACTION BUILDER</small></div><div className="pot-chip">POT<br/><b>{accounting.pot.toFixed(1)} BB</b></div></div>
-          {coordinates[tableSize].map((point,index)=>{const last=[...actions].reverse().find(a=>a.seat===index);return <button key={index} className={`seat ${index===heroSeat?"hero":""} ${index===selectedSeat?"selected":""} ${index===currentSeat?"current-turn":""} ${last?.type??(!last&&index!==heroSeat?"auto-fold":"")}`} style={{left:`${point.left}%`,top:`${point.top}%`}} onClick={()=>selectActingSeat(index)}><span className="avatar">{index===heroSeat?"YOU":index+1}</span><span className="seat-info"><b>{positions[index]}</b><small>{index===currentSeat?"현재 차례":last?`${actionLabels[last.type]} ${last.amount||""}`:index===heroSeat?hand:"Fold · 자동"}</small></span>{positions[index]==="BTN"&&<i className="dealer">D</i>}</button>})}
+          {coordinates[tableSize].map((point,index)=>{const last=[...actions].reverse().find(a=>a.seat===index);return <button key={index} className={`seat ${index===heroSeat?"hero":""} ${index===selectedSeat?"selected":""} ${index===currentSeat?"current-turn":""} ${last?.type??(!last&&index!==heroSeat?"auto-fold":"")}`} style={{left:`${point.left}%`,top:`${point.top}%`}} onClick={()=>selectActingSeat(index)}><span className="avatar">{index===heroSeat?"YOU":index+1}</span><span className="seat-info"><b>{positions[index]}</b><small>{index===currentSeat?"현재 차례":last?`${actionLabels[last.type]} ${last.amount||""}`:index===heroSeat?hand:"Fold · 자동"}</small>{index!==heroSeat&&playerName(index)&&<small className="seat-profile" title={playerName(index)}>{playerName(index)}{profile.stats[seatPlayers[index]??""]?` · ${tendencySummary(profile.stats[seatPlayers[index]??""].classification)}`:""}</small>}</span>{positions[index]==="BTN"&&<i className="dealer">D</i>}</button>})}
         </div>
         <div className="hero-seat-row"><span>내 좌석</span>{positions.map((p,i)=><button key={p} className={heroSeat===i?"active":""} onClick={()=>changeHeroSeat(i)}>{p}</button>)}</div>
       </section>
@@ -131,9 +195,11 @@ export default function TableHelperV2(){
         <label className="amount-field">액션 후 총 투입액<div><input type="number" min="0" max={currentSeat>=0?stacks[currentSeat]:heroStack} step="0.5" value={amount} onChange={e=>setAmount(Number(e.target.value))}/><b>BB</b></div><span className="amount-presets"><button onClick={()=>setAmount(accounting.currentBet)}>Call {accounting.currentBet}BB</button><button onClick={()=>setAmount(accounting.minimumRaiseTo)}>Min {accounting.minimumRaiseTo}BB</button><button onClick={()=>setAmount(currentSeat>=0?stacks[currentSeat]:heroStack)}>All-in {currentSeat>=0?stacks[currentSeat]:heroStack}BB</button></span></label>
         <div className="hero-inputs"><label>내 핸드<input value={hand} maxLength={3} onChange={e=>setHand(e.target.value)}/></label><label>{currentSeat>=0?`${positions[currentSeat]} 시작 스택`:"Hero 시작 스택"}<input type="number" min="1" value={stackDraft??stacks[stackSeat]} disabled={stackLocked} title={stackLocked?"이미 액션한 좌석의 스택은 실행 취소 후 변경하세요.":undefined} onChange={e=>setStackDraft(e.target.value)} onBlur={commitStack} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/></label></div>
         {currentPosition?<><div className="action-result compact"><p>{currentSeat===heroSeat?"RECOMMENDED ACTION":"HERO DECISION PREVIEW"} <span>신뢰도 {result.confidence}</span></p><h2>{result.primaryDisplay}</h2><p>{currentSeat===heroSeat?result.summary:"상대 액션을 계속 입력하면 Hero 차례에 최종 추천을 표시합니다."}</p></div><div className="frequency-list">{result.displayFrequencies.map(item=><div key={item.action}><span>{item.action}</span><i><b style={{width:`${item.frequency}%`}}/></i><strong>{item.frequency}%</strong></div>)}</div><details className="range-matrix"><summary>169 핸드 전략표 보기 <span>{positions[heroSeat]} · {nearestStackBucket(heroStack)}BB</span></summary><div>{strategyMatrix.map(cell=><span key={cell.hand} className={cell.aggressive>=50?"range-aggressive":cell.passive>=40?"range-passive":"range-fold"} title={`Fold ${cell.fold}% / Passive ${cell.passive}% / Aggressive ${cell.aggressive}%`}>{cell.hand}</span>)}</div><p><i/>공격적 액션 <i/>패시브 액션 <i/>Fold</p></details></>:<div className="preflop-complete-card"><small>PREFLOP COMPLETE</small><b>{accounting.pot.toFixed(1)} BB POT</b><span>아래에서 플랍 보드와 액션을 입력하세요.</span></div>}
-        <p className="solver-note">CURRENT SOURCE · {result.strategySource}{result.strategySource==="baseline-v1"?" · NOT GTO FALLBACK":" · LICENSED DATASET"}</p>
+        {tableSize&&currentSeat===heroSeat&&<PreflopExploitCard tableSize={tableSize} positions={positions} heroSeat={heroSeat} hand={hand} stacks={stacks} actions={actions} statsBySeat={statsBySeat}/>}
+        {profile.enabled&&<SeatPlayersPanel positions={positions} heroSeat={heroSeat} seatPlayers={seatPlayers} players={profile.players} stats={profile.stats} onAssign={assignPlayer} onCreate={profile.createPlayer}/>}
+        <p className="solver-note">CURRENT SOURCE · {result.strategySource}{result.strategySource==="baseline-v1"?" · NOT GTO FALLBACK":result.strategySource.startsWith("pack:")?" · SOLVED PACK (rangelab-preflop MCCFR)":" · LICENSED DATASET"}</p>
         <details className="strategy-import"><summary>STRATEGY DATA · {datasetInfo?.id}</summary><label>검증된 JSON 데이터셋 불러오기<input type="file" accept="application/json,.json" onChange={event=>void importDataset(event.target.files?.[0])}/></label>{datasetInfo?.id!==bundledStrategyDatasetId&&<button type="button" onClick={resetDataset}>기본 DCFR로 복원</button>}{datasetInfo&&<small>{datasetInfo.contract} · {datasetInfo.spots} spots · {datasetInfo.license}</small>}{datasetInfo?.provenance&&<small>{datasetInfo.provenance.generator} · {datasetInfo.provenance.revision.slice(0,12)} · {datasetInfo.provenance.iterations.toLocaleString()} iterations · seed {datasetInfo.provenance.seed}</small>}{datasetMessage&&<small>{datasetMessage}</small>}<p>각 spot은 169핸드 전체, 빈도 합 100%, 라이선스 메타데이터가 필요합니다. 검증된 데이터는 이 브라우저에 저장됩니다.</p></details>
-        {!currentPosition&&<PostflopPanel positions={positions} preflopActions={actions} stacks={stacks} heroSeat={heroSeat}/>} 
+        {!currentPosition&&<PostflopPanel key={handNumber} positions={positions} preflopActions={actions} stacks={stacks} heroSeat={heroSeat} exploit={tableSize?{tableSize,statsBySeat}:undefined} recorder={{tableSize,heroHand:hand,seatPlayers,profileEnabled:profile.enabled,onSaved:()=>setProfileRevision(value=>value+1),onNextHand:startNextHand}}/>} 
       </aside>
     </div>
   </main>;

@@ -1,0 +1,6 @@
+[package]
+name = "memmap2"
+version = "0.9.11"
+edition = "2021"
+description = "Heap-backed stand-in for memmap2::MmapMut::map_anon so dcfr-solver builds for wasm32."
+publish = false
