@@ -47,6 +47,8 @@ export function deriveBettingState(actions: PlayerAction[], positions: Position[
       state.foldedSeats.add(action.seat);
       continue;
     }
+    // A check (the big blind in a limped or unopened pot) adds nothing; its blind stays in.
+    if (action.type === "check") continue;
     state.contributions.set(action.seat, action.amount);
     if (action.amount >= stackFor(effectiveStack,action.seat)) state.allInSeats.add(action.seat);
     if (["open", "3bet", "4bet", "5bet"].includes(action.type)) {

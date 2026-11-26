@@ -127,7 +127,7 @@ export function buildWasmSolveRequest(input:WasmSolveInput):WasmSolveRequest{
   };
 }
 
-export type WasmSolveResponse={ok:true;result:{source:string;player:Role;best_action:string;exploitability:number|null;heroUnreached?:boolean;iterations?:number;stoppedBy?:"deadline"|"iterations";elapsedMs?:number|null;workUnits?:number;strategy:{action:string;frequency:number;evChips:number}[]}}|{ok:false;error:string};
+export type WasmSolveResponse={ok:true;result:{source:string;player:Role;best_action:string;exploitability:number|null;heroUnreached?:boolean;iterations?:number;stoppedBy?:"deadline"|"iterations";elapsedMs?:number|null;workUnits?:number;strategy:{action:string;frequency:number;evChips:number}[];details?:{action:string;label:string;frequency:number;evChips:number}[]}}|{ok:false;error:string};
 
 /** Converts a dcfr-core envelope (wasm or native adapter) to RangeLab's normalized solver JSON with EV in BB. */
 export function wasmResponseToSolverJson(response:WasmSolveResponse){
@@ -136,6 +136,8 @@ export function wasmResponseToSolverJson(response:WasmSolveResponse){
   return JSON.stringify({
     source:result.source==="dcfr-native"?"dcfr-native":"dcfr-wasm",
     strategy:result.strategy.map(item=>({action:item.action,frequency:item.frequency,ev:item.evChips/CHIPS_PER_BB})),
+    // Per-size rows ("bet 33%", "allin"): unlike the grouped strategy, an unplayed size still carries its own EV.
+    ...(result.details?{details:result.details.map(item=>({action:item.action,label:item.label,frequency:item.frequency,ev:item.evChips/CHIPS_PER_BB}))}:{}),
     best_action:result.best_action,
     // Omitted when the solver skipped the extra traversal to stay within its time budget.
     ...(typeof result.exploitability==="number"?{exploitability:result.exploitability}:{}),

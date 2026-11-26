@@ -59,7 +59,9 @@ export function availablePostflopActions(context:PostflopContext,seat:number):Po
   if(committed===context.currentBet)return context.currentBet===0?["check","bet"]:["check","raise"];
   const seatLast=context.actions.findLastIndex(action=>action.seat===seat);
   const facedShortRaise=seatLast>=context.lastFullRaiseIndex&&context.actions.slice(seatLast+1).some(action=>action.type==="raise");
-  return facedShortRaise?["fold","call"]:["fold","call","raise"];
+  // A stack that cannot exceed the bet can only call (all-in for less) or fold.
+  const canRaise=(context.remainingAtStart[seat]??0)>context.currentBet;
+  return facedShortRaise||!canRaise?["fold","call"]:["fold","call","raise"];
 }
 
 /** Opponents who still have to act on the current bet after the hero calls it: live, not all in, not yet matched. */
@@ -78,6 +80,7 @@ export function validatePostflopActionV2(context:PostflopContext,seat:number,typ
   }
   if(type==="bet"&&amount<=0)return {valid:false,message:"Bet 금액은 0보다 커야 합니다.",minimumAmount:Math.min(1,stack)};
   if(type==="raise"){
+    if(amount<=context.currentBet)return {valid:false,message:`Raise 총액은 현재 베팅 ${context.currentBet}BB보다 커야 합니다.`,minimumAmount:Math.min(context.currentBet+context.lastFullRaiseSize,stack)};
     const minimum=context.currentBet+context.lastFullRaiseSize;
     if(amount<minimum&&amount!==stack)return {valid:false,message:`최소 Raise 총액은 ${minimum}BB입니다.`,minimumAmount:Math.min(minimum,stack)};
   }

@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { PlayerAction, PlayerActionType, preflopEffectiveStack, recommendFromHistory } from "@/lib/game-state";
 import { Position } from "@/lib/preflop";
 import { availableActions, bettingAmounts, nextPosition, positionOrder, validatePreflopAction } from "@/lib/preflop-machine";
-import { activeStrategyDataset, buildStrategyMatrix, bundledStrategyDatasetId, clearStrategyDataset, nearestStackBucket, parseStrategyDatasetJson, type PackApproximation } from "@/lib/strategy-data";
+import { activeStrategyDataset, buildStrategyMatrix, bundledStrategyDatasetId, clearStrategyDataset, nearestStackBucket, parseStrategyDatasetJson } from "@/lib/strategy-data";
 import { bucketOrder, loadPreflopPack } from "@/lib/preflop-packs";
 import PostflopPanel from "./postflop-panel";
 import { calculatePokerPots } from "@/lib/pots";
@@ -18,21 +19,15 @@ import { tendencySummary } from "./profiling/tendency-labels";
 import { useProfile } from "./profiling/use-profile";
 import PreflopExploitCard from "./exploit/preflop-exploit-card";
 import IcmPanel from "./icm-panel";
+import { approximationNote, seatCoordinates } from "./table-ui";
 
 type TableSize = 6 | 8;
 const packErrorPrefix="프리플랍 솔브 데이터를 불러오지 못했습니다";
 const positionSets: Record<TableSize, Position[]> = { 6:["BTN","SB","BB","UTG","HJ","CO"], 8:["BTN","SB","BB","UTG","UTG+1","MP","HJ","CO"] };
-const coordinates: Record<TableSize,{left:number;top:number}[]> = {
-  6:[{left:50,top:92},{left:12,top:72},{left:12,top:24},{left:50,top:4},{left:88,top:24},{left:88,top:72}],
-  8:[{left:50,top:94},{left:18,top:87},{left:5,top:52},{left:18,top:15},{left:50,top:4},{left:82,top:15},{left:95,top:52},{left:82,top:87}],
-};
+const coordinates=seatCoordinates;
 const actionLabels:Record<PlayerActionType,string>={fold:"Fold",check:"Check",limp:"Limp",open:"Open",call:"Call","3bet":"3-bet","4bet":"4-bet","5bet":"5-bet"};
 const strategyStorageKey="rangelab.preflop-dataset.v1";
 const browserLocalStorage=()=>{try{return typeof window==="undefined"?null:window.localStorage;}catch{return null;}};
-function approximationNote(approx:PackApproximation){
-  const parts=[approx.stack&&`APPROX STACK: ${approx.packStack}BB 팩으로 ${approx.requestedStack}BB 대체`,approx.size&&`APPROX SIZE: ${approx.packSize}BB 사이즈로 ${approx.requestedSize}BB 대체`].filter(Boolean);
-  return ` · ${parts.join(" · ")}`;
-}
 
 export default function TableHelperV2(){
   const [tableSize,setTableSize]=useState<TableSize|null>(null);
@@ -212,7 +207,7 @@ export default function TableHelperV2(){
     setValidationMessage("");
   }
 
-  if(!tableSize)return <main className="lobby-shell"><div className="lobby-brand">RANGE<span>LAB</span></div><section className="lobby-card"><p className="eyebrow">Choose your table</p><h1>테이블을<br/>선택하세요.</h1><p className="lobby-description">인원에 맞춰 좌석과 포지션, 액션 순서를 구성합니다.</p><div className="table-choices">{([6,8] as const).map(size=><button key={size} onClick={()=>enter(size)}><span className="mini-table"><i/><i/><i/><i/><i/><i/>{size===8&&<><i/><i/></>}</span><b>{size}-MAX</b><small>{size}인 테이블</small><em>입장하기 →</em></button>)}</div></section></main>;
+  if(!tableSize)return <main className="lobby-shell"><div className="lobby-brand">RANGE<span>LAB</span></div><section className="lobby-card"><p className="eyebrow">Choose your table</p><h1>테이블을<br/>선택하세요.</h1><p className="lobby-description">인원에 맞춰 좌석과 포지션, 액션 순서를 구성합니다. 혼자 모든 좌석을 플레이하려면 <Link href="/self-play">셀프 플레이</Link>.</p><div className="table-choices">{([6,8] as const).map(size=><button key={size} onClick={()=>enter(size)}><span className="mini-table"><i/><i/><i/><i/><i/><i/>{size===8&&<><i/><i/></>}</span><b>{size}-MAX</b><small>{size}인 테이블</small><em>입장하기 →</em></button>)}</div></section></main>;
 
   return <main className="game-shell v2">
     <header className="game-header"><div className="brand">RANGE<span>LAB</span></div><div className="game-title"><b>{tableSize}-MAX · PREFLOP</b><span>ACTION BUILDER</span></div><button className="leave-button" onClick={()=>setTableSize(null)}>테이블 나가기</button></header>
