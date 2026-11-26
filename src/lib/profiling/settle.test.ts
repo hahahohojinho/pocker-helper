@@ -48,6 +48,27 @@ describe("settleHand", () => {
     const seats = record.seats.map(seat => seat.seat === 3 ? { ...seat, startStack: 20 } : seat.seat === 0 ? { ...seat, startStack: 50 } : seat);
     expect(settle({ ...record, seats })).toMatchObject({ ok: false });
   });
+  it("gives an odd cent to the first winner left of the button", () => {
+    // The SB posts only 0.49 from a 0.49bb stack, so BTN (slot 0) and CO (slot 5) split 12.49. The CO comes first
+    // clockwise from the button's left, so it gets the odd cent.
+    const record = srpToShowdown([0, 5]);
+    const seats = record.seats.map(seat => ({ ...seat, holeCards: null, startStack: seat.seat === 1 ? 0.49 : seat.startStack }));
+    const preflop = record.preflop.map(action => action.seat === 1 ? { ...action, type: "fold" as const } : action);
+    const result = settle({ ...record, seats, preflop });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect([result.payouts[5], result.payouts[0]]).toEqual([6.25, 6.24]);
+  });
+  it("only takes a blind as large as a short stack", () => {
+    // SB posts from a 0.3bb stack: it can only lose 0.3, and chips stay conserved.
+    const record = makeHand({ preflop: [[3, "fold"], [4, "fold"], [5, "open", 2.5], [0, "fold"], [1, "fold"], [2, "fold"]], winners: [5] });
+    const seats = record.seats.map(seat => seat.seat === 1 ? { ...seat, startStack: 0.3 } : seat);
+    const result = settle({ ...record, seats });
+    expect(result).toMatchObject({ ok: true });
+    if (result.ok) {
+      expect(result.stacks[1]).toBe(0);
+      expect(sum(result.stacks)).toBe(500.3);
+    }
+  });
   it("splits a pot between the chosen winners when no cards were shown", () => {
     // No cards shown: the chosen winners split the 12.5 pot.
     const record = srpToShowdown([0, 5]);

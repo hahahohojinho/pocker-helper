@@ -11,6 +11,7 @@ import { calculatePokerPots } from "@/lib/pots";
 import { deriveBettingState } from "@/lib/preflop-machine";
 import { loadSeatPlayers, parseSeatPlayers, rotateForNextHand, rotateHeroSeat, saveSeatPlayers, type SeatPlayers } from "@/lib/profiling/build-record";
 import SeatPlayersPanel from "./profiling/seat-players-panel";
+import { MIN_STACK, REBUY_STACK } from "./profiling/hand-recorder-panel";
 import { tendencySummary } from "./profiling/tendency-labels";
 import { useProfile } from "./profiling/use-profile";
 import PreflopExploitCard from "./exploit/preflop-exploit-card";
@@ -123,17 +124,14 @@ export default function TableHelperV2(){
   /** One player per seat: assigning a player already seated elsewhere moves them. */
   function assignPlayer(seat:number,playerId:string|null){updateSeatPlayers(current=>current.map((value,index)=>index===seat?playerId:playerId!==null&&value===playerId?null:value));}
   /** The button moves one seat: players, the hero, and stacks all shift one slot, and the hand starts over. */
-  function startNextHand(){
+  function startNextHand(settledStacks?:number[]){
     if(!tableSize)return;
     updateSeatPlayers(rotateForNextHand);
     setHeroSeat(seat=>rotateHeroSeat(seat,tableSize));
-    setStacks(current=>rotateForNextHand(current.slice(0,tableSize)));
+    // Settled stacks from the hand recorder carry over; a seat that busted (below the record minimum) rebuys.
+    const carried=(current:number[])=>current.slice(0,tableSize).map((stack,seat)=>{const settled=settledStacks?.[seat];if(settled===undefined||!Number.isFinite(settled))return stack;return settled<MIN_STACK?REBUY_STACK:settled;});
+    setStacks(current=>rotateForNextHand(carried(current)));
     setActions([]);setSelectedSeat(3);setValidationMessage("");setHandNumber(value=>value+1);
-  }
-  /** Settled stacks from the hand recorder; "다음 핸드" then rotates them with the button. */
-  function applySettledStacks(settled:number[]){
-    if(!tableSize)return;
-    setStacks(current=>current.slice(0,tableSize).map((stack,seat)=>Number.isFinite(settled[seat])?Math.max(0,settled[seat]):stack));
   }
   function enter(size:TableSize){setTableSize(size);setHeroSeat(0);setSelectedSeat(3);setActions([]);setStacks(Array(size).fill(100))}
   function selectActingSeat(seat:number){
@@ -210,7 +208,7 @@ export default function TableHelperV2(){
         {profile.enabled&&<SeatPlayersPanel positions={positions} heroSeat={heroSeat} seatPlayers={seatPlayers} players={profile.players} stats={profile.stats} onAssign={assignPlayer} onCreate={profile.createPlayer}/>}
         <p className="solver-note">CURRENT SOURCE · {result.strategySource}{result.strategySource==="baseline-v1"?" · NOT GTO FALLBACK":result.strategySource.startsWith("pack:")?" · SOLVED PACK (rangelab-preflop MCCFR)":" · LICENSED DATASET"}{effectiveStack!==heroStack&&` · 유효 스택 ${effectiveStack}BB`}{result.strategyApproximation&&<span className="approx-note">{approximationNote(result.strategyApproximation)}</span>}</p>
         <details className="strategy-import"><summary>STRATEGY DATA · {datasetInfo?.id}</summary><label>검증된 JSON 데이터셋 불러오기<input type="file" accept="application/json,.json" onChange={event=>void importDataset(event.target.files?.[0])}/></label>{datasetInfo?.id!==bundledStrategyDatasetId&&<button type="button" onClick={resetDataset}>기본 DCFR로 복원</button>}{datasetInfo&&<small>{datasetInfo.contract} · {datasetInfo.spots} spots · {datasetInfo.license}</small>}{datasetInfo?.provenance&&<small>{datasetInfo.provenance.generator} · {datasetInfo.provenance.revision.slice(0,12)} · {datasetInfo.provenance.iterations.toLocaleString()} iterations · seed {datasetInfo.provenance.seed}</small>}{datasetMessage&&<small>{datasetMessage}</small>}<p>각 spot은 169핸드 전체, 빈도 합 100%, 라이선스 메타데이터가 필요합니다. 검증된 데이터는 이 브라우저에 저장됩니다.</p></details>
-        {!currentPosition&&<PostflopPanel key={handNumber} positions={positions} preflopActions={actions} stacks={stacks} heroSeat={heroSeat} exploit={tableSize?{tableSize,statsBySeat}:undefined} recorder={{tableSize,heroHand:hand,seatPlayers,profileEnabled:profile.enabled,onSaved:()=>setProfileRevision(value=>value+1),onNextHand:startNextHand,onApplyStacks:applySettledStacks}}/>} 
+        {!currentPosition&&<PostflopPanel key={handNumber} positions={positions} preflopActions={actions} stacks={stacks} heroSeat={heroSeat} exploit={tableSize?{tableSize,statsBySeat}:undefined} recorder={{tableSize,heroHand:hand,seatPlayers,profileEnabled:profile.enabled,onSaved:()=>setProfileRevision(value=>value+1),onNextHand:startNextHand}}/>} 
       </aside>
     </div>
   </main>;

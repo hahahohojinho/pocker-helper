@@ -16,22 +16,27 @@ const pendingLabels: Record<string, string> = {
   "the hand has not reached showdown": "아직 쇼다운 전입니다",
   "the board needs five cards for showdown": "쇼다운하려면 보드 5장을 입력하세요",
 };
+/** Smallest stack a hand record accepts; a seat below it rebuys for the next hand. */
+export const MIN_STACK = 0.5;
+export const REBUY_STACK = 100;
 const splitCards = (text: string) => (text.match(/[2-9TJQKA][cdhs]/gi) ?? []).slice(0, 2);
 
 /** Shows whether the hand is over, collects shown cards and winners, and saves the hand to the profile database. */
-export default function HandRecorderPanel({ tableSize, positions, stacks, heroSeat, heroHand, heroCards, seatPlayers, preflopActions, postflopActions, board, profileEnabled, onSaved, onNextHand, onApplyStacks }: {
+export default function HandRecorderPanel({ tableSize, positions, stacks, heroSeat, heroHand, heroCards, seatPlayers, preflopActions, postflopActions, board, profileEnabled, onSaved, onNextHand }: {
   tableSize: ProfileTableSize; positions: readonly Position[]; stacks: readonly number[]; heroSeat: number; heroHand: string; heroCards: readonly string[];
   seatPlayers: readonly (string | null)[]; preflopActions: PlayerAction[]; postflopActions: PostflopAction[]; board: readonly string[];
-  profileEnabled: boolean; onSaved: () => void; onNextHand: () => void;
-  /** Writes the settled stacks back to the table before the next hand. */
-  onApplyStacks?: (stacks: number[]) => void;
+  profileEnabled: boolean; onSaved: () => void;
+  /** Starts the next hand, with this hand's settled stacks when the user keeps them. */
+  onNextHand: (settledStacks?: number[]) => void;
 }) {
   const [shown, setShown] = useState<Record<number, string>>({});
   const [winners, setWinners] = useState<number[]>([]);
   const [message, setMessage] = useState("");
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [stacksApplied, setStacksApplied] = useState(false);
+  // The settled stacks only replace the table stacks when the next hand starts, so this hand's record keeps its
+  // start stacks for replay and saving.
+  const [carryStacks, setCarryStacks] = useState(true);
   // Id and time are fixed at the first save attempt: a retry must send the identical record to be a duplicate.
   const recordMeta = useRef<{ id: string; playedAt: string } | null>(null);
 
@@ -85,14 +90,14 @@ export default function HandRecorderPanel({ tableSize, positions, stacks, heroSe
       </label>)}
     </div>}
     {settlement && !settlement.ok && <small className="profile-message">{settlement.message}</small>}
-    {settlement?.ok && onApplyStacks && <p className="stack-settlement">
-      <small>스택 정산</small> {stackChanges.map(change => `${positions[change.seat]} ${change.before}→${change.after}`).join(" · ")}
-      {settlement.stacks.some(stack => stack <= 0) && " · 0BB 좌석은 다음 핸드 전에 리바이 스택을 입력하세요"}
+    {settlement?.ok && <p className="stack-settlement">
+      <label><input type="checkbox" checked={carryStacks} onChange={event => setCarryStacks(event.target.checked)} /> 다음 핸드에 정산 스택 적용</label>
+      {" "}{stackChanges.map(change => `${positions[change.seat]} ${change.before}→${change.after}`).join(" · ")}
+      {settlement.stacks.some(stack => stack < MIN_STACK) && ` · ${MIN_STACK}BB 미만 좌석은 ${REBUY_STACK}BB 리바이로 시작합니다`}
     </p>}
     <div className="recorder-buttons">
       {profileEnabled && <button type="button" disabled={!end?.finished || saving || saved || chosenWinners.length === 0 || incompleteShown} onClick={() => void save()}>{saved ? "저장됨" : "핸드 저장"}</button>}
-      {settlement?.ok && onApplyStacks && <button type="button" disabled={stacksApplied} onClick={() => { onApplyStacks(settlement.stacks); setStacksApplied(true); }}>{stacksApplied ? "스택 반영됨" : "결과를 스택에 반영"}</button>}
-      <button type="button" onClick={onNextHand}>다음 핸드 →</button>
+      <button type="button" onClick={() => onNextHand(settlement?.ok && carryStacks ? settlement.stacks : undefined)}>다음 핸드 →</button>
     </div>
     {incompleteShown && <small className="profile-message">공개 카드는 2장을 입력하세요 (예: AhKd).</small>}
     {heroMismatch && <small className="profile-message">Hero 카드({heroCards.join(" ")})가 내 핸드({heroHand})와 달라 Hero 카드는 저장하지 않습니다.</small>}
