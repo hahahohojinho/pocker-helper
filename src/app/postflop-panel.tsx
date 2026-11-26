@@ -138,7 +138,7 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,
       setCalledEquity(value===null?null:{value,key:calledEquityKey});
     }catch(error){setCalledEquity(null);setMessage(error instanceof Error?`콜 레인지 Equity 계산 실패: ${error.message}`:"콜 레인지 Equity 계산에 실패했습니다.");}
   }
-  function importSolver(){try{let parsed:SolverResult;try{parsed=parseSolverResult(solverText);}catch{parsed=parseTexasSolverNode(solverText,holeCards.join(""));}setSolverResult(parsed);setMessage("");}catch(error){setMessage(error instanceof Error?error.message:"Solver 결과를 읽지 못했습니다.");}}
+  function importSolver(){try{let parsed:SolverResult;try{parsed=parseSolverResult(solverText);}catch{parsed=parseTexasSolverNode(solverText,holeCards.join(""));}setSolverResult(parsed);setSolvedRakeKey("unknown");setMessage("");}catch(error){setMessage(error instanceof Error?error.message:"Solver 결과를 읽지 못했습니다.");}}
   const actorCommitted=actor===null?0:(context.contributions.get(actor)??0);
   const toCall=Math.max(0,context.currentBet-actorCommitted);
   const freshCalledEquity=calledEquity?.key===calledEquityKey?calledEquity.value:undefined;
@@ -252,7 +252,8 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,
     try{
       // End-to-end time as the user experiences it, including range building and transport.
       const {value:raw,elapsedMs}=await timed(()=>solveDcfr(controller.signal));
-      setSolverText(raw);setSolverResult({...parseSolverResult(raw),elapsedMs});setSolvedRakeKey(rakeKey);
+      // 3-way solves ignore rake, so their result is always the no-rake answer.
+      setSolverText(raw);setSolverResult({...parseSolverResult(raw),elapsedMs});setSolvedRakeKey(useMultiway?"none":rakeKey);
       if(elapsedMs>ANSWER_TARGET_MS&&!preferNative)setMessage(`브라우저 Solver가 ${(elapsedMs/1000).toFixed(1)}초 걸렸습니다. DCFR_ADAPTER_PATH로 네이티브 Solver를 켜면 10초 안에 답합니다.`);
       const note=(JSON.parse(raw) as {note?:string}).note;
       if(note)setMessage(note);
@@ -292,7 +293,8 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,
       const exploitabilityHeader=response.headers.get("x-solver-exploitability")?.trim();
       const headerExploitability=exploitabilityHeader?Number(exploitabilityHeader):Number.NaN;
       if(parsed.exploitability===undefined&&Number.isFinite(headerExploitability))parsed={...parsed,exploitability:headerExploitability};
-      setSolverText(raw);setSolverResult(parsed);setSolvedRakeKey(rakeKey);
+      // TexasSolver and the external backend do not take rake.
+      setSolverText(raw);setSolverResult(parsed);setSolvedRakeKey("none");
     }catch(error){setMessage(error instanceof Error?error.message:"로컬 Solver 실행에 실패했습니다.");}finally{setSolving(false);}
   }
 
@@ -312,7 +314,7 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,
     <FlopLibraryCard request={libraryRequest} requestKey={JSON.stringify(libraryRequest)} onApply={result=>{setSolverResult(result);setSolverText("");setSolvedRakeKey("none");}}/>
     <button className="local-solver-button" disabled={!solverReady||solving} onClick={runLocalSolver}>{solving?solvingLabel:useMultiway?"네이티브 3-WAY SOLVER 실행":useDcfr?(preferNative?"네이티브 SOLVER 실행":"브라우저 SOLVER 실행"):solverCapability.backend==="counterfactual"?"COUNTERFACTUAL SOLVER 실행":solverCapability.backend==="dcfr"?"LOCAL DCFR EV 실행":"LOCAL TEXASSOLVER 실행"}</button>{solving&&(useDcfr||useMultiway)&&<button type="button" className="solver-cancel-button" onClick={cancelWasmSolve}>취소</button>}<small className="local-solver-help">{useMultiway?<>NATIVE 3-WAY CFR · {street==="turn"?"턴(리버는 체크다운 가정, EV 근사)":"리버"} · 모든 노드 · 사이드팟 · 내쉬 균형 보장 없음 · {getSolverPreset("multiway",street).iterations} iterations</>:useDcfr?<>{preferNative?`NATIVE DCFR · 멀티스레드 · Heads-up · 모든 노드 · ${getSolverPreset("native",street).iterations} iterations · `:`IN-BROWSER DCFR · Heads-up · 모든 노드 · ${getSolverPreset("wasm",street).iterations} iterations${street==="flop"?" · flop은 1~2분 소요, 수렴도 확인":""} · `}<a href="/solver/THIRD-PARTY-LICENSES.txt" target="_blank" rel="noreferrer">라이선스</a></>:<>BOUNDED SOLVE · {solverCapability.backend==="counterfactual"?`외부 backend · 최대 ${solverCapability.maxPlayers}명`:solverCapability.backend==="dcfr"?"Heads-up · street root 및 중간 액션 노드 · Hero OOP/IP · solver counterfactual EV":"Heads-up · street root 및 중간 액션 노드 · Hero OOP/IP"} · 전체 weighted class · 반복 상한 내 조기 종료.</>}</small>
     {hasRake(rake)&&<p className="local-solver-help rake-note">{useDcfr?`레이크 ${rake.percent}% · 캡 ${rake.capBb}BB 반영 (폴드 시 콜받지 않은 베팅까지 레이크 기준에 포함되는 근사)`:"이 솔버 경로(3-WAY/외부)는 레이크를 지원하지 않아 결과는 레이크 없음 기준입니다"} · MODEL EV와 EXPLOIT 카드는 레이크 미반영</p>}
-    {solverResult&&solvedRakeKey!==rakeKey&&<p className="local-solver-help rake-note">위 Solver 결과는 레이크 설정을 바꾸기 전에 계산한 값입니다. 다시 실행하세요.</p>}
+    {solverResult&&solvedRakeKey!==rakeKey&&<p className="local-solver-help rake-note">{solvedRakeKey==="unknown"?"가져온 결과의 레이크 기준은 알 수 없습니다.":useDcfr?"위 Solver 결과는 현재 레이크 설정과 다른 기준으로 계산한 값입니다. 다시 실행하세요.":"위 Solver 결과는 레이크 없음 기준입니다."}</p>}
     {streetStartSeats.length>2&&!useMultiway&&solverCapability.backend!=="counterfactual"&&<p className="local-solver-help">멀티웨이는 턴/리버 3인(네이티브 Solver)만 로컬 Solver가 풉니다. 위 EV는 MODEL 근사입니다.</p>}
     <details className="solver-import"><summary>Solver 노드 내보내기 / 결과 가져오기</summary>{solverNode&&<textarea readOnly value={JSON.stringify(solverNode,null,2)}/>}<textarea value={solverText} onChange={event=>setSolverText(event.target.value)} placeholder={'정규화 결과 또는 TexasSolver native strategy node'}/><button onClick={importSolver}>전략 적용</button><small>TexasSolver native 콤보 전략과 RangeLab/OpenSpiel 정규화 JSON을 지원합니다.</small></details>
     {recorder&&<HandRecorderPanel {...recorder} rake={rake} positions={positions} stacks={stacks} heroSeat={heroSeat} heroCards={holeCards} preflopActions={preflopActions} postflopActions={actions} board={board}/>}

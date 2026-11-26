@@ -14,7 +14,9 @@ export function parseRakeSetting(value:unknown):RakeSetting{
   if(!value||typeof value!=="object")return NO_RAKE;
   const {percent,capBb}=value as Record<string,unknown>;
   if(!inRange(percent,MAX_RAKE_PERCENT)||!inRange(capBb,MAX_RAKE_CAP_BB))return NO_RAKE;
-  return percent>0&&capBb>0?{percent,capBb}:NO_RAKE;
+  // Settlement and the solver both work in cents, so the cap is kept in whole cents (at least one).
+  const capCents=Math.round(capBb*100);
+  return percent>0&&capCents>=1?{percent,capBb:capCents/100}:NO_RAKE;
 }
 
 export const hasRake=(setting:RakeSetting)=>setting.percent>0&&setting.capBb>0;

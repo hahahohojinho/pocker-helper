@@ -8,6 +8,8 @@ describe("rake setting",()=>{
     expect(hasRake(NO_RAKE)).toBe(false);
     expect(parseRakeSetting({percent:10,capBb:100})).toEqual({percent:10,capBb:100});
     expect(parseRakeSetting({percent:10,capBb:100.5})).toEqual(NO_RAKE);
+    expect(parseRakeSetting({percent:5,capBb:0.001})).toEqual(NO_RAKE);
+    expect(parseRakeSetting({percent:5,capBb:2.345})).toEqual({percent:5,capBb:2.35});
   });
   it("round-trips through storage and survives broken or missing storage",()=>{
     const store=new Map<string,string>();
