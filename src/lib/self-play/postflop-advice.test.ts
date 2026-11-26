@@ -78,3 +78,15 @@ describe("grading", () => {
     expect(gradePostflop(advice, "fold", 0, turn.context, turn.seat)).toBeNull();
   });
 });
+
+describe("category-only grading (3-way solver)", () => {
+  it("grades a bet against the bet category and flags that the size was not compared", () => {
+    const hand = headsUpFlop();
+    const turn = postflopTurn(hand);
+    const advice = parsePostflopAdvice(JSON.stringify({ source: "multiway-native", best_action: "check", strategy: [{ action: "check", frequency: 0.6, ev: 3 }, { action: "bet", frequency: 0.4, ev: 2.5 }] }));
+    const grade = gradePostflop(advice, "bet", 4, turn.context, turn.seat)!;
+    expect(grade).toMatchObject({ chosenLabel: "bet", sizeApprox: true });
+    expect(grade.evLoss).toBeCloseTo(0.5, 10);
+    expect(gradePostflop(advice, "check", 0, turn.context, turn.seat)).toMatchObject({ sizeApprox: false, evLoss: 0 });
+  });
+});

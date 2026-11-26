@@ -64,8 +64,10 @@ export function checkedDown(backend: SolveBackend, turn: PostflopTurn): boolean 
   return laterStreetsCheckedDown(backend, turn.street) || (turn.street === "turn" && aggressions > MAX_TURN_AGGRESSIONS_WITH_RIVER);
 }
 
-export interface SizeDetail { action: PostflopActionType; label: string; frequency: number; ev: number; }
-export interface PostflopAdvice { result: SolverResult; details: SizeDetail[]; note?: string; }
+/** One action or size at the node; `amount` (street total, BB) is given when the label alone does not price it. */
+export interface SizeDetail { action: PostflopActionType; label: string; frequency: number; ev: number; amount?: number; }
+/** "solver": equilibrium frequencies and EVs; "model": EV estimates only (frequencies are not meaningful). */
+export interface PostflopAdvice { kind: "solver" | "model"; result: SolverResult; details: SizeDetail[]; note?: string; }
 
 const isAction = (value: unknown): value is PostflopActionType => typeof value === "string" && ["fold", "check", "call", "bet", "raise"].includes(value);
 
@@ -78,7 +80,7 @@ export function parsePostflopAdvice(raw: string): PostflopAdvice {
     return isAction(item.action) && typeof item.label === "string" && typeof item.frequency === "number" && typeof item.ev === "number"
       ? [{ action: item.action, label: item.label, frequency: item.frequency, ev: item.ev }] : [];
   }) : [];
-  return { result, details, ...(typeof data.note === "string" ? { note: data.note } : {}) };
+  return { kind: "solver", result, details, ...(typeof data.note === "string" ? { note: data.note } : {}) };
 }
 
 /** Street-total BB a solver size label stands for at this node ("bet 33%", "bet 3/2", "bet 2x", "allin"); null if unknown. */
@@ -104,6 +106,8 @@ export interface PostflopGrade {
   bestEv: number;
   /** BB given up against the best option at this node (never negative). */
   evLoss: number;
+  /** The chosen bet or raise was graded against a size-less category (e.g. the 3-way solver), not its own size. */
+  sizeApprox: boolean;
 }
 
 /**
@@ -111,14 +115,17 @@ export interface PostflopGrade {
  * solved size; sizes off the tree are therefore graded as that nearest size.
  */
 export function gradePostflop(advice: PostflopAdvice, type: PostflopActionType, amount: number, context: PostflopContext, seat: number): PostflopGrade | null {
-  const rows = advice.details.length ? advice.details
+  const rows: SizeDetail[] = advice.details.length ? advice.details
     : advice.result.actions.flatMap(action => action.ev === undefined ? [] : [{ action: action.action, label: action.action, frequency: action.frequency / 100, ev: action.ev }]);
   const candidates = rows.filter(row => row.action === type);
   if (!candidates.length) return null;
-  const distance = (row: SizeDetail) => type === "bet" || type === "raise" ? Math.abs((labelAmount(row.label, context, seat) ?? Number.POSITIVE_INFINITY) - amount) : 0;
+  // Category-only rows (no size in the label, e.g. the 3-way solver) match any size of that action.
+  const rowAmount = (row: SizeDetail) => row.amount ?? (row.label === row.action ? amount : labelAmount(row.label, context, seat));
+  const distance = (row: SizeDetail) => type === "bet" || type === "raise" ? Math.abs((rowAmount(row) ?? Number.POSITIVE_INFINITY) - amount) : 0;
   const chosen = candidates.reduce((nearest, row) => distance(row) < distance(nearest) ? row : nearest);
   // No solved size could be priced (an unknown label format): leave the decision ungraded rather than guess.
   if (!Number.isFinite(distance(chosen))) return null;
   const best = rows.reduce((top, row) => row.ev > top.ev ? row : top);
-  return { chosenLabel: chosen.label, chosenEv: chosen.ev, chosenFrequency: chosen.frequency, bestLabel: best.label, bestEv: best.ev, evLoss: Math.max(0, best.ev - chosen.ev) };
+  const sizeApprox = (type === "bet" || type === "raise") && chosen.amount === undefined && chosen.label === chosen.action;
+  return { chosenLabel: chosen.label, chosenEv: chosen.ev, chosenFrequency: chosen.frequency, bestLabel: best.label, bestEv: best.ev, evLoss: Math.max(0, best.ev - chosen.ev), sizeApprox };
 }

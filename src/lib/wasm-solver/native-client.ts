@@ -3,6 +3,12 @@ import type { WasmSolveRequest } from "./request";
 
 /** The server cannot run the native solver (not configured, disabled, or unreachable); callers fall back to wasm. */
 export class NativeSolverUnavailableError extends Error {}
+/** The server answered with an error status; `status` tells a busy or broken server (429, 5xx) from a bad request. */
+export class NativeSolverHttpError extends Error {
+  constructor(readonly status:number,message:string){super(message);}
+}
+/** A failure worth backing off from: the server is off, unreachable, busy, or failing, not the request being wrong. */
+export const isTransientNativeFailure=(error:unknown)=>error instanceof NativeSolverUnavailableError||(error instanceof NativeSolverHttpError&&(error.status===429||error.status>=500));
 
 const errorMessage=(raw:string,fallback:string)=>{try{return (JSON.parse(raw) as {error?:string}).error??fallback;}catch{return fallback;}};
 
@@ -26,6 +32,6 @@ async function postNativeSolve(kind:"dcfr-json"|"multiway-json",request:WasmSolv
   }
   const raw=await response.text();
   if(response.status===403||response.status===404)throw new NativeSolverUnavailableError(errorMessage(raw,"Native solver is not enabled."));
-  if(!response.ok)throw new Error(errorMessage(raw,`Native solver failed (HTTP ${response.status}).`));
+  if(!response.ok)throw new NativeSolverHttpError(response.status,errorMessage(raw,`Native solver failed (HTTP ${response.status}).`));
   return raw;
 }

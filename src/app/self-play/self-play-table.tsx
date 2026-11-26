@@ -6,7 +6,7 @@ import { bucketOrder, loadPreflopPack } from "@/lib/preflop-packs";
 import { createSeed } from "@/lib/self-play/deck";
 import { applyAction, canUndo, committedBySeat, createHand, handTurn, MAX_PLAYERS, MIN_PLAYERS, SLOT_POSITIONS, undoAction, visibleBoard, type SelfPlayHand } from "@/lib/self-play/hand-state";
 import { gradePreflop, preflopAdvice } from "@/lib/self-play/preflop-advice";
-import { adviceKey, checkedDown, headsUpRequest, streetStartSeats } from "@/lib/self-play/postflop-advice";
+import { spotFor, type SolveSpot } from "./advice-runner";
 import { carryStacks, finishHand } from "@/lib/self-play/settlement";
 import { NO_RAKE } from "@/lib/table-config";
 import type { PostflopActionType } from "@/lib/postflop-machine";
@@ -14,7 +14,7 @@ import { seatCoordinates } from "../table-ui";
 import PlayingCard from "./playing-card";
 import SelfPlayDock, { ACTION_LABELS, type ActionType } from "./self-play-dock";
 import { DecisionList, PostflopAdviceCard, PreflopAdviceCard, type DecisionLog } from "./self-play-advice";
-import { useSolverAdvice, type SolveSpot } from "./use-solver-advice";
+import { useSolverAdvice } from "./use-solver-advice";
 
 const MAX_START_STACK = 1000;
 const STREET_LABELS = { preflop: "PREFLOP", flop: "FLOP", turn: "TURN", river: "RIVER" } as const;
@@ -71,18 +71,12 @@ export default function SelfPlayTable() {
   // packRevision re-runs the lookup after a solved pack finishes loading.
   const advice = useMemo(() => hand && turn?.kind === "preflop" && actingCards ? preflopAdvice(hand, turn.seat, actingCards) : null, [hand, turn, actingCards, packRevision]); // eslint-disable-line react-hooks/exhaustive-deps
   const result = useMemo(() => hand && turn?.kind === "over" ? finishHand(hand, NO_RAKE) : null, [hand, turn]);
-  // Heads-up postflop spots go to the DCFR solver with the acting seat's cards only.
-  const postflop = useMemo((): { spot: SolveSpot | null; unsupported: string | null } => {
-    if (!hand || turn?.kind !== "postflop" || !actingCards) return { spot: null, unsupported: null };
-    const seats = streetStartSeats(hand, turn.street);
-    if (seats.length !== 2) return { spot: null, unsupported: `${seats.length}인 포스트플랍은 아직 솔버 조언이 없습니다. 헤즈업 스팟만 지원합니다.` };
-    try {
-      const request = headsUpRequest(hand, turn, actingCards, "native");
-      if (!request) return { spot: null, unsupported: "이 스팟은 헤즈업 솔버로 풀 수 없습니다." };
-      return { spot: { key: adviceKey(request), street: turn.street, build: (backend, cost) => headsUpRequest(hand, turn, actingCards, backend, cost) }, unsupported: null };
-    } catch (error) {
-      return { spot: null, unsupported: error instanceof Error ? error.message : "솔버 요청을 만들 수 없습니다." };
-    }
+  // Each postflop decision point gets an advice job (DCFR, 3-way CFR or the model) from the acting seat's cards only.
+  // The key is the whole action history, so an undo followed by a different action is a different spot.
+  const postflop = useMemo((): { spot: SolveSpot | null } => {
+    if (!hand || turn?.kind !== "postflop" || !actingCards) return { spot: null };
+    const key = JSON.stringify([hand.seed, hand.handNo, hand.preflop.map(action => [action.type, action.amount]), hand.postflop.map(action => [action.seat, action.type, action.amount])]);
+    return { spot: spotFor(hand, turn, actingCards, key) };
   }, [hand, turn, actingCards]);
   const solver = useSolverAdvice(postflop.spot);
   const stackBucket = advice ? bucketOrder(advice.effectiveStack)[0] : null;
@@ -107,12 +101,12 @@ export default function SelfPlayTable() {
   const board = visibleBoard(hand, turn);
   const decisionPoint = `${session.handNo}:${hand.preflop.length}:${hand.postflop.length}`;
   const adviceRevealed = !adviceFirst || adviceShownFor === decisionPoint;
-  const solvedEntry = postflop.spot ? solver.entries[postflop.spot.key] : undefined;
   const postflopNotes = [
     ...(session.stacks.length === 2 ? ["APPROX HU: 2인은 6-max SB vs BB로 근사합니다 (SB가 포스트플랍 선행동)."] : []),
-    ...(turn.kind === "postflop" && solvedEntry?.status === "done" && checkedDown(solvedEntry.backend, turn) ? ["이후 스트리트 체크다운 근사: 다음 스트리트 베팅 없이 계산된 트리입니다."] : []),
-    ...(solver.nativeAvailable === false ? ["네이티브 솔버가 없어 브라우저에서 계산합니다 (느리고 트리가 단순합니다)."] : []),
+    ...(solver.capability?.native === false ? ["네이티브 솔버가 없어 헤즈업은 브라우저에서 계산합니다 (느리고 트리가 단순합니다)."] : []),
   ];
+  // Fewer than six players fill the 6-max slots from the blinds outward; the empty early seats are folds in the pack.
+  const preflopNote = session.stacks.length < 6 ? `APPROX TABLE: ${session.stacks.length}인 테이블을 6-max 팩에 앞 좌석 폴드로 대입합니다.` : null;
 
   function act(type: ActionType, amount: number) {
     if (!session || !turn || turn.kind === "over") return;
@@ -170,9 +164,9 @@ export default function SelfPlayTable() {
       <aside className="action-dock action-builder">
         <div className="selected-player"><small>{turn.kind === "over" ? "HAND OVER" : `${turn.kind === "preflop" ? "PREFLOP" : STREET_LABELS[turn.street]} · 액션 차례`}</small>
           <b>{turn.kind === "over" ? (turn.showdown ? "쇼다운" : "폴드로 종료") : `P${hand.seatPlayer[turn.seat]! + 1} · ${turn.position}`}</b></div>
-        {turn.kind === "preflop" && <PreflopAdviceCard advice={advice} revealed={adviceRevealed} onReveal={() => setAdviceShownFor(decisionPoint)} />}
+        {turn.kind === "preflop" && <PreflopAdviceCard advice={advice} note={preflopNote} revealed={adviceRevealed} onReveal={() => setAdviceShownFor(decisionPoint)} />}
         {turn.kind === "postflop" && <PostflopAdviceCard entry={postflop.spot ? solver.entries[postflop.spot.key] : undefined} solving={postflop.spot !== null && solver.running === postflop.spot.key}
-          queued={solver.running !== null && solver.running !== postflop.spot?.key} unsupported={postflop.unsupported} notes={postflopNotes} revealed={adviceRevealed} onReveal={() => setAdviceShownFor(decisionPoint)} onRetry={() => { if (postflop.spot) solver.retry(postflop.spot); }} />}
+          queued={solver.running !== null && solver.running !== postflop.spot?.key} notes={postflopNotes} revealed={adviceRevealed} onReveal={() => setAdviceShownFor(decisionPoint)} onRetry={() => { if (postflop.spot) solver.retry(postflop.spot); }} />}
         {turn.kind !== "over" && <SelfPlayDock key={`${hand.preflop.length}-${hand.postflop.length}`} hand={hand} turn={turn} onAct={act} />}
         {turn.kind === "over" && result && (result.ok
           ? <div className="sp-result">{result.winners.map(seat => <p key={seat}>P{hand.seatPlayer[seat]! + 1} ({SLOT_POSITIONS[seat]}) +{result.payouts[seat]}BB</p>)}<button type="button" onClick={nextHand}>다음 핸드</button></div>

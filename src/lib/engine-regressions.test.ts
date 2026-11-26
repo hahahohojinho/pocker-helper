@@ -51,3 +51,14 @@ describe("short all-in recorded as a raise", () => {
     expect(replayHandRecord(asCall)).toMatchObject({ ok: true, end: { finished: true, showdown: true } });
   });
 });
+
+describe("native solver failure classes", () => {
+  it("backs off only for server trouble, not for a rejected request", async () => {
+    const { isTransientNativeFailure, NativeSolverHttpError, NativeSolverUnavailableError } = await import("./wasm-solver/native-client");
+    expect(isTransientNativeFailure(new NativeSolverUnavailableError("off"))).toBe(true);
+    expect(isTransientNativeFailure(new NativeSolverHttpError(429, "busy"))).toBe(true);
+    expect(isTransientNativeFailure(new NativeSolverHttpError(500, "crash"))).toBe(true);
+    expect(isTransientNativeFailure(new NativeSolverHttpError(400, "bad request"))).toBe(false);
+    expect(isTransientNativeFailure(new Error("other"))).toBe(false);
+  });
+});
