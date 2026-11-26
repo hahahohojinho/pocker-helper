@@ -73,7 +73,7 @@ function isRunout(context: PostflopContext, liveSeats: number[]) {
 }
 
 /** Chips each seat put in over the whole hand: preflop plus the final amount on each postflop street. */
-function totalContributions(record: HandRecordV1, preflopState: BettingState) {
+export function totalContributions(record: HandRecordV1, preflopState: BettingState) {
   const totals = record.seats.map(seat => preflopState.contributions.get(seat.seat) ?? 0);
   for (const street of streets) {
     const final = new Map<number, number>();
@@ -83,7 +83,7 @@ function totalContributions(record: HandRecordV1, preflopState: BettingState) {
   return totals;
 }
 
-function bestHolders(record: HandRecordV1, liveSeats: number[]): number[] | null {
+export function bestHolders(record: HandRecordV1, liveSeats: number[]): number[] | null {
   const board = record.board.map(parseCard) as Card[];
   const scores = liveSeats.map(seat => {
     const hole = record.seats[seat].holeCards;

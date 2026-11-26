@@ -8,6 +8,7 @@ import { buildHandRecord, newRecordId } from "@/lib/profiling/build-record";
 import { comboToClass, parseHandRecord, type ProfileTableSize } from "@/lib/profiling/hand-record";
 import { normalizeStartingHand } from "@/lib/strategy-data";
 import { replayHandRecord } from "@/lib/profiling/hand-replay";
+import { settleHand } from "@/lib/profiling/settle";
 import { saveHandRecord } from "./use-profile";
 
 const pendingLabels: Record<string, string> = {
@@ -18,16 +19,19 @@ const pendingLabels: Record<string, string> = {
 const splitCards = (text: string) => (text.match(/[2-9TJQKA][cdhs]/gi) ?? []).slice(0, 2);
 
 /** Shows whether the hand is over, collects shown cards and winners, and saves the hand to the profile database. */
-export default function HandRecorderPanel({ tableSize, positions, stacks, heroSeat, heroHand, heroCards, seatPlayers, preflopActions, postflopActions, board, profileEnabled, onSaved, onNextHand }: {
+export default function HandRecorderPanel({ tableSize, positions, stacks, heroSeat, heroHand, heroCards, seatPlayers, preflopActions, postflopActions, board, profileEnabled, onSaved, onNextHand, onApplyStacks }: {
   tableSize: ProfileTableSize; positions: readonly Position[]; stacks: readonly number[]; heroSeat: number; heroHand: string; heroCards: readonly string[];
   seatPlayers: readonly (string | null)[]; preflopActions: PlayerAction[]; postflopActions: PostflopAction[]; board: readonly string[];
   profileEnabled: boolean; onSaved: () => void; onNextHand: () => void;
+  /** Writes the settled stacks back to the table before the next hand. */
+  onApplyStacks?: (stacks: number[]) => void;
 }) {
   const [shown, setShown] = useState<Record<number, string>>({});
   const [winners, setWinners] = useState<number[]>([]);
   const [message, setMessage] = useState("");
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [stacksApplied, setStacksApplied] = useState(false);
   // Id and time are fixed at the first save attempt: a retry must send the identical record to be a duplicate.
   const recordMeta = useRef<{ id: string; playedAt: string } | null>(null);
 
@@ -37,13 +41,18 @@ export default function HandRecorderPanel({ tableSize, positions, stacks, heroSe
     const draft = (ids: { id: string; playedAt: string }, chosen: number[]) => buildHandRecord({ ...ids, tableSize, heroSeat, heroHand, stacks, seatPlayers, preflop: preflopActions, postflop: postflopActions, board, holeCards, winners: chosen });
     // Who is still in decides which winners can be chosen, so this replay skips the winner check.
     const probe = replayHandRecord(draft({ id: "00000000-0000-4000-8000-000000000000", playedAt: new Date(0).toISOString() }, []), { checkWinners: false });
-    if (!probe.ok) return { error: probe.message, end: null, draft };
-    return { error: "", end: probe.end, draft };
+    if (!probe.ok) return { error: probe.message, end: null, draft, preflopState: null };
+    return { error: "", end: probe.end, draft, preflopState: probe.preflopState };
   }, [shown, heroSeat, heroCards, tableSize, heroHand, stacks, seatPlayers, preflopActions, postflopActions, board]);
   const end = evaluation.end;
   const incompleteShown = Object.values(shown).some(text => text.trim() !== "" && splitCards(text).length !== 2);
   const heroMismatch = heroCards.length === 2 && comboToClass(heroCards[0], heroCards[1]) !== normalizeStartingHand(heroHand);
   const chosenWinners = end && !end.showdown ? end.liveSeats : winners.filter(seat => end?.liveSeats.includes(seat));
+
+  const settlement = end?.finished && evaluation.preflopState && chosenWinners.length > 0
+    ? settleHand(evaluation.draft({ id: "00000000-0000-4000-8000-000000000000", playedAt: new Date(0).toISOString() }, chosenWinners), end, evaluation.preflopState)
+    : null;
+  const stackChanges = settlement?.ok ? settlement.stacks.map((after, seat) => ({ seat, before: stacks[seat] ?? 0, after })).filter(change => change.after !== change.before) : [];
 
   async function save() {
     setSaving(true);
@@ -75,8 +84,14 @@ export default function HandRecorderPanel({ tableSize, positions, stacks, heroSe
         <input type="checkbox" checked={winners.includes(seat)} onChange={event => setWinners(current => event.target.checked ? [...current, seat] : current.filter(value => value !== seat))} /> 승자
       </label>)}
     </div>}
+    {settlement && !settlement.ok && <small className="profile-message">{settlement.message}</small>}
+    {settlement?.ok && onApplyStacks && <p className="stack-settlement">
+      <small>스택 정산</small> {stackChanges.map(change => `${positions[change.seat]} ${change.before}→${change.after}`).join(" · ")}
+      {settlement.stacks.some(stack => stack <= 0) && " · 0BB 좌석은 다음 핸드 전에 리바이 스택을 입력하세요"}
+    </p>}
     <div className="recorder-buttons">
       {profileEnabled && <button type="button" disabled={!end?.finished || saving || saved || chosenWinners.length === 0 || incompleteShown} onClick={() => void save()}>{saved ? "저장됨" : "핸드 저장"}</button>}
+      {settlement?.ok && onApplyStacks && <button type="button" disabled={stacksApplied} onClick={() => { onApplyStacks(settlement.stacks); setStacksApplied(true); }}>{stacksApplied ? "스택 반영됨" : "결과를 스택에 반영"}</button>}
       <button type="button" onClick={onNextHand}>다음 핸드 →</button>
     </div>
     {incompleteShown && <small className="profile-message">공개 카드는 2장을 입력하세요 (예: AhKd).</small>}

@@ -130,6 +130,11 @@ export default function TableHelperV2(){
     setStacks(current=>rotateForNextHand(current.slice(0,tableSize)));
     setActions([]);setSelectedSeat(3);setValidationMessage("");setHandNumber(value=>value+1);
   }
+  /** Settled stacks from the hand recorder; "다음 핸드" then rotates them with the button. */
+  function applySettledStacks(settled:number[]){
+    if(!tableSize)return;
+    setStacks(current=>current.slice(0,tableSize).map((stack,seat)=>Number.isFinite(settled[seat])?Math.max(0,settled[seat]):stack));
+  }
   function enter(size:TableSize){setTableSize(size);setHeroSeat(0);setSelectedSeat(3);setActions([]);setStacks(Array(size).fill(100))}
   function selectActingSeat(seat:number){
     if(!currentPosition){setValidationMessage("프리플랍 베팅 라운드가 종료되었습니다.");return;}
@@ -205,7 +210,7 @@ export default function TableHelperV2(){
         {profile.enabled&&<SeatPlayersPanel positions={positions} heroSeat={heroSeat} seatPlayers={seatPlayers} players={profile.players} stats={profile.stats} onAssign={assignPlayer} onCreate={profile.createPlayer}/>}
         <p className="solver-note">CURRENT SOURCE · {result.strategySource}{result.strategySource==="baseline-v1"?" · NOT GTO FALLBACK":result.strategySource.startsWith("pack:")?" · SOLVED PACK (rangelab-preflop MCCFR)":" · LICENSED DATASET"}{effectiveStack!==heroStack&&` · 유효 스택 ${effectiveStack}BB`}{result.strategyApproximation&&<span className="approx-note">{approximationNote(result.strategyApproximation)}</span>}</p>
         <details className="strategy-import"><summary>STRATEGY DATA · {datasetInfo?.id}</summary><label>검증된 JSON 데이터셋 불러오기<input type="file" accept="application/json,.json" onChange={event=>void importDataset(event.target.files?.[0])}/></label>{datasetInfo?.id!==bundledStrategyDatasetId&&<button type="button" onClick={resetDataset}>기본 DCFR로 복원</button>}{datasetInfo&&<small>{datasetInfo.contract} · {datasetInfo.spots} spots · {datasetInfo.license}</small>}{datasetInfo?.provenance&&<small>{datasetInfo.provenance.generator} · {datasetInfo.provenance.revision.slice(0,12)} · {datasetInfo.provenance.iterations.toLocaleString()} iterations · seed {datasetInfo.provenance.seed}</small>}{datasetMessage&&<small>{datasetMessage}</small>}<p>각 spot은 169핸드 전체, 빈도 합 100%, 라이선스 메타데이터가 필요합니다. 검증된 데이터는 이 브라우저에 저장됩니다.</p></details>
-        {!currentPosition&&<PostflopPanel key={handNumber} positions={positions} preflopActions={actions} stacks={stacks} heroSeat={heroSeat} exploit={tableSize?{tableSize,statsBySeat}:undefined} recorder={{tableSize,heroHand:hand,seatPlayers,profileEnabled:profile.enabled,onSaved:()=>setProfileRevision(value=>value+1),onNextHand:startNextHand}}/>} 
+        {!currentPosition&&<PostflopPanel key={handNumber} positions={positions} preflopActions={actions} stacks={stacks} heroSeat={heroSeat} exploit={tableSize?{tableSize,statsBySeat}:undefined} recorder={{tableSize,heroHand:hand,seatPlayers,profileEnabled:profile.enabled,onSaved:()=>setProfileRevision(value=>value+1),onNextHand:startNextHand,onApplyStacks:applySettledStacks}}/>} 
       </aside>
     </div>
   </main>;
