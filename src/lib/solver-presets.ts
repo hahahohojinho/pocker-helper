@@ -8,8 +8,11 @@ export type SolverBackend="texassolver"|"dcfr"|"counterfactual"|"wasm"|"native"|
 export type SolverStreet="flop"|"turn"|"river";
 export type ExploitabilityLevel="ok"|"warn"|"bad"|"unknown";
 
+export interface StreetSizes { betPercent:number[];raisePercent:number[]; }
+/** Bet sizes for streets after the solved one. A later street without sizes is check-only (all-in at SPR <= 1). */
+export interface LaterStreetSizes { river?:StreetSizes; }
 /** For DCFR backends `timeBudgetMs` bounds wall-clock time and `iterations` is only a cap. */
-export interface SolverPreset { iterations:number;accuracy:number;timeBudgetMs?:number;threads:number;tree:TexasSolverTree;useIsomorphism:boolean;maxClasses:number; }
+export interface SolverPreset { iterations:number;accuracy:number;timeBudgetMs?:number;threads:number;tree:TexasSolverTree;laterStreets?:LaterStreetSizes;useIsomorphism:boolean;maxClasses:number; }
 export interface SolverLogSummary { exploitability?:number;iteration?:number;timeMs?:number; }
 
 /** Requests every thread the server allows; the API clamps it with resolveSolverThreads. */
@@ -54,12 +57,34 @@ const budgets:Record<SolverBackend,Record<SolverStreet,{iterations:number;accura
   multiway:{...NATIVE_BUDGETS,turn:{iterations:500,accuracy:0.5,timeBudgetMs:MULTIWAY_TURN_BUDGET_MS}},
 };
 
+const BASE_SIZES:StreetSizes={betPercent:[50],raisePercent:[60]};
+/**
+ * Native adapter trees, 2026-11-26, 12 threads, SRP BB vs BTN and wide vs wide ranges (docs/SOLVER_INTEGRATION.md):
+ * river 33/75/150% bets with a 60% raise reach <= 0.006% in 2 s; a turn with river betting (50%/60% on both streets)
+ * reaches 0.29-0.48% in 4.5 s, while two turn sizes or three river sizes there stay above 1.6%. The flop library and
+ * the browser solver keep the single-size tree with later streets checked down.
+ */
+const NATIVE_RIVER_SIZES:StreetSizes={betPercent:[33,75,150],raisePercent:[60]};
+const NATIVE_LATER_STREETS:Partial<Record<SolverStreet,LaterStreetSizes>>={turn:{river:BASE_SIZES}};
+
+function streetSizes(backend:SolverBackend,street:SolverStreet):StreetSizes{
+  return backend==="native"&&street==="river"?NATIVE_RIVER_SIZES:BASE_SIZES;
+}
+
+/** Whether a heads-up DCFR solve of this street leaves every later street without betting. */
+export function laterStreetsCheckedDown(backend:SolverBackend,street:SolverStreet){
+  return street!=="river"&&!getSolverPreset(backend,street).laterStreets?.river;
+}
+
 export function getSolverPreset(backend:SolverBackend,street:SolverStreet):SolverPreset{
   const budget=budgets[backend][street];
+  const sizes=streetSizes(backend,street);
+  const laterStreets=backend==="native"?NATIVE_LATER_STREETS[street]:undefined;
   return {
     ...budget,
     threads:MAX_THREADS,
-    tree:{betPercent:[50],raisePercent:[60],includeAllIn:false},
+    tree:{betPercent:[...sizes.betPercent],raisePercent:[...sizes.raisePercent],includeAllIn:false},
+    ...(laterStreets?{laterStreets}:{}),
     // Off until a native dump confirms exact Hero combos survive isomorphism.
     useIsomorphism:false,
     maxClasses:Number.POSITIVE_INFINITY,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createSolverNode } from "./solver-adapter";
-import { exploitabilityLevel, getSolverPreset, parseTexasSolverLog, resolveSolverThreads, resolveSolverTimeoutMs, type SolverBackend } from "./solver-presets";
+import { exploitabilityLevel, getSolverPreset, laterStreetsCheckedDown, parseTexasSolverLog, resolveSolverThreads, resolveSolverTimeoutMs, type SolverBackend } from "./solver-presets";
 import { clampSolverBudget, isTrustedSolverRequest, MAX_SOLVER_BODY_BYTES, nativeJsonSolverEnabled, parseSolverBody, readSolverBody, tryAcquireSolverSlot } from "./solver-guard";
 import { buildTexasSolverCommands, validateTexasSolverJob } from "./texas-solver-config";
 
@@ -16,6 +16,17 @@ describe("solver presets",()=>{
       expect(preset.accuracy).toBeLessThanOrEqual(2);
       expect(preset.maxClasses).toBe(Number.POSITIVE_INFINITY);
     }
+  });
+  it("solves native turns with river betting and keeps the flop and the browser solver checked down",()=>{
+    expect(getSolverPreset("native","turn").laterStreets?.river).toEqual({betPercent:[50],raisePercent:[60]});
+    expect(getSolverPreset("native","river").tree.betPercent).toEqual([33,75,150]);
+    expect(laterStreetsCheckedDown("native","turn")).toBe(false);
+    expect(laterStreetsCheckedDown("native","river")).toBe(false);
+    expect(laterStreetsCheckedDown("native","flop")).toBe(true);
+    expect(laterStreetsCheckedDown("wasm","turn")).toBe(true);
+    // The flop library spec hash depends on this tree; changing it invalidates every stored flop.
+    expect(getSolverPreset("native","flop").tree).toEqual({betPercent:[50],raisePercent:[60],includeAllIn:false});
+    expect(getSolverPreset("multiway","river").tree.betPercent).toEqual([50]);
   });
   it("spends more iterations on later streets with smaller trees",()=>{
     expect(getSolverPreset("texassolver","river").iterations).toBeGreaterThan(getSolverPreset("texassolver","flop").iterations);

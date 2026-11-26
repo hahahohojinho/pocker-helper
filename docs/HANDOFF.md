@@ -4,6 +4,9 @@ Last updated: 2026-11-25
 
 ## Resume here (2026-10-11, branch fix/solver-quality)
 
+- 2026-11-25: CRITICAL finding: dcfr-core `bet_config()` (`tools/dcfr-core/src/solve.rs`) only fills bet sizes for the solved street, so later streets are check-only (all-in at SPR<=1). Turn solves = river checked down; flop live and flop library = turn/river checked down. Verified with a scratch probe (river root actions `[Check]`). Native Rust builds need VS2022 BuildTools `vcvars64.bat` (VS 18 Community lacks msvcrt.lib). Roadmap and fix plan: `docs/SPEC_SOLVER_ROADMAP.md` (P0-1 later-street tree first).
+- 2026-11-26 (branch feat/p0-solver-accuracy): P0-3 known-answer tests (river polarization closed form, exploitability falls) and P0-1/P0-2 partial: request field `betSizesByStreet`; native river 33/75/150 + raise 60 (<=0.006% in 2 s); native turn now includes river betting 50/60 (0.29-0.48% in 4.5 s). Wider turn trees stay >1.6% so are not live. Flop (live + library) and wasm keep the checked-down tree, labelled `이후 스트리트 체크다운 근사`. wasm rebuilt with toolchain 1.99.0 (wasm32 target added); adapter exe rebuilt. Next: TexasSolver cross-check (needs exe), always-all-in option, flop library re-measure with later streets, P1 dynamic stacks.
+
 - 2026-11-13: flop library finished (17/17 scenarios, all flops <=0.5% after a 90 s redo of 919 3BP flops); adapter exe rebuilt.
 
 - 2026-10-19: 3-way turn solved with the river checked down (approximation, labelled `리버 체크다운 근사`); heads-up bias check vs dcfr-core: best action 25/29 spots, EV off up to ~0.9bb (docs/SOLVER_INTEGRATION.md). Kernel parallelized over river cards (3-5x faster); 8 s turn budget gives <= 0.46% max BR gain; browser E2E 8.3 s. Security review HIGH (unbounded turn iteration) fixed with a 20M work-unit cap; code review: river-averaging reference test added. Default adapter exe still locked by the library build (rebuild after).

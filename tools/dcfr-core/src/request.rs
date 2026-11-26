@@ -35,6 +35,10 @@ pub struct RawRequest {
     pub iterations: u32,
     /// `bet_sizes[depth]` lists `[numerator, denominator]` fractions of the pot (depth 0 = bet, 1 = first raise, ...).
     pub bet_sizes: Vec<Vec<[i32; 2]>>,
+    /// Sizes for streets after the board's street, in the same depth format. A street left out is check-only
+    /// (all-in at SPR <= 1), which was the only behaviour before this field existed.
+    #[serde(default)]
+    pub bet_sizes_by_street: Option<RawStreetSizes>,
     pub max_raises: u8,
     #[serde(default)]
     pub history: Vec<RawStep>,
@@ -44,6 +48,15 @@ pub struct RawRequest {
     /// wasm only: measured nanoseconds per work unit (action slot x live combo) per iteration, for planning.
     #[serde(default)]
     pub iteration_cost_ns: Option<f64>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RawStreetSizes {
+    #[serde(default)]
+    pub turn: Option<Vec<Vec<[i32; 2]>>>,
+    #[serde(default)]
+    pub river: Option<Vec<Vec<[i32; 2]>>>,
 }
 
 #[derive(Deserialize)]
@@ -64,6 +77,8 @@ pub struct SolveRequest {
     pub stacks: [i32; 2],
     pub iterations: u32,
     pub bet_sizes: Vec<Vec<BetSize>>,
+    /// Sizes for later streets, indexed by `Street::index()`; empty for the solved street and earlier ones.
+    pub later_bet_sizes: [Vec<Vec<BetSize>>; 4],
     pub max_raises: u8,
     pub history: Vec<Action>,
     pub time_budget_ms: Option<u32>,
@@ -87,6 +102,16 @@ pub(crate) fn parse_step(step: &RawStep) -> Result<Action, String> {
         ("bet" | "raise", Some(size)) => Ok(Action::Bet(fraction(size, "history size")?)),
         (action, _) => Err(format!("invalid history step: {action}")),
     }
+}
+
+/// Validates one street's `[depth][size]` fraction lists.
+fn parse_depths(depths: &[Vec<[i32; 2]>], label: &str) -> Result<Vec<Vec<BetSize>>, String> {
+    if depths.is_empty() || depths.len() > MAX_RAISES as usize || depths.iter().any(|sizes| sizes.is_empty() || sizes.len() > MAX_SIZES_PER_DEPTH) {
+        return Err(format!("{label} needs 1..={MAX_RAISES} depths of 1..={MAX_SIZES_PER_DEPTH} sizes"));
+    }
+    depths.iter()
+        .map(|sizes| sizes.iter().map(|&size| fraction(size, label)).collect::<Result<Vec<_>, _>>())
+        .collect()
 }
 
 fn parse_hero(hero: &str, board: Hand) -> Result<usize, String> {
@@ -133,9 +158,6 @@ impl SolveRequest {
         if !(1..=MAX_RAISES).contains(&raw.max_raises) {
             return Err(format!("maxRaises must be 1..={MAX_RAISES}"));
         }
-        if raw.bet_sizes.is_empty() || raw.bet_sizes.len() > MAX_RAISES as usize || raw.bet_sizes.iter().any(|sizes| sizes.is_empty() || sizes.len() > MAX_SIZES_PER_DEPTH) {
-            return Err(format!("betSizes needs 1..={MAX_RAISES} depths of 1..={MAX_SIZES_PER_DEPTH} sizes"));
-        }
         if raw.time_budget_ms.is_some_and(|budget| !(MIN_BUDGET_MS..=MAX_BUDGET_MS).contains(&budget)) {
             return Err(format!("timeBudgetMs must be {MIN_BUDGET_MS}..={MAX_BUDGET_MS}"));
         }
@@ -145,9 +167,17 @@ impl SolveRequest {
         if raw.history.len() > MAX_HISTORY {
             return Err(format!("history exceeds {MAX_HISTORY} actions"));
         }
-        let bet_sizes = raw.bet_sizes.iter()
-            .map(|sizes| sizes.iter().map(|&size| fraction(size, "bet size")).collect::<Result<Vec<_>, _>>())
-            .collect::<Result<Vec<_>, _>>()?;
+        let bet_sizes = parse_depths(&raw.bet_sizes, "betSizes")?;
+        let mut later_bet_sizes: [Vec<Vec<BetSize>>; 4] = std::array::from_fn(|_| Vec::new());
+        if let Some(by_street) = &raw.bet_sizes_by_street {
+            for (later, sizes, label) in [(Street::Turn, &by_street.turn, "betSizesByStreet.turn"), (Street::River, &by_street.river, "betSizesByStreet.river")] {
+                let Some(sizes) = sizes else { continue };
+                if later.index() <= street.index() {
+                    return Err(format!("{label} must be a street after the board's street"));
+                }
+                later_bet_sizes[later.index()] = parse_depths(sizes, label)?;
+            }
+        }
         let history = raw.history.iter().map(parse_step).collect::<Result<Vec<_>, _>>()?;
         Ok(SolveRequest {
             board,
@@ -158,6 +188,7 @@ impl SolveRequest {
             stacks: raw.stacks,
             iterations: raw.iterations,
             bet_sizes,
+            later_bet_sizes,
             max_raises: raw.max_raises,
             history,
             time_budget_ms: raw.time_budget_ms,

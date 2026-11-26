@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use dcfr_solver::cfr::{DcfrMode, SubgameConfig, SubgameSolver};
-use dcfr_solver::game::{Action, BetConfig, BetSize};
+use dcfr_solver::game::{Action, BetConfig};
 use serde_json::{json, Value};
 
 use crate::estimate::{estimate, MAX_TREE_NODES};
@@ -15,7 +15,8 @@ use crate::SolveOptions;
 const MIB: u64 = 1024 * 1024;
 
 pub(crate) fn bet_config(request: &SolveRequest) -> Arc<BetConfig> {
-    let mut sizes: [Vec<Vec<BetSize>>; 4] = std::array::from_fn(|_| Vec::new());
+    // Streets after the board's street get `later_bet_sizes`; a street without sizes is check-only.
+    let mut sizes = request.later_bet_sizes.clone();
     sizes[request.street.index()] = request.bet_sizes.clone();
     let history_has_allin = request.history.contains(&Action::AllIn);
     Arc::new(BetConfig {

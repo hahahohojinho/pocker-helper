@@ -6,6 +6,11 @@ export const CHIPS_PER_BB=100;
 /** dcfr-solver's tree accepts at most four bets/raises per street. */
 export const MAX_RAISES=4;
 const MAX_SIZES_PER_DEPTH=6;
+/**
+ * River betting is added to a turn solve only while the turn has seen at most this many bets/raises. Native, 4.5 s,
+ * SRP ranges (2026-11-26): no action 0.29-0.48%, after a bet 0.57%, after a bet and a raise 1.96% (checked down: 0.08%).
+ */
+export const MAX_TURN_AGGRESSIONS_WITH_RIVER=1;
 
 type Role="oop"|"ip";
 export type Fraction=[number,number];
@@ -20,9 +25,11 @@ export interface WasmSolveInput {
   iterations:number;betPercent:number[];raisePercent:number[];
   /** Wall-clock budget; `iterations` becomes a cap. wasm also needs `iterationCostNs` to plan within it. */
   timeBudgetMs?:number;iterationCostNs?:number;
+  /** River sizes for a turn solve; without them the river is checked down. */
+  laterStreets?:{river?:{betPercent:number[];raisePercent:number[]}};
 }
 export type WasmHistoryAction={action:"check"|"call"|"fold"|"allin"}|{action:"bet"|"raise";size:Fraction};
-export interface WasmSolveRequest { board:string;hero:string;oopRange:string;ipRange:string;pot:number;stacks:[number,number];iterations:number;betSizes:Fraction[][];maxRaises:number;history:WasmHistoryAction[];timeBudgetMs?:number;iterationCostNs?:number; }
+export interface WasmSolveRequest { board:string;hero:string;oopRange:string;ipRange:string;pot:number;stacks:[number,number];iterations:number;betSizes:Fraction[][];maxRaises:number;history:WasmHistoryAction[];betSizesByStreet?:{river?:Fraction[][]};timeBudgetMs?:number;iterationCostNs?:number; }
 
 export const toChips=(bb:number)=>Math.round(bb*CHIPS_PER_BB);
 const greatestCommonDivisor=(left:number,right:number):number=>right===0?left:greatestCommonDivisor(right,left%right);
@@ -83,6 +90,8 @@ export function mergeSizes(base:Fraction[],observed:Fraction[]=[]){
   return merged;
 }
 
+const percentFractions=(percents:number[])=>mergeSizes(percents.map(percent=>fraction(Math.round(percent),100)));
+
 export function buildWasmSolveRequest(input:WasmSolveInput):WasmSolveRequest{
   const pot=toChips(input.pot);
   if(!(pot>0)||!(input.stacks.oop>0)||!(input.stacks.ip>0))throw new Error("Pot and stacks must be positive.");
@@ -91,6 +100,9 @@ export function buildWasmSolveRequest(input:WasmSolveInput):WasmSolveRequest{
   const baseRaise=input.raisePercent.map(percent=>fraction(Math.round(percent),100));
   const depthCount=Math.max(2,sizesByDepth.length);
   const betSizes=Array.from({length:depthCount},(_,depth)=>mergeSizes(depth===0?baseBet:baseRaise,sizesByDepth[depth]));
+  if(input.laterStreets?.river&&input.board.length!==4)throw new Error("River sizes apply only to a turn solve.");
+  // maxRaises also bounds the river, so a turn that already saw a bet and a raise grows the river tree past the budget.
+  const river=aggressions<=MAX_TURN_AGGRESSIONS_WITH_RIVER?input.laterStreets?.river:undefined;
   return {
     board:cardCodes(input.board,[3,4,5],"Board"),
     hero:cardCodes(input.heroHole,[2],"Hero"),
@@ -101,6 +113,7 @@ export function buildWasmSolveRequest(input:WasmSolveInput):WasmSolveRequest{
     // One more bet level than observed so the acting player can still raise.
     maxRaises:Math.min(MAX_RAISES,Math.max(2,aggressions+1)),
     history,
+    ...(river?{betSizesByStreet:{river:[percentFractions(river.betPercent),percentFractions(river.raisePercent)]}}:{}),
     ...(input.timeBudgetMs===undefined?{}:{timeBudgetMs:Math.round(input.timeBudgetMs)}),
     ...(input.iterationCostNs===undefined?{}:{iterationCostNs:input.iterationCostNs}),
   };

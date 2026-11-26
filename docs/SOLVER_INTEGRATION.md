@@ -80,6 +80,30 @@ Before solving, `tools/dcfr-core/src/estimate.rs` walks the betting tree with dc
 
 `tools/dcfr-core` holds the request parsing and solve code shared by the wasm module (sequential shims) and the native adapter (real rayon). `rangelab-dcfr-adapter --json` reads the wasm request from stdin (256KB limit) and prints the same envelope with `source: "dcfr-native"`. When `DCFR_ADAPTER_PATH` is set and the local API is allowed, `GET /api/solver` reports `nativeJson: true`, and the panel posts `{kind: "dcfr-json", request}` instead of solving in the browser, falling back to wasm on 403/404 or a network error. The route reads at most 300KB of body (413 beyond), applies the same same-origin, single-slot, iteration clamp, timeout, and abort handling, passes `RAYON_NUM_THREADS` from `SOLVER_MAX_THREADS`/CPU count, and gives the child only an allowlisted environment. Native presets: river 1000, turn 200, flop 60 iterations; measured with ~600-combo ranges: river 0.5s, turn 1.3s at 0.008% pot exploitability, flop 14s at 0.04%.
 
+### Later-street betting (2026-11-26)
+
+Until 2026-11-26 dcfr-core gave bet sizes only to the solved street; every later street was check-only (all-in at SPR <= 1). A turn solve therefore checked the river down, and flop solves (live and the flop library) checked the turn and river down. The exploitability figures above for turns and flops measure that reduced game.
+
+- Request field `betSizesByStreet: {turn?, river?}` (same `[depth][size]` fractions and limits as `betSizes`) gives sizes to streets after the board's street; a street left out stays check-only. Sizes for the solved or an earlier street are rejected.
+- Presets (`src/lib/solver-presets.ts`): native river 33/75/150% bets with a 60% raise; native turn 50% / 60% plus river 50% / 60%. The browser solver and native flops (including the flop library, whose spec hash depends on the tree) keep the single-size tree with later streets checked down, and the panel labels those results `이후 스트리트 체크다운 근사`.
+- Measured (native adapter, 12 threads, board JsTd7c2h(3d), pot 650, stacks 9750, SRP BB vs BTN and wide vs wide ranges):
+
+| Tree | Budget | Iterations | Exploitability (% pot) |
+| --- | --- | --- | --- |
+| River 50% / raise 60% | 2 s | 2181-2378 | 0.000 |
+| River 33/75/150% / raise 60% | 2 s | 739-871 | <= 0.006 |
+| River 33/75/150% / raise 60, 100% | 2 s | 292-311 | <= 0.071 |
+| Turn 50%, river checked down (old) | 4.5 s | 124-164 | <= 0.018 |
+| Turn 50% + river 50% | 4.5 s | 47-64 | 0.29-0.48 |
+| Turn 50% + river 50% | 9 s | 73-84 | 0.19-0.24 |
+| Turn 50% + river 50%, after OOP bet | 4.5 s | 43 | 0.57 |
+| Turn 50% + river 50%, after bet and raise (maxRaises 3) | 4.5 s | 31 | 1.96 (river then stays checked down: 0.08) |
+| Turn 50% + river 33/75/150% | 4.5 s | 21-26 | 5.5-7.5 |
+| Turn 50/100% + river 50% | 4.5 s | 37-41 | 1.6-3.1 |
+| Turn 50/100% + river 33/75/150% | 9 s | 17-19 | 14-18 |
+
+- Known-answer tests: `tools/dcfr-core/tests/known_games.rs` checks a river polarization game against the closed form (bluff share b/(1+2b), call share 1/(1+b), within 0.5 points at b = 0.5, 1, 1.5) and that exploitability falls with iterations. `tests/later_streets.rs` covers the new field.
+
 ## Native multiway solver (3 players: river, and turn with the river checked down)
 
 `rangelab-dcfr-adapter --json-multiway` solves 2-3 player river spots with its own crate, `tools/multiway-core`. The submodule's postflop solver is two-player only, so only its card, evaluator, and range parsing are reused. The panel uses it when exactly three players start the river, the native adapter is advertised (`GET /api/solver` -> `nativeMultiway: {maxPlayers: 3, streets: ["river"]}`, probed once with `--capabilities`), and at least two of the three can still bet. Other multiway spots keep the MODEL EV with a notice.
@@ -90,7 +114,7 @@ Before solving, `tools/dcfr-core/src/estimate.rs` walks the betting tree with dc
 - Solver (`src/solver.rs`): vector-form DCFR (alpha 1.5, beta 0, gamma 2) over full ranges with alternating updates; terminal kernels run on rayon. Values are net chips relative to the street-start stack, and per-combo action EV is the value divided by the compatible opponent reach, as in dcfr-solver. In a 2-player request it matches dcfr-core's root action EVs within 1% of the pot (test).
 - Convergence: 3-player CFR has no Nash guarantee, so the result reports `convergence.maxBrGain`, the largest gain any one player gets by best-responding to the others' average strategies (percent of the street-start pot), plus per-player gains. The UI shows `MAX BR GAIN x.xx% POT` with the 1%/5% thresholds and labels the EV `SOLVER EV · 3-WAY CFR`; `exploitability` is null. The EV is conditional on the profile CFR reached and is not unique.
 - Time: the deadline loop leaves room for one more iteration, the EV pass, and the best-response pass; the best-response pass may run up to 1 s past the budget rather than be skipped under load. Measured 2026-10-16 on 12 threads, river root and check-bet nodes, 4.5 s budget: BB/CO/BTN SRP ranges 261-344 iterations at max BR gain <= 0.019% of the pot; 100% ranges for all three at a 2 s budget, 118-139 iterations at <= 0.075%.
-- Turn (approximation, 2026-10-19): a 4-card board is solved with turn betting and no river betting; every showdown is averaged over the river cards (`Solver::rivers`, divisor 52 - 4 - 2 x players) and the result carries `riverModel: "checkdown"`, shown as `리버 체크다운 근사`. Against dcfr-core's full heads-up turn solve (river betting included, `examples/turn_checkdown_bias.rs`, BTN vs BB SRP, 3 boards x 6 hands): the best action matched in 12 of 13 OOP-root spots and 13 of 16 IP-facing-a-bet spots (one clear miss: 98s on K72 raise-bluffs instead of folding), absolute EVs were off by up to ~0.9bb. 3-way speed after parallelizing over river cards: ~0.2 s per iteration on SRP and 100% ranges; 8 s budget (`MULTIWAY_TURN_BUDGET_MS`) gives 34-35 iterations at <= 0.46% max BR gain. Requests whose estimated work exceeds 20M kernel units per iteration (~0.8 s) are rejected so a solve cannot outrun the server timeout.
+- Turn (approximation, 2026-10-19): a 4-card board is solved with turn betting and no river betting; every showdown is averaged over the river cards (`Solver::rivers`, divisor 52 - 4 - 2 x players) and the result carries `riverModel: "checkdown"`, shown as `리버 체크다운 근사`. Against dcfr-core's heads-up turn solve (which at the time also had no river betting, see Later-street betting below, so this measured the multiway kernel rather than the river-checkdown bias; `examples/turn_checkdown_bias.rs`, BTN vs BB SRP, 3 boards x 6 hands): the best action matched in 12 of 13 OOP-root spots and 13 of 16 IP-facing-a-bet spots (one clear miss: 98s on K72 raise-bluffs instead of folding), absolute EVs were off by up to ~0.9bb. 3-way speed after parallelizing over river cards: ~0.2 s per iteration on SRP and 100% ranges; 8 s budget (`MULTIWAY_TURN_BUDGET_MS`) gives 34-35 iterations at <= 0.46% max BR gain. Requests whose estimated work exceeds 20M kernel units per iteration (~0.8 s) are rejected so a solve cannot outrun the server timeout.
 - Limits: turn (approximate) and river only, 3 players at most, at most three bets/raises before the decision, request JSON up to 256 KB, tree capped at 1,000,000 nodes and 1 GB of storage including node overhead (the heads-up path allows 4 GB). Once the budget is spent the solve stops even below the 3-iteration minimum.
 
 ## Flop library (precomputed heads-up flops)

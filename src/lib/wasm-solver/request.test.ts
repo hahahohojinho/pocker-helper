@@ -62,6 +62,15 @@ describe("wasm solve response",()=>{
     const raw=wasmResponseToSolverJson({ok:true,result:{source:"dcfr-wasm",player:"ip",best_action:"call",exploitability:0.1,heroUnreached:true,strategy:[{action:"call",frequency:1,evChips:10},{action:"fold",frequency:0,evChips:0}]}});
     expect((JSON.parse(raw) as {note?:string}).note).toMatch(/도달하지 않/);
   });
+  it("adds river sizes to a turn solve so the river is not checked down",()=>{
+    const turn={...input,board:["Js","Td","7c","2h"],laterStreets:{river:{betPercent:[33,75,150],raisePercent:[60]}}};
+    expect(buildWasmSolveRequest(turn).betSizesByStreet).toEqual({river:[[[33,100],[3,4],[3,2]],[[3,5]]]});
+    expect(buildWasmSolveRequest({...turn,laterStreets:undefined})).not.toHaveProperty("betSizesByStreet");
+    expect(()=>buildWasmSolveRequest({...input,laterStreets:turn.laterStreets})).toThrow(/turn/);
+    // After a bet and a raise the river tree is too large for the budget, so the river stays checked down.
+    expect(buildWasmSolveRequest({...turn,history:[{role:"oop",action:"bet",amount:5}]})).toHaveProperty("betSizesByStreet");
+    expect(buildWasmSolveRequest({...turn,history:[{role:"oop",action:"bet",amount:5},{role:"ip",action:"raise",amount:20}]})).not.toHaveProperty("betSizesByStreet");
+  });
   it("surfaces solver errors",()=>{
     expect(()=>wasmResponseToSolverJson({ok:false,error:"history does not reach a decision node"})).toThrow(/history/);
   });
