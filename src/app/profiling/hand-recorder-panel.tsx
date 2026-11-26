@@ -9,6 +9,7 @@ import { comboToClass, parseHandRecord, type ProfileTableSize } from "@/lib/prof
 import { normalizeStartingHand } from "@/lib/strategy-data";
 import { replayHandRecord } from "@/lib/profiling/hand-replay";
 import { settleHand } from "@/lib/profiling/settle";
+import { NO_RAKE, type RakeSetting } from "@/lib/table-config";
 import { saveHandRecord } from "./use-profile";
 
 const pendingLabels: Record<string, string> = {
@@ -22,10 +23,12 @@ export const REBUY_STACK = 100;
 const splitCards = (text: string) => (text.match(/[2-9TJQKA][cdhs]/gi) ?? []).slice(0, 2);
 
 /** Shows whether the hand is over, collects shown cards and winners, and saves the hand to the profile database. */
-export default function HandRecorderPanel({ tableSize, positions, stacks, heroSeat, heroHand, heroCards, seatPlayers, preflopActions, postflopActions, board, profileEnabled, onSaved, onNextHand }: {
+export default function HandRecorderPanel({ tableSize, positions, stacks, heroSeat, heroHand, heroCards, seatPlayers, preflopActions, postflopActions, board, profileEnabled, onSaved, onNextHand, rake = NO_RAKE }: {
   tableSize: ProfileTableSize; positions: readonly Position[]; stacks: readonly number[]; heroSeat: number; heroHand: string; heroCards: readonly string[];
   seatPlayers: readonly (string | null)[]; preflopActions: PlayerAction[]; postflopActions: PostflopAction[]; board: readonly string[];
   profileEnabled: boolean; onSaved: () => void;
+  /** Table rake, deducted from pots that saw a flop. */
+  rake?: RakeSetting;
   /** Starts the next hand, with this hand's settled stacks when the user keeps them. */
   onNextHand: (settledStacks?: number[]) => void;
 }) {
@@ -55,7 +58,7 @@ export default function HandRecorderPanel({ tableSize, positions, stacks, heroSe
   const chosenWinners = end && !end.showdown ? end.liveSeats : winners.filter(seat => end?.liveSeats.includes(seat));
 
   const settlement = end?.finished && evaluation.preflopState && chosenWinners.length > 0
-    ? settleHand(evaluation.draft({ id: "00000000-0000-4000-8000-000000000000", playedAt: new Date(0).toISOString() }, chosenWinners), end, evaluation.preflopState)
+    ? settleHand(evaluation.draft({ id: "00000000-0000-4000-8000-000000000000", playedAt: new Date(0).toISOString() }, chosenWinners), end, evaluation.preflopState, rake)
     : null;
   const stackChanges = settlement?.ok ? settlement.stacks.map((after, seat) => ({ seat, before: stacks[seat] ?? 0, after })).filter(change => change.after !== change.before) : [];
 
@@ -93,6 +96,7 @@ export default function HandRecorderPanel({ tableSize, positions, stacks, heroSe
     {settlement?.ok && <p className="stack-settlement">
       <label><input type="checkbox" checked={carryStacks} onChange={event => setCarryStacks(event.target.checked)} /> 다음 핸드에 정산 스택 적용</label>
       {" "}{stackChanges.map(change => `${positions[change.seat]} ${change.before}→${change.after}`).join(" · ")}
+      {settlement.rake > 0 && ` · 레이크 ${settlement.rake}BB`}
       {settlement.stacks.some(stack => stack < MIN_STACK) && ` · ${MIN_STACK}BB 미만 좌석은 ${REBUY_STACK}BB 리바이로 시작합니다`}
     </p>}
     <div className="recorder-buttons">

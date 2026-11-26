@@ -24,8 +24,8 @@ pub(crate) fn bet_config(request: &SolveRequest) -> Arc<BetConfig> {
         max_raises: request.max_raises,
         // Same collapse rule as the native adapter: only bets that need the whole stack become all-in.
         allin_threshold: 1.0,
-        // Offer all-in at SPR <= 1 unless the observed history needs the all-in branch.
-        allin_pot_ratio: if history_has_allin { 0.0 } else { 1.0 },
+        // The request's ratio (default: all-in at SPR <= 1), unless the observed history needs the all-in branch.
+        allin_pot_ratio: if history_has_allin { 0.0 } else { request.allin_pot_ratio },
         no_donk: false,
         geometric_2bets: false,
     })
@@ -46,8 +46,8 @@ pub fn subgame_config(request: &SolveRequest) -> SubgameConfig {
         skip_cum_strategy: false,
         dcfr_mode: DcfrMode::Standard,
         depth_limit: None,
-        rake_pct: 0.0,
-        rake_cap: 0.0,
+        rake_pct: request.rake.map_or(0.0, |(fraction, _)| fraction),
+        rake_cap: request.rake.map_or(0.0, |(_, cap)| cap),
         exploration_eps: 0.0,
         entropy_bonus: 0.0,
         entropy_anneal: false,

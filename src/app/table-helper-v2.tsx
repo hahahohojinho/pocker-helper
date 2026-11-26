@@ -12,9 +12,11 @@ import { deriveBettingState } from "@/lib/preflop-machine";
 import { loadSeatPlayers, parseSeatPlayers, rotateForNextHand, rotateHeroSeat, saveSeatPlayers, type SeatPlayers } from "@/lib/profiling/build-record";
 import SeatPlayersPanel from "./profiling/seat-players-panel";
 import { MIN_STACK, REBUY_STACK } from "./profiling/hand-recorder-panel";
+import { loadRakeSetting, MAX_RAKE_CAP_BB, MAX_RAKE_PERCENT, parseRakeSetting, saveRakeSetting, type RakeSetting } from "@/lib/table-config";
 import { tendencySummary } from "./profiling/tendency-labels";
 import { useProfile } from "./profiling/use-profile";
 import PreflopExploitCard from "./exploit/preflop-exploit-card";
+import IcmPanel from "./icm-panel";
 
 type TableSize = 6 | 8;
 const packErrorPrefix="프리플랍 솔브 데이터를 불러오지 못했습니다";
@@ -25,6 +27,7 @@ const coordinates: Record<TableSize,{left:number;top:number}[]> = {
 };
 const actionLabels:Record<PlayerActionType,string>={fold:"Fold",check:"Check",limp:"Limp",open:"Open",call:"Call","3bet":"3-bet","4bet":"4-bet","5bet":"5-bet"};
 const strategyStorageKey="rangelab.preflop-dataset.v1";
+const browserLocalStorage=()=>{try{return typeof window==="undefined"?null:window.localStorage;}catch{return null;}};
 function approximationNote(approx:PackApproximation){
   const parts=[approx.stack&&`APPROX STACK: ${approx.packStack}BB 팩으로 ${approx.requestedStack}BB 대체`,approx.size&&`APPROX SIZE: ${approx.packSize}BB 사이즈로 ${approx.requestedSize}BB 대체`].filter(Boolean);
   return ` · ${parts.join(" · ")}`;
@@ -46,6 +49,16 @@ export default function TableHelperV2(){
   const [seatPlayersLoaded,setSeatPlayersLoaded]=useState(false);
   // Remounts the postflop panel (and its recorder) for each new hand.
   const [handNumber,setHandNumber]=useState(0);
+  // The inputs keep the typed text (so "0.5" can be entered); only a valid pair (both above 0, within limits)
+  // becomes the table rake. Loaded after mount so the server render and the first client render agree.
+  const [rakeDraft,setRakeDraft]=useState<{percent:string;capBb:string}>({percent:"",capBb:""});
+  useEffect(()=>{queueMicrotask(()=>{const saved=loadRakeSetting(browserLocalStorage());if(saved.percent)setRakeDraft({percent:String(saved.percent),capBb:String(saved.capBb)});});},[]);
+  const rake=parseRakeSetting({percent:Number(rakeDraft.percent),capBb:Number(rakeDraft.capBb)});
+  function updateRake(field:keyof RakeSetting,value:string){
+    const draft={...rakeDraft,[field]:value};
+    setRakeDraft(draft);
+    saveRakeSetting(browserLocalStorage(),parseRakeSetting({percent:Number(draft.percent),capBb:Number(draft.capBb)}));
+  }
   const [profileRevision,setProfileRevision]=useState(0);
   const positions=positionSets[tableSize??6];
   const seatPlayers=seatPlayersBySize[tableSize??6];
@@ -202,13 +215,15 @@ export default function TableHelperV2(){
         <p className="auto-fold-note">Hero 액션을 기록하면 이후 재액션까지 입력 가능</p><div className="action-buttons seven">{(["fold","check","limp","open","call","3bet","4bet","5bet"] as PlayerActionType[]).map(type=><button key={type} disabled={!allowed.includes(type)} onClick={()=>addAction(type)}>{actionLabels[type]}</button>)}</div>
         {validationMessage&&<p className="validation-message">{validationMessage}</p>}
         <label className="amount-field">액션 후 총 투입액<div><input type="number" min="0" max={currentSeat>=0?stacks[currentSeat]:heroStack} step="0.5" value={amount} onChange={e=>setAmount(Number(e.target.value))}/><b>BB</b></div><span className="amount-presets"><button onClick={()=>setAmount(accounting.currentBet)}>Call {accounting.currentBet}BB</button><button onClick={()=>setAmount(accounting.minimumRaiseTo)}>Min {accounting.minimumRaiseTo}BB</button><button onClick={()=>setAmount(currentSeat>=0?stacks[currentSeat]:heroStack)}>All-in {currentSeat>=0?stacks[currentSeat]:heroStack}BB</button></span></label>
+        <div className="rake-inputs"><label>레이크 %<input type="number" min="0" max={MAX_RAKE_PERCENT} step="0.5" value={rakeDraft.percent} placeholder="0" onChange={e=>updateRake("percent",e.target.value)}/></label><label>캡 BB<input type="number" min="0" max={MAX_RAKE_CAP_BB} step="0.5" value={rakeDraft.capBb} placeholder="0" onChange={e=>updateRake("capBb",e.target.value)}/></label><small>{rake.percent?`헤즈업 DCFR 솔버와 핸드 정산에 ${rake.percent}% · 캡 ${rake.capBb}BB 적용 (플랍 라이브러리 미사용)`:"레이크 없음"}</small></div>
         <div className="hero-inputs"><label>내 핸드<input value={hand} maxLength={3} onChange={e=>setHand(e.target.value)}/></label><label>{currentSeat>=0?`${positions[currentSeat]} 시작 스택`:"Hero 시작 스택"}<input type="number" min="1" value={stackDraft??stacks[stackSeat]} disabled={stackLocked} title={stackLocked?"이미 액션한 좌석의 스택은 실행 취소 후 변경하세요.":undefined} onChange={e=>setStackDraft(e.target.value)} onBlur={commitStack} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/></label></div>
         {currentPosition?<><div className="action-result compact"><p>{currentSeat===heroSeat?"RECOMMENDED ACTION":"HERO DECISION PREVIEW"} <span>신뢰도 {result.confidence}</span></p><h2>{result.primaryDisplay}</h2><p>{currentSeat===heroSeat?result.summary:"상대 액션을 계속 입력하면 Hero 차례에 최종 추천을 표시합니다."}</p></div><div className="frequency-list">{result.displayFrequencies.map(item=><div key={item.action}><span>{item.action}</span><i><b style={{width:`${item.frequency}%`}}/></i><strong>{item.frequency}%</strong></div>)}</div><details className="range-matrix"><summary>169 핸드 전략표 보기 <span>{positions[heroSeat]} · {nearestStackBucket(effectiveStack)}BB</span></summary><div>{strategyMatrix.map(cell=><span key={cell.hand} className={cell.aggressive>=50?"range-aggressive":cell.passive>=40?"range-passive":"range-fold"} title={`Fold ${cell.fold}% / Passive ${cell.passive}% / Aggressive ${cell.aggressive}%`}>{cell.hand}</span>)}</div><p><i/>공격적 액션 <i/>패시브 액션 <i/>Fold</p></details></>:<div className="preflop-complete-card"><small>PREFLOP COMPLETE</small><b>{accounting.pot.toFixed(1)} BB POT</b><span>아래에서 플랍 보드와 액션을 입력하세요.</span></div>}
         {tableSize&&currentSeat===heroSeat&&<PreflopExploitCard tableSize={tableSize} positions={positions} heroSeat={heroSeat} hand={hand} stacks={stacks} actions={actions} statsBySeat={statsBySeat}/>}
         {profile.enabled&&<SeatPlayersPanel positions={positions} heroSeat={heroSeat} seatPlayers={seatPlayers} players={profile.players} stats={profile.stats} onAssign={assignPlayer} onCreate={profile.createPlayer}/>}
         <p className="solver-note">CURRENT SOURCE · {result.strategySource}{result.strategySource==="baseline-v1"?" · NOT GTO FALLBACK":result.strategySource.startsWith("pack:")?" · SOLVED PACK (rangelab-preflop MCCFR)":" · LICENSED DATASET"}{effectiveStack!==heroStack&&` · 유효 스택 ${effectiveStack}BB`}{result.strategyApproximation&&<span className="approx-note">{approximationNote(result.strategyApproximation)}</span>}</p>
+        <IcmPanel positions={positions} stacks={stacks} heroSeat={heroSeat}/>
         <details className="strategy-import"><summary>STRATEGY DATA · {datasetInfo?.id}</summary><label>검증된 JSON 데이터셋 불러오기<input type="file" accept="application/json,.json" onChange={event=>void importDataset(event.target.files?.[0])}/></label>{datasetInfo?.id!==bundledStrategyDatasetId&&<button type="button" onClick={resetDataset}>기본 DCFR로 복원</button>}{datasetInfo&&<small>{datasetInfo.contract} · {datasetInfo.spots} spots · {datasetInfo.license}</small>}{datasetInfo?.provenance&&<small>{datasetInfo.provenance.generator} · {datasetInfo.provenance.revision.slice(0,12)} · {datasetInfo.provenance.iterations.toLocaleString()} iterations · seed {datasetInfo.provenance.seed}</small>}{datasetMessage&&<small>{datasetMessage}</small>}<p>각 spot은 169핸드 전체, 빈도 합 100%, 라이선스 메타데이터가 필요합니다. 검증된 데이터는 이 브라우저에 저장됩니다.</p></details>
-        {!currentPosition&&<PostflopPanel key={handNumber} positions={positions} preflopActions={actions} stacks={stacks} heroSeat={heroSeat} exploit={tableSize?{tableSize,statsBySeat}:undefined} recorder={{tableSize,heroHand:hand,seatPlayers,profileEnabled:profile.enabled,onSaved:()=>setProfileRevision(value=>value+1),onNextHand:startNextHand}}/>} 
+        {!currentPosition&&<PostflopPanel key={handNumber} rake={rake} positions={positions} preflopActions={actions} stacks={stacks} heroSeat={heroSeat} exploit={tableSize?{tableSize,statsBySeat}:undefined} recorder={{tableSize,heroHand:hand,seatPlayers,profileEnabled:profile.enabled,onSaved:()=>setProfileRevision(value=>value+1),onNextHand:startNextHand}}/>} 
       </aside>
     </div>
   </main>;

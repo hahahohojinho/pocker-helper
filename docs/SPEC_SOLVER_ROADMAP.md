@@ -146,7 +146,7 @@ export function deadMoneyBb(config:TableConfig,activePlayers:number):number; // 
 | 턴 | 50%, 100% | 60% | 항상 |
 | 리버 | 33%, 75%, 150% | 60% | 항상 |
 
-- 진행 상황 (2026-11-26): 네이티브 리버 33/75/150% + 레이즈 60% 적용 (2초에 0.006% 이하). 턴/플랍 다중 사이즈는 위 측정 결과로 보류.
+- 진행 상황 (2026-11-26): 네이티브 리버 33/75/150% + 레이즈 60% 적용 (2초에 0.006% 이하). 턴/플랍 다중 사이즈는 위 측정 결과로 보류. `allinPotRatio` 추가, 네이티브 리버만 항상 올인 (0.11%); 턴은 6.4%라 기존 규칙 유지.
 - 올인 "항상" 옵션: `bet_config.allin_pot_ratio`를 요청 값으로 받도록 `dcfr-core` 확장 (0.0 = 항상).
 - 플랍 라이브러리 스펙(`manifest.ts`)은 P0-4에서 새 트리로 재생성하기 전까지 기존 `[50]/[60]`을 고정 사용한다. 그래야 기존 데이터가 `stale`로 버려지지 않는다.
 - 완료 기준:
@@ -191,6 +191,7 @@ export function deadMoneyBb(config:TableConfig,activePlayers:number):number; // 
 - 측정: 같은 보드에서 90bb 실시간 계산과 100bb 라이브러리 결과의 빈도 차이를 5개 보드에서 기록한다.
 
 #### P1-4. 핸드 결과로 스택 자동 갱신
+- 진행 상황 (2026-11-26): 완료. 정산 스택은 "다음 핸드"로 넘어갈 때만 적용 (현재 핸드 기록 보존), 0.5BB 미만은 100BB 리바이.
 - 변경: "핸드 저장" 시 팟 분배 결과(`pots.ts` 레이어와 쇼다운 승자 입력)로 좌석별 스택을 계산해 `setStacks`에 반영한다. 레이크가 설정돼 있으면 차감한다.
 - UI: 갱신 전후 스택을 보여 주고 수동 수정을 허용한다.
 - 완료 기준: 사이드팟 3개 올인 시나리오에서 칩 보존 (전체 합 = 이전 합 - 레이크).
@@ -213,6 +214,7 @@ export function deadMoneyBb(config:TableConfig,activePlayers:number):number; // 
 - 앤티 팩이 없으면 앤티 없는 팩을 쓰고 `APPROX ANTE`로 표시한다.
 
 ### P3. 캐시 레이크
+- 진행 상황 (2026-11-26): 헤즈업 DCFR(네이티브, wasm)과 정산에 연결. 3인/TexasSolver 경로는 미지원 경고. 솔버의 폴드 터미널은 콜받지 않은 베팅까지 레이크 기준에 포함하는 근사 (서브모듈 수정 필요).
 
 - dcfr-core 요청에 `rake:{percent,capChips}` (선택)를 추가해 `SubgameConfig.rake_pct`와 `rake_cap`으로 넘긴다. 엔진 기능은 이미 있다 (`cfr.rs:478-481`, `3330`).
 - TexasSolver 경로는 레이크를 지원하지 않으므로 레이크가 있으면 dcfr 경로를 우선 사용하고 결과에 표시한다.
@@ -226,6 +228,7 @@ export function deadMoneyBb(config:TableConfig,activePlayers:number):number; // 
 - 핸드 기록에 레벨을 저장한다.
 
 #### P4-2. ICM 계산기 (신규 `src/lib/icm/icm.ts`)
+- 진행 상황 (2026-11-26): 완료 (정확 계산 10명까지, 테이블 패널 포함). Monte Carlo 확장은 미구현.
 - 알고리즘: Malmuth-Harville. 플레이어 9명 이하는 정확 재귀(메모이제이션), 그 이상은 Monte Carlo.
 - 인터페이스:
   ```ts

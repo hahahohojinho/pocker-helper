@@ -27,6 +27,9 @@ describe("solver presets",()=>{
     // The flop library spec hash depends on this tree; changing it invalidates every stored flop.
     expect(getSolverPreset("native","flop").tree).toEqual({betPercent:[50],raisePercent:[60],includeAllIn:false});
     expect(getSolverPreset("multiway","river").tree.betPercent).toEqual([50]);
+    expect(getSolverPreset("native","river").allInPotRatio).toBe(0);
+    expect(getSolverPreset("native","turn").allInPotRatio).toBeUndefined();
+    expect(getSolverPreset("wasm","river").allInPotRatio).toBeUndefined();
   });
   it("spends more iterations on later streets with smaller trees",()=>{
     expect(getSolverPreset("texassolver","river").iterations).toBeGreaterThan(getSolverPreset("texassolver","flop").iterations);

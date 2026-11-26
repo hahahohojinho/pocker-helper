@@ -12,7 +12,9 @@ export interface StreetSizes { betPercent:number[];raisePercent:number[]; }
 /** Bet sizes for streets after the solved one. A later street without sizes is check-only (all-in at SPR <= 1). */
 export interface LaterStreetSizes { river?:StreetSizes; }
 /** For DCFR backends `timeBudgetMs` bounds wall-clock time and `iterations` is only a cap. */
-export interface SolverPreset { iterations:number;accuracy:number;timeBudgetMs?:number;threads:number;tree:TexasSolverTree;laterStreets?:LaterStreetSizes;useIsomorphism:boolean;maxClasses:number; }
+export interface SolverPreset { iterations:number;accuracy:number;timeBudgetMs?:number;threads:number;tree:TexasSolverTree;laterStreets?:LaterStreetSizes;
+  /** DCFR all-in rule: offered when the stack is at most this many pots; unset keeps the solver default (1). */
+  allInPotRatio?:number;useIsomorphism:boolean;maxClasses:number; }
 export interface SolverLogSummary { exploitability?:number;iteration?:number;timeMs?:number; }
 
 /** Requests every thread the server allows; the API clamps it with resolveSolverThreads. */
@@ -66,6 +68,11 @@ const BASE_SIZES:StreetSizes={betPercent:[50],raisePercent:[60]};
  */
 const NATIVE_RIVER_SIZES:StreetSizes={betPercent:[33,75,150],raisePercent:[60]};
 const NATIVE_LATER_STREETS:Partial<Record<SolverStreet,LaterStreetSizes>>={turn:{river:BASE_SIZES}};
+/**
+ * Native rivers offer all-in at any depth: 2026-11-26, SRP ranges, 33/75/150 tree, 2 s: 447 iterations at 0.11%.
+ * On a turn (with river betting) it fell to 42 iterations at 6.4% in 4.5 s, so turns keep the SPR <= 1 rule.
+ */
+const NATIVE_ALL_IN_ALWAYS:SolverStreet[]=["river"];
 
 function streetSizes(backend:SolverBackend,street:SolverStreet):StreetSizes{
   return backend==="native"&&street==="river"?NATIVE_RIVER_SIZES:BASE_SIZES;
@@ -85,6 +92,7 @@ export function getSolverPreset(backend:SolverBackend,street:SolverStreet):Solve
     threads:MAX_THREADS,
     tree:{betPercent:[...sizes.betPercent],raisePercent:[...sizes.raisePercent],includeAllIn:false},
     ...(laterStreets?{laterStreets}:{}),
+    ...(backend==="native"&&NATIVE_ALL_IN_ALWAYS.includes(street)?{allInPotRatio:0}:{}),
     // Off until a native dump confirms exact Hero combos survive isomorphism.
     useIsomorphism:false,
     maxClasses:Number.POSITIVE_INFINITY,

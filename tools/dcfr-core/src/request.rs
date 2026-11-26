@@ -15,6 +15,10 @@ pub const MAX_BUDGET_MS: u32 = 120_000;
 pub const MAX_REQUEST_BYTES: usize = 256 * 1024;
 /// Chip limit for pot and stacks.
 pub const MAX_CHIPS: i32 = 10_000_000;
+/// All-in is offered when the remaining stack is at most this many pots; 0 offers it always.
+pub const MAX_ALLIN_POT_RATIO: f32 = 100.0;
+/// Rake as a percentage of the pot.
+pub const MAX_RAKE_PERCENT: f32 = 10.0;
 /// Largest bet or raise as a multiple of the pot it is sized from. dcfr-solver casts `frac * potAfterCall` to i32
 /// before clamping to the stack; potAfterCall <= 4 * MAX_CHIPS, so 50x keeps that product below i32::MAX.
 pub const MAX_SIZE_RATIO: i64 = 50;
@@ -40,6 +44,13 @@ pub struct RawRequest {
     #[serde(default)]
     pub bet_sizes_by_street: Option<RawStreetSizes>,
     pub max_raises: u8,
+    /// All-in is an action when the actor's remaining stack is at most this many current pots (default 1.0, the
+    /// old fixed rule; 0 offers all-in everywhere).
+    #[serde(default)]
+    pub allin_pot_ratio: Option<f32>,
+    /// Cash-game rake taken from every pot that ends in the subgame, capped per pot.
+    #[serde(default)]
+    pub rake: Option<RawRake>,
     #[serde(default)]
     pub history: Vec<RawStep>,
     /// Wall-clock budget for the solve; `iterations` is then an upper bound.
@@ -48,6 +59,13 @@ pub struct RawRequest {
     /// wasm only: measured nanoseconds per work unit (action slot x live combo) per iteration, for planning.
     #[serde(default)]
     pub iteration_cost_ns: Option<f64>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RawRake {
+    pub percent: f32,
+    pub cap_chips: i32,
 }
 
 #[derive(Deserialize)]
@@ -80,6 +98,9 @@ pub struct SolveRequest {
     /// Sizes for later streets, indexed by `Street::index()`; empty for the solved street and earlier ones.
     pub later_bet_sizes: [Vec<Vec<BetSize>>; 4],
     pub max_raises: u8,
+    pub allin_pot_ratio: f32,
+    /// (fraction of the pot, cap in chips); `None` means no rake.
+    pub rake: Option<(f32, f32)>,
     pub history: Vec<Action>,
     pub time_budget_ms: Option<u32>,
     pub iteration_cost_ns: Option<f64>,
@@ -164,6 +185,22 @@ impl SolveRequest {
         if raw.iteration_cost_ns.is_some_and(|cost| !cost.is_finite() || cost < 1.0 || cost > 1e6) {
             return Err("iterationCostNs must be between 1 and 1e6".into());
         }
+        let allin_pot_ratio = raw.allin_pot_ratio.unwrap_or(1.0);
+        if !allin_pot_ratio.is_finite() || !(0.0..=MAX_ALLIN_POT_RATIO).contains(&allin_pot_ratio) {
+            return Err(format!("allinPotRatio must be between 0 and {MAX_ALLIN_POT_RATIO}"));
+        }
+        let rake = match &raw.rake {
+            None => None,
+            Some(rake) => {
+                if !rake.percent.is_finite() || !(rake.percent > 0.0 && rake.percent <= MAX_RAKE_PERCENT) {
+                    return Err(format!("rake.percent must be above 0 and at most {MAX_RAKE_PERCENT}"));
+                }
+                if !(1..=MAX_CHIPS).contains(&rake.cap_chips) {
+                    return Err(format!("rake.capChips must be 1..={MAX_CHIPS}"));
+                }
+                Some((rake.percent / 100.0, rake.cap_chips as f32))
+            }
+        };
         if raw.history.len() > MAX_HISTORY {
             return Err(format!("history exceeds {MAX_HISTORY} actions"));
         }
@@ -190,6 +227,8 @@ impl SolveRequest {
             bet_sizes,
             later_bet_sizes,
             max_raises: raw.max_raises,
+            allin_pot_ratio,
+            rake,
             history,
             time_budget_ms: raw.time_budget_ms,
             iteration_cost_ns: raw.iteration_cost_ns,

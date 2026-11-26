@@ -15,7 +15,7 @@ describe("settleHand", () => {
   it("pays a showdown pot to the best hand and conserves chips", () => {
     // Pot 12.5: CO and BTN 5.5 each, blinds 0.5 and 1; BTN's queens beat CO's ace-king.
     const result = settle(srpToShowdown());
-    expect(result).toEqual({ ok: true, stacks: [107, 99.5, 99, 100, 100, 94.5], payouts: [12.5, 0, 0, 0, 0, 0] });
+    expect(result).toEqual({ ok: true, stacks: [107, 99.5, 99, 100, 100, 94.5], payouts: [12.5, 0, 0, 0, 0, 0], rake: 0 });
     if (result.ok) expect(sum(result.stacks)).toBe(600);
   });
   it("gives the blinds to the last player left and returns nothing uncalled beyond the open", () => {
@@ -67,6 +67,33 @@ describe("settleHand", () => {
     if (result.ok) {
       expect(result.stacks[1]).toBe(0);
       expect(sum(result.stacks)).toBe(500.3);
+    }
+  });
+  it("takes capped rake from a pot that saw a flop, but not from a preflop pot", () => {
+    const record = srpToShowdown();
+    const replay = replayHandRecord(record, { checkWinners: false });
+    if (!replay.ok) throw new Error(replay.message);
+    // 5% of 12.5 is 0.625 -> 0.63 (cents), under the 3bb cap.
+    expect(settleHand(record, replay.end, replay.preflopState, { percent: 5, capBb: 3 })).toMatchObject({ ok: true, rake: 0.63, payouts: [11.87, 0, 0, 0, 0, 0] });
+    expect(settleHand(record, replay.end, replay.preflopState, { percent: 10, capBb: 1 })).toMatchObject({ ok: true, rake: 1, payouts: [11.5, 0, 0, 0, 0, 0] });
+    const folded = makeHand({ preflop: [[3, "fold"], [4, "fold"], [5, "open", 2.5], [0, "fold"], [1, "fold"], [2, "fold"]], winners: [5] });
+    const preflopReplay = replayHandRecord(folded, { checkWinners: false });
+    if (!preflopReplay.ok) throw new Error(preflopReplay.message);
+    expect(settleHand(folded, preflopReplay.end, preflopReplay.preflopState, { percent: 5, capBb: 3 })).toMatchObject({ ok: true, rake: 0 });
+  });
+  it("does not rake a bet nobody called", () => {
+    // CO opens 2.5, BTN calls, blinds fold (pot 6.5); CO bets 6 on the flop and BTN folds. Only 6.5 was contested.
+    const record = makeHand({
+      preflop: [[3, "fold"], [4, "fold"], [5, "open", 2.5], [0, "call", 2.5], [1, "fold"], [2, "fold"]],
+      postflop: [["flop", 5, "bet", 6], ["flop", 0, "fold"]], board: ["2c", "7d", "9h"], winners: [5],
+    });
+    const replay = replayHandRecord(record, { checkWinners: false });
+    if (!replay.ok) throw new Error(replay.message);
+    const result = settleHand(record, replay.end, replay.preflopState, { percent: 10, capBb: 5 });
+    expect(result).toMatchObject({ ok: true, rake: 0.65 });
+    if (result.ok) {
+      expect(result.stacks[5]).toBe(100 + 4 - 0.65);
+      expect(sum(result.stacks) + result.rake).toBe(600);
     }
   });
   it("splits a pot between the chosen winners when no cards were shown", () => {

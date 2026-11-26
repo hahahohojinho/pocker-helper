@@ -127,3 +127,6 @@ input,select { width:100%; height:48px; margin-top:9px; padding:0 13px; color:va
 .exploit-run { margin-top:8px; width:100%; background:#2b1611; border:1px solid #ff7a62; color:#ffd8cc; padding:8px; cursor:pointer; font-size:10px; }
 .approx-note { color:#d9a441; }
 .stack-settlement { color:#9fb3a5; font-size:10px; margin:8px 0 0; }.stack-settlement small { color:#657168; margin-right:6px; }
+.rake-inputs { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; font-size:10px; color:#8b978e; }.rake-inputs input { width:56px; margin-left:4px; }.rake-inputs small { color:#657168; }
+.icm-panel { margin-top:12px; font-size:10px; color:#8b978e; }.icm-panel summary { cursor:pointer; color:#9fb3a5; }.icm-panel label input { margin-left:6px; width:140px; }.icm-panel table { width:100%; margin:8px 0; border-collapse:collapse; }.icm-panel th,.icm-panel td { text-align:right; padding:2px 4px; }.icm-panel th:first-child,.icm-panel td:first-child { text-align:left; }.icm-hero { color:var(--green); }
+.rake-note { color:#d9a441; }

@@ -71,6 +71,12 @@ describe("wasm solve response",()=>{
     expect(buildWasmSolveRequest({...turn,history:[{role:"oop",action:"bet",amount:5}]})).toHaveProperty("betSizesByStreet");
     expect(buildWasmSolveRequest({...turn,history:[{role:"oop",action:"bet",amount:5},{role:"ip",action:"raise",amount:20}]})).not.toHaveProperty("betSizesByStreet");
   });
+  it("passes the all-in rule and a rake in solver chips only when set",()=>{
+    expect(buildWasmSolveRequest({...input,allInPotRatio:0,rake:{percent:5,capBb:3}})).toMatchObject({allinPotRatio:0,rake:{percent:5,capChips:300}});
+    const plain=buildWasmSolveRequest({...input,rake:{percent:0,capBb:0}});
+    expect(plain).not.toHaveProperty("rake");
+    expect(plain).not.toHaveProperty("allinPotRatio");
+  });
   it("surfaces solver errors",()=>{
     expect(()=>wasmResponseToSolverJson({ok:false,error:"history does not reach a decision node"})).toThrow(/history/);
   });

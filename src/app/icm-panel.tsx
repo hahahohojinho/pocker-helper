@@ -19,7 +19,8 @@ export default function IcmPanel({ positions, stacks, heroSeat }: { positions: r
   else {
     try { equity = icmEquity(seats.map(item => item.stack), payouts); } catch (caught) { error = caught instanceof Error ? caught.message : "ICM 계산 실패"; }
   }
-  const pool = payouts?.reduce((sum, value) => sum + value, 0) ?? 0;
+  // Only the prizes these seats can reach (the first n places) count, so the column sums to 100%.
+  const pool = equity ? equity.reduce((sum, value) => sum + value, 0) : 0;
   const chips = seats.reduce((sum, item) => sum + item.stack, 0);
   return <details className="icm-panel">
     <summary>토너먼트 ICM ($EV)</summary>

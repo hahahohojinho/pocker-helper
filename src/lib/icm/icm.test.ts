@@ -41,6 +41,7 @@ describe("dollarEvChange",()=>{
   });
   it("requires probabilities that sum to one",()=>{
     expect(()=>dollarEvChange({stacksBefore:[1,1],payouts:[1],heroIndex:0,outcomes:[{probability:0.4,stacksAfter:[2,0]}]})).toThrow();
+    expect(()=>dollarEvChange({stacksBefore:[1,1],payouts:[1],heroIndex:2,outcomes:[{probability:1,stacksAfter:[2,0]}]})).toThrow(/Hero/);
   });
 });
 
@@ -51,5 +52,6 @@ describe("parsePayouts",()=>{
     expect(parsePayouts("abc")).toBeNull();
     expect(parsePayouts("0,0")).toBeNull();
     expect(parsePayouts("")).toBeNull();
+    expect(parsePayouts("1e308,1e308")).toBeNull();
   });
 });

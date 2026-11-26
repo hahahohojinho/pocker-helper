@@ -1,4 +1,5 @@
 import { parseCard } from "../equity";
+import { hasRake, type RakeSetting } from "../table-config";
 import type { PostflopActionType } from "../postflop-machine";
 
 /** The wasm solver works in integer chips; RangeLab amounts are BB, so 1 chip = 1/100 BB. */
@@ -27,9 +28,14 @@ export interface WasmSolveInput {
   timeBudgetMs?:number;iterationCostNs?:number;
   /** River sizes for a turn solve; without them the river is checked down. */
   laterStreets?:{river?:{betPercent:number[];raisePercent:number[]}};
+  /** All-in is offered when the remaining stack is at most this many pots (solver default 1; 0 = always). */
+  allInPotRatio?:number;
+  /** Cash-game rake: percent of each pot, capped in BB per pot. */
+  rake?:RakeSetting;
 }
+
 export type WasmHistoryAction={action:"check"|"call"|"fold"|"allin"}|{action:"bet"|"raise";size:Fraction};
-export interface WasmSolveRequest { board:string;hero:string;oopRange:string;ipRange:string;pot:number;stacks:[number,number];iterations:number;betSizes:Fraction[][];maxRaises:number;history:WasmHistoryAction[];betSizesByStreet?:{river?:Fraction[][]};timeBudgetMs?:number;iterationCostNs?:number; }
+export interface WasmSolveRequest { board:string;hero:string;oopRange:string;ipRange:string;pot:number;stacks:[number,number];iterations:number;betSizes:Fraction[][];maxRaises:number;history:WasmHistoryAction[];betSizesByStreet?:{river?:Fraction[][]};allinPotRatio?:number;rake?:{percent:number;capChips:number};timeBudgetMs?:number;iterationCostNs?:number; }
 
 export const toChips=(bb:number)=>Math.round(bb*CHIPS_PER_BB);
 const greatestCommonDivisor=(left:number,right:number):number=>right===0?left:greatestCommonDivisor(right,left%right);
@@ -114,6 +120,8 @@ export function buildWasmSolveRequest(input:WasmSolveInput):WasmSolveRequest{
     maxRaises:Math.min(MAX_RAISES,Math.max(2,aggressions+1)),
     history,
     ...(river?{betSizesByStreet:{river:[percentFractions(river.betPercent),percentFractions(river.raisePercent)]}}:{}),
+    ...(input.allInPotRatio===undefined?{}:{allinPotRatio:input.allInPotRatio}),
+    ...(input.rake&&hasRake(input.rake)?{rake:{percent:input.rake.percent,capChips:Math.max(1,toChips(input.rake.capBb))}}:{}),
     ...(input.timeBudgetMs===undefined?{}:{timeBudgetMs:Math.round(input.timeBudgetMs)}),
     ...(input.iterationCostNs===undefined?{}:{iterationCostNs:input.iterationCostNs}),
   };

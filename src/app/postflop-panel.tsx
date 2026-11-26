@@ -23,6 +23,7 @@ import { timed } from "@/lib/timing";
 import { exploitabilityLevel, getSolverPreset, laterStreetsCheckedDown } from "@/lib/solver-presets";
 import { buildSolverTree } from "@/lib/solver-tree";
 import HandRecorderPanel from "./profiling/hand-recorder-panel";
+import { hasRake, NO_RAKE, type RakeSetting } from "@/lib/table-config";
 import PostflopExploitCard from "./exploit/postflop-exploit-card";
 import FlopLibraryCard from "./flop-library/flop-library-card";
 import { exploitRange, MAX_RANGE_TEXT } from "@/lib/exploit/postflop-exploits";
@@ -30,7 +31,7 @@ import type { StatTotals } from "@/lib/profiling/classify";
 import type { ProfileTableSize } from "@/lib/profiling/hand-record";
 
 /** Recorder settings owned by the table helper; the panel supplies the hand it holds (board, actions, cards). */
-export type RecorderProps=Omit<ComponentProps<typeof HandRecorderPanel>,"positions"|"stacks"|"heroSeat"|"heroCards"|"preflopActions"|"postflopActions"|"board">;
+export type RecorderProps=Omit<ComponentProps<typeof HandRecorderPanel>,"positions"|"stacks"|"heroSeat"|"heroCards"|"preflopActions"|"postflopActions"|"board"|"rake">;
 
 const labels:Record<PostflopActionType,string>={fold:"Fold",check:"Check",bet:"Bet",call:"Call",raise:"Raise"};
 const nextStreet={flop:"turn",turn:"river"} as const;
@@ -51,7 +52,7 @@ const MULTIWAY_SUBSET_ITERATIONS=5000;
 const STREET_ORDER=["flop","turn","river"] as const;
 const baselineRange="AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,QJs,QTs,JTs,T9s,98s,87s,76s,65s,54s,AKo,AQo,AJo,KQo";
 
-export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,recorder,exploit}:{positions:Position[];preflopActions:PlayerAction[];stacks:number[];heroSeat:number;recorder?:RecorderProps;exploit?:{tableSize:ProfileTableSize;statsBySeat:readonly (StatTotals|undefined)[]}}){
+export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,recorder,exploit,rake=NO_RAKE}:{positions:Position[];preflopActions:PlayerAction[];stacks:number[];heroSeat:number;recorder?:RecorderProps;rake?:RakeSetting;exploit?:{tableSize:ProfileTableSize;statsBySeat:readonly (StatTotals|undefined)[]}}){
   const preflop=deriveBettingState(preflopActions,positions,stacks);
   // Solved preflop packs exist per table size; the seat count tells which one applies.
   const tableSize:TableSize|undefined=positions.length===6||positions.length===8?positions.length:undefined;
@@ -69,6 +70,9 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,
   const [calledEquity,setCalledEquity]=useState<{value:SubsetEquities;key:string}|null>(null);
   const [solverText,setSolverText]=useState("");
   const [solverResult,setSolverResult]=useState<SolverResult|null>(null);
+  // The rake a shown result was solved with, so changing the table rake marks the old result instead of passing it off.
+  const rakeKey=hasRake(rake)?`${rake.percent}/${rake.capBb}`:"none";
+  const [solvedRakeKey,setSolvedRakeKey]=useState("none");
   const [solving,setSolving]=useState(false);
   const [rangeBySeat,setRangeBySeat]=useState<Record<number,string>>({});
   const [solverCapability,setSolverCapability]=useState<{backend:"texassolver"|"dcfr"|"counterfactual";maxPlayers:number;nativeJson:boolean;multiwayStreets:string[]}>({backend:"texassolver",maxPlayers:2,nativeJson:false,multiwayStreets:[]});
@@ -198,6 +202,8 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,
       history:streetActions.map(action=>({role:action.seat===oopSeat?"oop":"ip",action:action.type,amount:action.amount})),
       iterations:preset.iterations,betPercent:preset.tree.betPercent,raisePercent:preset.tree.raisePercent,timeBudgetMs:preset.timeBudgetMs,
       ...(preset.laterStreets?{laterStreets:preset.laterStreets}:{}),
+      ...(preset.allInPotRatio===undefined?{}:{allInPotRatio:preset.allInPotRatio}),
+      ...(hasRake(rake)?{rake}:{}),
       ...(backend==="wasm"?{iterationCostNs:loadIterationCost(browserStorage(),street)}:{}),
     });
   }
@@ -217,7 +223,8 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,
   // The flop library answers the same request the native solver would get, so it only matches identical spots.
   let libraryRequest:ReturnType<typeof dcfrRequest>|null=null;
   if(street==="flop"&&streetStartSeats.length===2&&actor===heroSeat&&knownBoard.length===3&&holeCards.every(card=>card.length===2)){
-    try{libraryRequest=dcfrRequest("native");}catch{libraryRequest=null;}
+    // The library was solved without rake, so a raked table always solves live.
+    try{libraryRequest=hasRake(rake)?null:dcfrRequest("native");}catch{libraryRequest=null;}
   }
   /** Native first when advertised; falls back to the browser when the server cannot run it. */
   async function solveDcfr(signal:AbortSignal){
@@ -245,7 +252,7 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,
     try{
       // End-to-end time as the user experiences it, including range building and transport.
       const {value:raw,elapsedMs}=await timed(()=>solveDcfr(controller.signal));
-      setSolverText(raw);setSolverResult({...parseSolverResult(raw),elapsedMs});
+      setSolverText(raw);setSolverResult({...parseSolverResult(raw),elapsedMs});setSolvedRakeKey(rakeKey);
       if(elapsedMs>ANSWER_TARGET_MS&&!preferNative)setMessage(`브라우저 Solver가 ${(elapsedMs/1000).toFixed(1)}초 걸렸습니다. DCFR_ADAPTER_PATH로 네이티브 Solver를 켜면 10초 안에 답합니다.`);
       const note=(JSON.parse(raw) as {note?:string}).note;
       if(note)setMessage(note);
@@ -285,7 +292,7 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,
       const exploitabilityHeader=response.headers.get("x-solver-exploitability")?.trim();
       const headerExploitability=exploitabilityHeader?Number(exploitabilityHeader):Number.NaN;
       if(parsed.exploitability===undefined&&Number.isFinite(headerExploitability))parsed={...parsed,exploitability:headerExploitability};
-      setSolverText(raw);setSolverResult(parsed);
+      setSolverText(raw);setSolverResult(parsed);setSolvedRakeKey(rakeKey);
     }catch(error){setMessage(error instanceof Error?error.message:"로컬 Solver 실행에 실패했습니다.");}finally{setSolving(false);}
   }
 
@@ -302,10 +309,12 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,
     <div className="equity-calculator"><div><span><small>HERO CARDS</small><span className="hole-inputs">{holeCards.map((card,index)=><input key={index} value={card} maxLength={2} onChange={event=>setHoleCards(current=>current.map((value,i)=>i===index?event.target.value:value))}/>)}</span></span><button onClick={runEquity}>EQUITY 계산</button></div><details className="opponent-ranges"><summary>상대 가중 레인지 <span>{liveSeats.filter(seat=>seat!==heroSeat).length}명</span></summary>{liveSeats.filter(seat=>seat!==heroSeat).map(seat=><label key={seat}>{positions[seat]} RANGE · ACTION BASELINE ({inferredRanges[seat]?.handCount??169}/169)<textarea maxLength={MAX_RANGE_TEXT} value={rangeFor(seat)} onChange={event=>setRangeBySeat(current=>({...current,[seat]:event.target.value}))}/><button type="button" onClick={()=>setRangeBySeat(current=>{const next={...current};delete next[seat];return next;})}>RESET TO INFERRED</button></label>)}</details>{equity&&<div className="equity-result"><strong>{equity.equity}%<small>EQUITY ±{equity.marginOfError}%</small></strong><span><b>{equity.win}%</b><small>WIN</small></span><span><b>{equity.tie}%</b><small>TIE</small></span><span><b>{equity.loss}%</b><small>LOSS</small></span><em>{equity.iterations.toLocaleString()} weighted simulations · seed {equity.seed}{"availableCombos" in equity?` · ${(equity as {availableCombos:number[]}).availableCombos.join("/")} combos`:""}</em></div>}</div>
     {exploitSpot&&exploit&&<PostflopExploitCard heroCards={[holeCards[0],holeCards[1]]} board={knownBoard} pot={pot} maxCommitment={maxCommitment} rangeUsage={exploitRanges.flatMap(item=>item.usage)} inputKey={JSON.stringify([holeCards,knownBoard,pot,maxCommitment,exploitInputsKey,opponentSeats.map(seat=>exploit.statsBySeat[seat]??null)])} opponents={exploitRanges.map(item=>({position:positions[item.seat],rangeText:item.rangeText,totals:exploit.statsBySeat[item.seat],allIn:(context.remainingAtStart[item.seat]??0)<=0,stack:context.remainingAtStart[item.seat]??0}))}/>}
     {equity&&<div className="ev-panel"><div className="ev-head"><b>{solverResult?"SOLVER STRATEGY":"ESTIMATED EV"}</b><span className={solverResult?"solver-source":"estimate-source"}>{solverResult?(solverResult.evSource==="solver"?(multiwayResult?(solverResult.riverModel==="checkdown"?"SOLVER EV · 3-WAY CFR · 리버 체크다운 근사":"SOLVER EV · 3-WAY CFR"):checkdownTree?"SOLVER EV · 이후 스트리트 체크다운 근사":"SOLVER EV"):"SOLVER FREQ · MODEL EV"):"NOT GTO"}</span>{solverResult?.elapsedMs!==undefined&&<span className={`solve-timing${solverResult.elapsedMs>ANSWER_TARGET_MS?" solve-timing-slow":""}`}>{(solverResult.elapsedMs/1000).toFixed(1)}s{solverResult.iterations!==undefined?` · ${solverResult.iterations} iter`:""}{solverResult.stoppedBy==="deadline"?" · 시간 제한":""}{solverResult.elapsedMs>ANSWER_TARGET_MS?" · 10초 초과":""}</span>}{solverResult&&<span className={`convergence convergence-${convergence}`} title={multiwayResult?"3인 CFR은 내쉬 균형을 보장하지 않습니다. 다른 두 명의 전략을 고정했을 때 한 명이 전략을 바꿔 얻을 수 있는 최대 이득입니다.":undefined}>{multiwayResult?(solverResult.maxBrGain===undefined?"수렴도 미확인":`MAX BR GAIN ${solverResult.maxBrGain.toFixed(2)}% POT`):solverResult.exploitability===undefined?"수렴도 미확인":`EXPLOIT ${solverResult.exploitability.toFixed(2)}% POT`}{convergence==="warn"&&" · 수렴 부족"}{convergence==="bad"&&" · 미수렴, 신뢰 불가"}</span>}</div>{solverResult?solverActions.map(item=><div className="ev-row" key={item.action}><span>{item.action}</span><i><b style={{width:`${item.frequency}%`}}/></i><strong>{item.frequency.toFixed(1)}% · {item.ev>=0?"+":""}{item.ev.toFixed(2)}BB<small>{item.evSource.toUpperCase()} EV</small></strong></div>):estimatedEvs.map(item=><div className="ev-row" key={item.action}><span>{item.action}</span><small>{item.assumption}</small><strong className={item.ev>=0?"positive":"negative"}>{item.ev>=0?"+":""}{item.ev.toFixed(2)} BB</strong></div>)}{!solverResult&&!estimatedEvs.length&&<small className="ev-note">모델 EV는 Hero 차례에만 표시합니다.</small>}</div>}
-    <FlopLibraryCard request={libraryRequest} requestKey={JSON.stringify(libraryRequest)} onApply={result=>{setSolverResult(result);setSolverText("");}}/>
+    <FlopLibraryCard request={libraryRequest} requestKey={JSON.stringify(libraryRequest)} onApply={result=>{setSolverResult(result);setSolverText("");setSolvedRakeKey("none");}}/>
     <button className="local-solver-button" disabled={!solverReady||solving} onClick={runLocalSolver}>{solving?solvingLabel:useMultiway?"네이티브 3-WAY SOLVER 실행":useDcfr?(preferNative?"네이티브 SOLVER 실행":"브라우저 SOLVER 실행"):solverCapability.backend==="counterfactual"?"COUNTERFACTUAL SOLVER 실행":solverCapability.backend==="dcfr"?"LOCAL DCFR EV 실행":"LOCAL TEXASSOLVER 실행"}</button>{solving&&(useDcfr||useMultiway)&&<button type="button" className="solver-cancel-button" onClick={cancelWasmSolve}>취소</button>}<small className="local-solver-help">{useMultiway?<>NATIVE 3-WAY CFR · {street==="turn"?"턴(리버는 체크다운 가정, EV 근사)":"리버"} · 모든 노드 · 사이드팟 · 내쉬 균형 보장 없음 · {getSolverPreset("multiway",street).iterations} iterations</>:useDcfr?<>{preferNative?`NATIVE DCFR · 멀티스레드 · Heads-up · 모든 노드 · ${getSolverPreset("native",street).iterations} iterations · `:`IN-BROWSER DCFR · Heads-up · 모든 노드 · ${getSolverPreset("wasm",street).iterations} iterations${street==="flop"?" · flop은 1~2분 소요, 수렴도 확인":""} · `}<a href="/solver/THIRD-PARTY-LICENSES.txt" target="_blank" rel="noreferrer">라이선스</a></>:<>BOUNDED SOLVE · {solverCapability.backend==="counterfactual"?`외부 backend · 최대 ${solverCapability.maxPlayers}명`:solverCapability.backend==="dcfr"?"Heads-up · street root 및 중간 액션 노드 · Hero OOP/IP · solver counterfactual EV":"Heads-up · street root 및 중간 액션 노드 · Hero OOP/IP"} · 전체 weighted class · 반복 상한 내 조기 종료.</>}</small>
+    {hasRake(rake)&&<p className="local-solver-help rake-note">{useDcfr?`레이크 ${rake.percent}% · 캡 ${rake.capBb}BB 반영 (폴드 시 콜받지 않은 베팅까지 레이크 기준에 포함되는 근사)`:"이 솔버 경로(3-WAY/외부)는 레이크를 지원하지 않아 결과는 레이크 없음 기준입니다"} · MODEL EV와 EXPLOIT 카드는 레이크 미반영</p>}
+    {solverResult&&solvedRakeKey!==rakeKey&&<p className="local-solver-help rake-note">위 Solver 결과는 레이크 설정을 바꾸기 전에 계산한 값입니다. 다시 실행하세요.</p>}
     {streetStartSeats.length>2&&!useMultiway&&solverCapability.backend!=="counterfactual"&&<p className="local-solver-help">멀티웨이는 턴/리버 3인(네이티브 Solver)만 로컬 Solver가 풉니다. 위 EV는 MODEL 근사입니다.</p>}
     <details className="solver-import"><summary>Solver 노드 내보내기 / 결과 가져오기</summary>{solverNode&&<textarea readOnly value={JSON.stringify(solverNode,null,2)}/>}<textarea value={solverText} onChange={event=>setSolverText(event.target.value)} placeholder={'정규화 결과 또는 TexasSolver native strategy node'}/><button onClick={importSolver}>전략 적용</button><small>TexasSolver native 콤보 전략과 RangeLab/OpenSpiel 정규화 JSON을 지원합니다.</small></details>
-    {recorder&&<HandRecorderPanel {...recorder} positions={positions} stacks={stacks} heroSeat={heroSeat} heroCards={holeCards} preflopActions={preflopActions} postflopActions={actions} board={board}/>}
+    {recorder&&<HandRecorderPanel {...recorder} rake={rake} positions={positions} stacks={stacks} heroSeat={heroSeat} heroCards={holeCards} preflopActions={preflopActions} postflopActions={actions} board={board}/>}
   </section>;
 }

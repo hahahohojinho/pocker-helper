@@ -51,9 +51,13 @@ export function icmEquity(stacks:readonly number[],payouts:readonly number[]):nu
   return equity;
 }
 
-/** Hero's prize-equity change for a decision with these chip outcomes, against keeping the current stacks. */
+/**
+ * Hero's prize-equity change for a decision with these chip outcomes, against keeping the current stacks. Each
+ * outcome should hold the same total chips as `stacksBefore`, or the baseline is not like for like.
+ */
 export function dollarEvChange(input:{stacksBefore:readonly number[];outcomes:readonly IcmOutcome[];payouts:readonly number[];heroIndex:number}):number{
   const {stacksBefore,outcomes,payouts,heroIndex}=input;
+  if(!Number.isInteger(heroIndex)||heroIndex<0||heroIndex>=stacksBefore.length)throw new Error("Hero 좌석 번호가 범위를 벗어났습니다.");
   const totalProbability=outcomes.reduce((sum,outcome)=>sum+outcome.probability,0);
   if(!outcomes.length||outcomes.some(outcome=>!(outcome.probability>=0)||outcome.stacksAfter.length!==stacksBefore.length)||Math.abs(totalProbability-1)>1e-6)throw new Error("결과 확률의 합은 1이고 스택 수가 같아야 합니다.");
   const before=icmEquity(stacksBefore,payouts)[heroIndex];
@@ -65,5 +69,7 @@ export function parsePayouts(text:string):number[]|null{
   const parts=text.split(/[,\s]+/).map(part=>part.replace(/%$/,"")).filter(Boolean);
   if(!parts.length||parts.length>MAX_ICM_PLAYERS)return null;
   const values=parts.map(Number);
-  return values.every(value=>Number.isFinite(value)&&value>=0)&&values.some(value=>value>0)?values:null;
+  // Each prize and their total must stay finite so shares never become Infinity/Infinity.
+  const total=values.reduce((sum,value)=>sum+value,0);
+  return values.every(value=>Number.isFinite(value)&&value>=0)&&total>0&&Number.isFinite(total)?values:null;
 }
