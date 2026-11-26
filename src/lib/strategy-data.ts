@@ -4,7 +4,9 @@ import bundledDcfrDataset from "../data/dcfr-6max-100bb-rfi-v1.json";
 import { lookupPackStrategy, type TableSize } from "./preflop-packs";
 
 export type StackBucket = 20 | 40 | 60 | 100 | 150;
-export interface StrategyMix { fold: number; passive: number; aggressive: number; source: "baseline-v1"|`dataset:${string}`|`pack:${string}`; }
+/** Set when a solved pack answered for a different stack depth or bet size than the spot asked about. */
+export interface PackApproximation { packStack:number;requestedStack:number;stack:boolean;packSize?:number;requestedSize?:number;size:boolean; }
+export interface StrategyMix { fold: number; passive: number; aggressive: number; source: "baseline-v1"|`dataset:${string}`|`pack:${string}`; approximation?:PackApproximation; }
 /** aggressorPosition and limperPositions are only matched by preflop packs; v1/v2 datasets ignore them. */
 export interface PreflopSpotContext { openerPosition?:Position;callerPositions?:Position[];actionSize?:number;aggressorPosition?:Position;limperPositions?:Position[];raiseCount?:number; }
 export interface StrategyDatasetRow extends PreflopSpotContext { hand:string;position:Position;stack:StackBucket;scenario:PreflopScenario;fold:number;passive:number;aggressive:number; }

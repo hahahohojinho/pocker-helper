@@ -39,11 +39,28 @@ describe("matchFlopLibrary", () => {
   });
   it("misses when anything in the solve differs", () => {
     const misses: [Partial<WasmSolveRequest>, string][] = [
-      [{ oopRange: "AA,KK,72o,AsQh:0.01" }, "scenario"], [{ pot: 551 }, "scenario"], [{ stacks: [9750, 9749] }, "scenario"],
+      [{ oopRange: "AA,KK,72o,AsQh:0.01" }, "scenario"], [{ pot: 551 }, "scenario"], [{ stacks: [8000, 9750] }, "scenario"],
       [{ betSizes: [[[3, 5]], [[3, 5]]] }, "scenario"], [{ maxRaises: 3 }, "scenario"], [{ board: "Kc7d3h" }, "board"],
       [{ board: "Kc7d2h5s" }, "not-flop"], [{ history: [{ action: "check" }, { action: "check" }] }, "line"],
     ];
     for (const [patch, reason] of misses) expect(matchFlopLibrary(index, request(patch))).toEqual({ miss: reason });
+  });
+  it("answers effective stacks within 15% of the solved one as a labelled approximation", () => {
+    expect((matchFlopLibrary(index, request()) as FlopLibraryMatch).stackApprox).toBeUndefined();
+    expect(matchFlopLibrary(index, request({ stacks: [9000, 12000] }))).toMatchObject({ board: FIXTURE_BOARD, stackApprox: { libraryStack: 97.5, requestedStack: 90 } });
+    expect(matchFlopLibrary(index, request({ stacks: [11000, 11000] }))).toMatchObject({ stackApprox: { libraryStack: 97.5, requestedStack: 110 } });
+    // A deeper stack behind the effective one is still the exact spot.
+    expect((matchFlopLibrary(index, request({ stacks: [9750, 12000] })) as FlopLibraryMatch).stackApprox).toBeUndefined();
+  });
+  it("prefers the closest stack and refuses approximations at low SPR", () => {
+    const deeper = { ...index.scenarios[0], id: "6max-110bb", stacks: [11000, 11000] as [number, number] };
+    const both = { ...index, scenarios: [index.scenarios[0], deeper] };
+    expect(matchFlopLibrary(both, request({ stacks: [10800, 10800] }))).toMatchObject({ scenario: { id: "6max-110bb" }, stackApprox: { libraryStack: 110, requestedStack: 108 } });
+    expect((matchFlopLibrary({ ...index, scenarios: [deeper, index.scenarios[0]] }, request()) as FlopLibraryMatch).scenario.id).toBe(index.scenarios[0].id);
+    // Pot 550 with 20.5bb stacks: SPR below 4, so only the exact stack answers.
+    const shallow = { ...index, scenarios: [{ ...index.scenarios[0], stacks: [2050, 2050] as [number, number] }] };
+    expect(matchFlopLibrary(shallow, request({ stacks: [1900, 1900] }))).toEqual({ miss: "scenario" });
+    expect(matchFlopLibrary(shallow, request({ stacks: [2050, 2050] }))).toMatchObject({ board: FIXTURE_BOARD });
   });
   it("maps a suit-permuted board and hero to the stored flop", () => {
     expect(matchFlopLibrary(index, request({ board: "Kh7s2d", hero: "AdAc" }))).toMatchObject({ board: FIXTURE_BOARD, hero: "AhAs" });

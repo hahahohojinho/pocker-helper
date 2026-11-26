@@ -173,15 +173,18 @@ export function deadMoneyBb(config:TableConfig,activePlayers:number):number; // 
 ### P1. 캐시게임 동적 스택
 
 #### P1-1. 프리플랍 유효 스택 조회
+- 진행 상황 (2026-11-26): 완료. 다인 팟에서는 어그레서 스택이 더 중요할 수 있다는 한계가 있음.
 - 변경: `table-helper-v2.tsx:54`. `effectiveStack`을 Hero 스택과 아직 행동할 수 있는 상대 중 최대 스택의 최소값으로 바꾼다. 상대가 이미 레이즈했으면 그 레이저 스택 기준.
 - 신규 함수: `src/lib/preflop-context.ts` 또는 기존 `game-state.ts`에 `preflopEffectiveStack(actions, seats, stacks, heroSeat):number`. 기존 유틸을 먼저 확인한 뒤 위치를 정한다.
 - 완료 기준: Hero 250bb, 상대 40bb 레이즈 상황이면 40bb 팩을 선택한다 (단위 테스트).
 
 #### P1-2. 근사 매칭 표시
+- 진행 상황 (2026-11-26): 완료. 사이즈는 5% 이내면 같은 스팟으로 봄.
 - 변경: `lookupPackStrategy` 반환값에 `match:{stack:"exact"|"approx";size:"exact"|"approx";packStack:number;requestedStack:number}`를 추가하고, UI에 3-2 라벨을 표시한다.
 - 호출부 전체(`strategy-data.ts` 등)를 Grep으로 확인한 뒤 반환 타입 확장은 선택 필드로 한다.
 
 #### P1-3. 플랍 라이브러리 스택 허용 범위
+- 진행 상황 (2026-11-26): 완료. 가장 가까운 스택 우선, SPR 4 미만은 정확 일치만 허용 (코드 리뷰 반영). 실측 비교는 라이브러리 데이터가 있는 PC에서 필요.
 - 변경: `flop-library/lookup.ts`. 유효 스택이 라이브러리 스택의 ±15% 이내이면 사용하고 `APPROX STACK`으로 표시한다.
 - 허용 범위 상수는 `manifest.ts`에 둔다.
 - 완료 기준: 90bb와 115bb 요청은 히트하고, 80bb 요청은 `scenario` 미스.

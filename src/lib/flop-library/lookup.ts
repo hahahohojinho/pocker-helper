@@ -4,13 +4,26 @@ import { canonicalFlop, mapCards } from "./canonical";
 import { FREQUENCY_SCALE, type ActionCategory, type FlopIndex, type FlopScenario, type FlopSolution, type Fraction } from "./format";
 
 export type FlopLibraryMiss = "not-flop" | "line" | "scenario" | "board" | "stale" | "node" | "hero";
-export interface FlopLibraryMatch { scenario: FlopScenario; board: string; nodeKey: string; hero: string; }
+/** Set when the library answers for a different effective stack (within STACK_TOLERANCE), in BB. */
+export interface StackApproximation { libraryStack: number; requestedStack: number; }
+export interface FlopLibraryMatch { scenario: FlopScenario; board: string; nodeKey: string; hero: string; stackApprox?: StackApproximation; }
+
+/**
+ * Cash stacks drift from the 100bb the library was solved for. Within 15% of the solved effective stack the stored
+ * strategy is used and labelled as an approximation; beyond it the live solver answers.
+ */
+export const STACK_TOLERANCE = 0.15;
+/**
+ * Below this stack-to-pot ratio (on the shallower of the two stacks) the stored bet and raise sizes approach the
+ * stack, so all-in collapses and missing raise nodes make a stored line invalid for another stack: exact stacks only.
+ */
+export const MIN_APPROX_SPR = 4;
 
 /** Explains a miss in the UI; the live solver answers instead. */
 export const MISS_LABELS: Record<FlopLibraryMiss, string> = {
   "not-flop": "플랍이 아님",
   line: "라이브러리에 없는 액션 라인",
-  scenario: "레인지, 팟, 스택, 사이즈 중 사전 계산과 다른 값이 있음",
+  scenario: "레인지, 팟, 사이즈가 사전 계산과 다르거나 유효 스택이 15% 넘게 다름 (SPR 4 미만은 정확히 같아야 함)",
   board: "아직 계산하지 않은 플랍",
   stale: "이전 설정으로 계산된 파일 (라이브러리 재생성 필요)",
   node: "이 보드에 없는 노드",
@@ -32,12 +45,25 @@ export function matchFlopLibrary(index: FlopIndex, request: WasmSolveRequest): F
   if (request.board.length !== 6) return { miss: "not-flop" };
   const nodeKey = historyKey(request.history);
   if (nodeKey === null) return { miss: "line" };
-  const scenario = index.scenarios.find(item => item.pot === request.pot && item.stacks[0] === request.stacks[0] && item.stacks[1] === request.stacks[1]
-    && item.maxRaises === request.maxRaises && sameFractions(item.betSizes, request.betSizes) && item.oopRange === request.oopRange && item.ipRange === request.ipRange);
+  const requestedStack = Math.min(...request.stacks);
+  const stackGap = (item: FlopScenario) => Math.abs(requestedStack - Math.min(...item.stacks));
+  const stackUsable = (item: FlopScenario) => {
+    const solved = Math.min(...item.stacks);
+    if (solved === requestedStack) return true;
+    return stackGap(item) <= solved * STACK_TOLERANCE && Math.min(solved, requestedStack) / item.pot >= MIN_APPROX_SPR;
+  };
+  // The closest stack wins, so an exact scenario is never shadowed by an approximate one listed earlier.
+  const scenario = index.scenarios
+    .filter(item => item.pot === request.pot && stackUsable(item) && item.maxRaises === request.maxRaises
+      && sameFractions(item.betSizes, request.betSizes) && item.oopRange === request.oopRange && item.ipRange === request.ipRange)
+    .reduce<FlopScenario | undefined>((best, item) => !best || stackGap(item) < stackGap(best) ? item : best, undefined);
   if (!scenario) return { miss: "scenario" };
   const { board, suitMap } = canonicalFlop(request.board.match(/.{2}/g) ?? []);
   if (!scenario.flops.includes(board)) return { miss: "board" };
-  return { scenario, board, nodeKey, hero: mapCards(request.hero.match(/.{2}/g) ?? [], suitMap).join("") };
+  // Only the effective stack shapes the game; a deeper stack behind it changes nothing.
+  const exact = stackGap(scenario) === 0;
+  const stackApprox = exact ? {} : { stackApprox: { libraryStack: Math.min(...scenario.stacks) / CHIPS_PER_BB, requestedStack: requestedStack / CHIPS_PER_BB } };
+  return { scenario, board, nodeKey, hero: mapCards(request.hero.match(/.{2}/g) ?? [], suitMap).join(""), ...stackApprox };
 }
 
 interface Grouped { category: ActionCategory; frequency: number; weightedEv: number; bestEv: number; }

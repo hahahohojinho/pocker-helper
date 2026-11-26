@@ -27,6 +27,8 @@ const MAX_SPOTS=50_000;
 const MAX_PACK_RAISES=3;
 /** A spot or stack this many times off the request is a different situation, so the pack is not used. */
 const MAX_SIZE_RATIO=2.5;
+/** Sizes within 5% of the solved size (2.5bb vs 2.6bb) count as the same spot rather than an approximation. */
+const EXACT_SIZE_RATIO=1.05;
 /** Failed loads are not retried for this long, so editing the stack cannot hammer a broken file. */
 const FAILED_LOAD_RETRY_MS=60_000;
 const TABLE_POSITIONS:Record<TableSize,Position[]>={6:["UTG","HJ","CO","BTN","SB","BB"],8:["UTG","UTG+1","MP","HJ","CO","BTN","SB","BB"]};
@@ -135,7 +137,11 @@ export function lookupPackStrategy(input:PackLookup):StrategyMix|null{
   const spot=matches.reduce((best,candidate)=>Math.abs((candidate.actionSize??0)-(input.actionSize??0))<Math.abs((best.actionSize??0)-(input.actionSize??0))?candidate:best);
   if(spot.actionSize!==undefined&&input.actionSize!==undefined&&ratio(spot.actionSize,input.actionSize)>MAX_SIZE_RATIO)return null;
   const [fold,passive]=spot.mix[index];
-  return {fold:fold/10,passive:passive/10,aggressive:(PERMILLE-fold-passive)/10,source:`pack:${nearest.pack.id}`};
+  const mix:StrategyMix={fold:fold/10,passive:passive/10,aggressive:(PERMILLE-fold-passive)/10,source:`pack:${nearest.pack.id}`};
+  const stackApprox=nearest.pack.stack!==input.stack;
+  const sizeApprox=spot.actionSize!==undefined&&input.actionSize!==undefined&&ratio(spot.actionSize,input.actionSize)>EXACT_SIZE_RATIO;
+  if(!stackApprox&&!sizeApprox)return mix;
+  return {...mix,approximation:{packStack:nearest.pack.stack,requestedStack:input.stack,stack:stackApprox,...(sizeApprox?{packSize:spot.actionSize,requestedSize:input.actionSize}:{}),size:sizeApprox}};
 }
 
 const loading=new Map<string,Promise<PreflopPack|null>>();

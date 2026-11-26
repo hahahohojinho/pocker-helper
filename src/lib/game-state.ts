@@ -1,5 +1,5 @@
 import { Action as RecommendationAction, Position, Recommendation, recommendPreflop } from "./preflop";
-import { lookupStrategy, nearestStackBucket, type PreflopSpotContext } from "./strategy-data";
+import { lookupStrategy, nearestStackBucket, type PackApproximation, type PreflopSpotContext } from "./strategy-data";
 import type { TableSize } from "./preflop-packs";
 
 export type Street = "preflop" | "flop" | "turn" | "river";
@@ -53,6 +53,17 @@ function normalize(values: Record<RecommendationAction, number>) {
   return Object.fromEntries(Object.entries(values).map(([key, value]) => [key, Math.round(Math.max(0, value) / total * 100)])) as Record<RecommendationAction, number>;
 }
 
+/**
+ * The stack that bounds Hero's preflop decision: Hero's stack capped by the deepest opponent still in the hand.
+ * Folded seats no longer matter; stacks are the hand's starting stacks in BB.
+ */
+export function preflopEffectiveStack(stacks:readonly number[],heroSeat:number,actions:readonly PlayerAction[]){
+  const folded=new Set(actions.filter(action=>action.type==="fold").map(action=>action.seat));
+  const heroStack=stacks[heroSeat]??0;
+  const opponents=stacks.filter((stack,seat)=>seat!==heroSeat&&!folded.has(seat)&&Number.isFinite(stack)&&stack>0);
+  return opponents.length?Math.min(heroStack,Math.max(...opponents)):heroStack;
+}
+
 export function recommendFromHistory(input: {
   heroPosition: Position;
   hand: string;
@@ -60,7 +71,7 @@ export function recommendFromHistory(input: {
   actions: PlayerAction[];
   /** Enables solved preflop packs for this table size. */
   tableSize?: TableSize;
-}): Recommendation & { scenario: PreflopScenario; spotContext:PreflopSpotContext;strategySource:string;scenarioLabel: string; primaryDisplay:string; displayFrequencies:{action:string;frequency:number}[] } {
+}): Recommendation & { scenario: PreflopScenario; spotContext:PreflopSpotContext;strategySource:string;strategyApproximation?:PackApproximation;scenarioLabel: string; primaryDisplay:string; displayFrequencies:{action:string;frequency:number}[] } {
   const scenario = classifyPreflop(input.actions);
   const spotContext=derivePreflopSpotContext(input.actions);
   const aggressor = [...input.actions].reverse().find(action => ["open", "3bet", "4bet"].includes(action.type));
@@ -83,6 +94,7 @@ export function recommendFromHistory(input: {
     scenario,
     spotContext,
     strategySource:mix.source,
+    ...(mix.approximation?{strategyApproximation:mix.approximation}:{}),
     scenarioLabel: scenarioLabels[scenario],
     primaryDisplay,
     displayFrequencies:(Object.keys(frequencies) as RecommendationAction[]).map(action=>({action:labels[action],frequency:frequencies[action]})),

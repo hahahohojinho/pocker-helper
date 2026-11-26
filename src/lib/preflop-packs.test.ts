@@ -63,6 +63,13 @@ describe("pack lookup",()=>{
     expect(utg(25,6)?.fold).toBe(10);
     expect(utg(100,8)).toBeNull();
   });
+  it("marks answers taken from another stack depth or bet size as approximations",()=>{
+    installPreflopPack(parsePreflopPack(JSON.stringify(pack())));
+    const btn=(stack:number,actionSize:number)=>lookupPackStrategy({tableSize:6,stack,hand:"AKo",position:"BTN",scenario:"single-open",openerPosition:"CO",aggressorPosition:"CO",callerPositions:[],actionSize});
+    expect(btn(100,2.6)?.approximation).toBeUndefined();
+    expect(btn(85,2.5)?.approximation).toEqual({packStack:100,requestedStack:85,stack:true,size:false});
+    expect(btn(100,4)?.approximation).toEqual({packStack:100,requestedStack:100,stack:false,packSize:2.5,requestedSize:4,size:true});
+  });
   it("refuses bet sizes and stacks too far from the solved ones",()=>{
     installPreflopPack(parsePreflopPack(JSON.stringify(pack())));
     expect(lookupPackStrategy({tableSize:6,stack:100,hand:"AA",position:"BTN",scenario:"single-open",openerPosition:"CO",aggressorPosition:"CO",callerPositions:[],actionSize:8})).toBeNull();

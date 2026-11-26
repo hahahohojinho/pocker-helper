@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { classifyPreflop, derivePreflopSpotContext, recommendFromHistory, type PlayerAction } from "./game-state";
+import { classifyPreflop, derivePreflopSpotContext, preflopEffectiveStack, recommendFromHistory, type PlayerAction } from "./game-state";
 import type { Position } from "./preflop";
 import { clearPreflopPacks, installPreflopPack, parsePreflopPack } from "./preflop-packs";
 import { inferRangeFromPreflop } from "./range-model";
@@ -74,5 +74,17 @@ describe("pack-backed recommendations",()=>{
     const withPack=inferRangeFromPreflop({actions,seat:0,position:"BTN",stack:100,tableSize:6});
     const withoutPack=inferRangeFromPreflop({actions,seat:0,position:"BTN",stack:100});
     expect(withPack.text).not.toBe(withoutPack.text);
+  });
+});
+
+describe("preflop effective stack",()=>{
+  const fold=(seat:number):PlayerAction=>({id:`f${seat}`,street:"preflop",seat,position:"UTG",type:"fold",amount:0});
+  it("caps Hero's stack by the deepest opponent still in the hand",()=>{
+    expect(preflopEffectiveStack([250,40,60,100],0,[])).toBe(100);
+    expect(preflopEffectiveStack([250,40,60,100],0,[fold(3)])).toBe(60);
+    expect(preflopEffectiveStack([30,40,60,100],0,[])).toBe(30);
+  });
+  it("falls back to Hero's stack when no opponent stack is known",()=>{
+    expect(preflopEffectiveStack([80,40],0,[fold(1)])).toBe(80);
   });
 });

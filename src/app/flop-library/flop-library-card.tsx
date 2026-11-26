@@ -18,12 +18,13 @@ async function lookUp(key: string, request: WasmSolveRequest): Promise<Lookup> {
   if (!solution) return { key, miss: "board" };
   const answer = answerFromSolution(solution, match);
   if (typeof answer !== "string") return { key, miss: answer.miss };
-  return { key, result: parseSolverResult(answer), scenario: `${match.scenario.label} · ${match.scenario.generatedAt}` };
+  const approx = match.stackApprox ? ` · APPROX STACK: ${match.stackApprox.libraryStack}BB 계산으로 ${match.stackApprox.requestedStack}BB 대체` : "";
+  return { key, result: parseSolverResult(answer), scenario: `${match.scenario.label} · ${match.scenario.generatedAt}${approx}` };
 }
 
 /**
  * Instant answer for a heads-up flop decision from precomputed solutions. Shown only when the library holds the
- * exact spot (same ranges, pot, stacks, sizes, and line); otherwise the live solver is the answer.
+ * spot (same ranges, pot, sizes, and line; effective stack within STACK_TOLERANCE); otherwise the live solver answers.
  */
 export default function FlopLibraryCard({ request, requestKey, onApply }: {
   request: WasmSolveRequest | null; requestKey: string; onApply: (result: SolverResult) => void;

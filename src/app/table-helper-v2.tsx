@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { PlayerAction, PlayerActionType, recommendFromHistory } from "@/lib/game-state";
+import { PlayerAction, PlayerActionType, preflopEffectiveStack, recommendFromHistory } from "@/lib/game-state";
 import { Position } from "@/lib/preflop";
 import { availableActions, bettingAmounts, nextPosition, positionOrder, validatePreflopAction } from "@/lib/preflop-machine";
-import { activeStrategyDataset, buildStrategyMatrix, bundledStrategyDatasetId, clearStrategyDataset, nearestStackBucket, parseStrategyDatasetJson } from "@/lib/strategy-data";
+import { activeStrategyDataset, buildStrategyMatrix, bundledStrategyDatasetId, clearStrategyDataset, nearestStackBucket, parseStrategyDatasetJson, type PackApproximation } from "@/lib/strategy-data";
 import { bucketOrder, loadPreflopPack } from "@/lib/preflop-packs";
 import PostflopPanel from "./postflop-panel";
 import { calculatePokerPots } from "@/lib/pots";
@@ -24,6 +24,10 @@ const coordinates: Record<TableSize,{left:number;top:number}[]> = {
 };
 const actionLabels:Record<PlayerActionType,string>={fold:"Fold",check:"Check",limp:"Limp",open:"Open",call:"Call","3bet":"3-bet","4bet":"4-bet","5bet":"5-bet"};
 const strategyStorageKey="rangelab.preflop-dataset.v1";
+function approximationNote(approx:PackApproximation){
+  const parts=[approx.stack&&`APPROX STACK: ${approx.packStack}BB 팩으로 ${approx.requestedStack}BB 대체`,approx.size&&`APPROX SIZE: ${approx.packSize}BB 사이즈로 ${approx.requestedSize}BB 대체`].filter(Boolean);
+  return ` · ${parts.join(" · ")}`;
+}
 
 export default function TableHelperV2(){
   const [tableSize,setTableSize]=useState<TableSize|null>(null);
@@ -48,10 +52,12 @@ export default function TableHelperV2(){
   const statsBySeat=useMemo(()=>seatPlayers.map(id=>id?profile.stats[id]?.totals:undefined),[seatPlayers,profile.stats]);
   const playerName=(seat:number)=>profile.players.find(player=>player.id===seatPlayers[seat])?.name;
   const heroStack=stacks[heroSeat]??100;
+  // Packs and charts are looked up by the stack that bounds Hero's decision, not Hero's own stack.
+  const effectiveStack=preflopEffectiveStack(stacks,heroSeat,actions)||heroStack;
   // datasetRevision re-runs the lookup once an imported dataset or a solved pack has been installed into the
   // module-level strategy registry, which React cannot observe.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const result=useMemo(()=>recommendFromHistory({heroPosition:positions[heroSeat],hand,effectiveStack:heroStack,actions,tableSize:tableSize??undefined}),[positions,heroSeat,hand,heroStack,actions,tableSize,datasetRevision]);
+  const result=useMemo(()=>recommendFromHistory({heroPosition:positions[heroSeat],hand,effectiveStack,actions,tableSize:tableSize??undefined}),[positions,heroSeat,hand,effectiveStack,actions,tableSize,datasetRevision]);
   const currentPosition=nextPosition(actions,positions,stacks);
   const currentSeat=currentPosition ? positions.indexOf(currentPosition) : -1;
   const allowed=currentSeat>=0 ? availableActions(actions,positions,currentSeat,stacks) : [];
@@ -59,10 +65,10 @@ export default function TableHelperV2(){
   const bettingState=deriveBettingState(actions,positions,stacks);
   const potLayers=calculatePokerPots(bettingState.contributions,bettingState.foldedSeats,bettingState.allInSeats);
   const visibleActions=actions.filter(action=>!action.implicit);
-  const strategyMatrix=buildStrategyMatrix(positions[heroSeat],heroStack,result.scenario,result.spotContext,tableSize??undefined);
+  const strategyMatrix=buildStrategyMatrix(positions[heroSeat],effectiveStack,result.scenario,result.spotContext,tableSize??undefined);
 
   // Solved packs are per table size and stack bucket, so the load only re-runs when the nearest bucket changes.
-  const stackBucket=bucketOrder(heroStack)[0];
+  const stackBucket=bucketOrder(effectiveStack)[0];
   useEffect(()=>{
     if(!tableSize)return;
     let active=true;
@@ -194,10 +200,10 @@ export default function TableHelperV2(){
         {validationMessage&&<p className="validation-message">{validationMessage}</p>}
         <label className="amount-field">액션 후 총 투입액<div><input type="number" min="0" max={currentSeat>=0?stacks[currentSeat]:heroStack} step="0.5" value={amount} onChange={e=>setAmount(Number(e.target.value))}/><b>BB</b></div><span className="amount-presets"><button onClick={()=>setAmount(accounting.currentBet)}>Call {accounting.currentBet}BB</button><button onClick={()=>setAmount(accounting.minimumRaiseTo)}>Min {accounting.minimumRaiseTo}BB</button><button onClick={()=>setAmount(currentSeat>=0?stacks[currentSeat]:heroStack)}>All-in {currentSeat>=0?stacks[currentSeat]:heroStack}BB</button></span></label>
         <div className="hero-inputs"><label>내 핸드<input value={hand} maxLength={3} onChange={e=>setHand(e.target.value)}/></label><label>{currentSeat>=0?`${positions[currentSeat]} 시작 스택`:"Hero 시작 스택"}<input type="number" min="1" value={stackDraft??stacks[stackSeat]} disabled={stackLocked} title={stackLocked?"이미 액션한 좌석의 스택은 실행 취소 후 변경하세요.":undefined} onChange={e=>setStackDraft(e.target.value)} onBlur={commitStack} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/></label></div>
-        {currentPosition?<><div className="action-result compact"><p>{currentSeat===heroSeat?"RECOMMENDED ACTION":"HERO DECISION PREVIEW"} <span>신뢰도 {result.confidence}</span></p><h2>{result.primaryDisplay}</h2><p>{currentSeat===heroSeat?result.summary:"상대 액션을 계속 입력하면 Hero 차례에 최종 추천을 표시합니다."}</p></div><div className="frequency-list">{result.displayFrequencies.map(item=><div key={item.action}><span>{item.action}</span><i><b style={{width:`${item.frequency}%`}}/></i><strong>{item.frequency}%</strong></div>)}</div><details className="range-matrix"><summary>169 핸드 전략표 보기 <span>{positions[heroSeat]} · {nearestStackBucket(heroStack)}BB</span></summary><div>{strategyMatrix.map(cell=><span key={cell.hand} className={cell.aggressive>=50?"range-aggressive":cell.passive>=40?"range-passive":"range-fold"} title={`Fold ${cell.fold}% / Passive ${cell.passive}% / Aggressive ${cell.aggressive}%`}>{cell.hand}</span>)}</div><p><i/>공격적 액션 <i/>패시브 액션 <i/>Fold</p></details></>:<div className="preflop-complete-card"><small>PREFLOP COMPLETE</small><b>{accounting.pot.toFixed(1)} BB POT</b><span>아래에서 플랍 보드와 액션을 입력하세요.</span></div>}
+        {currentPosition?<><div className="action-result compact"><p>{currentSeat===heroSeat?"RECOMMENDED ACTION":"HERO DECISION PREVIEW"} <span>신뢰도 {result.confidence}</span></p><h2>{result.primaryDisplay}</h2><p>{currentSeat===heroSeat?result.summary:"상대 액션을 계속 입력하면 Hero 차례에 최종 추천을 표시합니다."}</p></div><div className="frequency-list">{result.displayFrequencies.map(item=><div key={item.action}><span>{item.action}</span><i><b style={{width:`${item.frequency}%`}}/></i><strong>{item.frequency}%</strong></div>)}</div><details className="range-matrix"><summary>169 핸드 전략표 보기 <span>{positions[heroSeat]} · {nearestStackBucket(effectiveStack)}BB</span></summary><div>{strategyMatrix.map(cell=><span key={cell.hand} className={cell.aggressive>=50?"range-aggressive":cell.passive>=40?"range-passive":"range-fold"} title={`Fold ${cell.fold}% / Passive ${cell.passive}% / Aggressive ${cell.aggressive}%`}>{cell.hand}</span>)}</div><p><i/>공격적 액션 <i/>패시브 액션 <i/>Fold</p></details></>:<div className="preflop-complete-card"><small>PREFLOP COMPLETE</small><b>{accounting.pot.toFixed(1)} BB POT</b><span>아래에서 플랍 보드와 액션을 입력하세요.</span></div>}
         {tableSize&&currentSeat===heroSeat&&<PreflopExploitCard tableSize={tableSize} positions={positions} heroSeat={heroSeat} hand={hand} stacks={stacks} actions={actions} statsBySeat={statsBySeat}/>}
         {profile.enabled&&<SeatPlayersPanel positions={positions} heroSeat={heroSeat} seatPlayers={seatPlayers} players={profile.players} stats={profile.stats} onAssign={assignPlayer} onCreate={profile.createPlayer}/>}
-        <p className="solver-note">CURRENT SOURCE · {result.strategySource}{result.strategySource==="baseline-v1"?" · NOT GTO FALLBACK":result.strategySource.startsWith("pack:")?" · SOLVED PACK (rangelab-preflop MCCFR)":" · LICENSED DATASET"}</p>
+        <p className="solver-note">CURRENT SOURCE · {result.strategySource}{result.strategySource==="baseline-v1"?" · NOT GTO FALLBACK":result.strategySource.startsWith("pack:")?" · SOLVED PACK (rangelab-preflop MCCFR)":" · LICENSED DATASET"}{effectiveStack!==heroStack&&` · 유효 스택 ${effectiveStack}BB`}{result.strategyApproximation&&<span className="approx-note">{approximationNote(result.strategyApproximation)}</span>}</p>
         <details className="strategy-import"><summary>STRATEGY DATA · {datasetInfo?.id}</summary><label>검증된 JSON 데이터셋 불러오기<input type="file" accept="application/json,.json" onChange={event=>void importDataset(event.target.files?.[0])}/></label>{datasetInfo?.id!==bundledStrategyDatasetId&&<button type="button" onClick={resetDataset}>기본 DCFR로 복원</button>}{datasetInfo&&<small>{datasetInfo.contract} · {datasetInfo.spots} spots · {datasetInfo.license}</small>}{datasetInfo?.provenance&&<small>{datasetInfo.provenance.generator} · {datasetInfo.provenance.revision.slice(0,12)} · {datasetInfo.provenance.iterations.toLocaleString()} iterations · seed {datasetInfo.provenance.seed}</small>}{datasetMessage&&<small>{datasetMessage}</small>}<p>각 spot은 169핸드 전체, 빈도 합 100%, 라이선스 메타데이터가 필요합니다. 검증된 데이터는 이 브라우저에 저장됩니다.</p></details>
         {!currentPosition&&<PostflopPanel key={handNumber} positions={positions} preflopActions={actions} stacks={stacks} heroSeat={heroSeat} exploit={tableSize?{tableSize,statsBySeat}:undefined} recorder={{tableSize,heroHand:hand,seatPlayers,profileEnabled:profile.enabled,onSaved:()=>setProfileRevision(value=>value+1),onNextHand:startNextHand}}/>} 
       </aside>
