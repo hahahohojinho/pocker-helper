@@ -1,7 +1,7 @@
 import type { PlayerActionType } from "../game-state";
 import { availableActions, deriveBettingState, type BettingState } from "../preflop-machine";
 import type { HandRecordV1 } from "./hand-record";
-import type { HandEnd } from "./hand-replay";
+import { recordAntes, type HandEnd } from "./hand-replay";
 
 /**
  * Every stat is a pair: n opportunities and x times taken, so later code can shrink small samples toward a prior.
@@ -38,7 +38,8 @@ class EventSink {
 
 function preflopEvents(record: HandRecordV1, sink: EventSink) {
   const positions = record.seats.map(seat => seat.position);
-  const stacks = record.seats.map(seat => seat.startStack);
+  // Posting an ante is not an action, so it changes no event; only all-in detection needs the playable stacks.
+  const stacks = recordAntes(record).playStacks;
   const acted = new Set<number>(), putIn = new Set<number>(), limped = new Set<number>();
   let opener: number | null = null;
   for (const [index, action] of record.preflop.entries()) {

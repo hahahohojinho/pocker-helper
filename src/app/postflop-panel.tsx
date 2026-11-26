@@ -24,6 +24,7 @@ import { exploitabilityLevel, getSolverPreset, laterStreetsCheckedDown } from "@
 import { buildSolverTree } from "@/lib/solver-tree";
 import HandRecorderPanel from "./profiling/hand-recorder-panel";
 import { hasRake, NO_RAKE, type RakeSetting } from "@/lib/table-config";
+import { hasAnte, NO_ANTE, postAntes, type AnteSetting } from "@/lib/antes";
 import PostflopExploitCard from "./exploit/postflop-exploit-card";
 import FlopLibraryCard from "./flop-library/flop-library-card";
 import { exploitRange, MAX_RANGE_TEXT } from "@/lib/exploit/postflop-exploits";
@@ -31,7 +32,7 @@ import type { StatTotals } from "@/lib/profiling/classify";
 import type { ProfileTableSize } from "@/lib/profiling/hand-record";
 
 /** Recorder settings owned by the table helper; the panel supplies the hand it holds (board, actions, cards). */
-export type RecorderProps=Omit<ComponentProps<typeof HandRecorderPanel>,"positions"|"stacks"|"heroSeat"|"heroCards"|"preflopActions"|"postflopActions"|"board"|"rake">;
+export type RecorderProps=Omit<ComponentProps<typeof HandRecorderPanel>,"positions"|"stacks"|"heroSeat"|"heroCards"|"preflopActions"|"postflopActions"|"board"|"rake"|"ante">;
 
 const labels:Record<PostflopActionType,string>={fold:"Fold",check:"Check",bet:"Bet",call:"Call",raise:"Raise"};
 const nextStreet={flop:"turn",turn:"river"} as const;
@@ -52,14 +53,17 @@ const MULTIWAY_SUBSET_ITERATIONS=5000;
 const STREET_ORDER=["flop","turn","river"] as const;
 const baselineRange="AA,KK,QQ,JJ,TT,99,88,77,66,55,44,33,22,AKs,AQs,AJs,ATs,A9s,A8s,A7s,A6s,A5s,A4s,A3s,A2s,KQs,KJs,KTs,QJs,QTs,JTs,T9s,98s,87s,76s,65s,54s,AKo,AQo,AJo,KQo";
 
-export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,recorder,exploit,rake=NO_RAKE}:{positions:Position[];preflopActions:PlayerAction[];stacks:number[];heroSeat:number;recorder?:RecorderProps;rake?:RakeSetting;exploit?:{tableSize:ProfileTableSize;statsBySeat:readonly (StatTotals|undefined)[]}}){
-  const preflop=deriveBettingState(preflopActions,positions,stacks);
+export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,recorder,exploit,rake=NO_RAKE,ante=NO_ANTE}:{positions:Position[];preflopActions:PlayerAction[];stacks:number[];heroSeat:number;recorder?:RecorderProps;rake?:RakeSetting;ante?:AnteSetting;exploit?:{tableSize:ProfileTableSize;statsBySeat:readonly (StatTotals|undefined)[]}}){
+  // `stacks` are the hand's start stacks; the betting engine and the solvers play what is left after the antes.
+  const anteSetup=postAntes(stacks,positions,ante);
+  const playStacks=anteSetup.playStacks;
+  const preflop=deriveBettingState(preflopActions,positions,playStacks,anteSetup.deadMoney);
   // Solved preflop packs exist per table size; the seat count tells which one applies.
   const tableSize:TableSize|undefined=positions.length===6||positions.length===8?positions.length:undefined;
   const activeSeats=positions.map((_,seat)=>seat).filter(seat=>!preflop.foldedSeats.has(seat));
   const nonActingSeats=new Set([...preflop.foldedSeats,...preflop.allInSeats]);
   const order=postflopOrder(positions,nonActingSeats);
-  const initialRemaining=stacks.map((stack,seat)=>Math.max(0,stack-(preflop.contributions.get(seat)??0)));
+  const initialRemaining=playStacks.map((stack,seat)=>Math.max(0,stack-(preflop.contributions.get(seat)??0)));
   const [street,setStreet]=useState<Exclude<Street,"preflop">>("flop");
   const [board,setBoard]=useState(["","","","",""]);
   const [actions,setActions]=useState<PostflopAction[]>([]);
@@ -82,8 +86,8 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,
   const [solveMode,setSolveMode]=useState<"native"|"wasm"|null>(null);
   useEffect(()=>()=>wasmSolveRef.current?.abort(),[]);
   useEffect(()=>{const controller=new AbortController();fetch("/api/solver",{signal:controller.signal,cache:"no-store"}).then(response=>response.ok?response.json():Promise.reject()).then(value=>{if(value&&["texassolver","dcfr","counterfactual"].includes(value.backend)&&Number.isInteger(value.maxPlayers))setSolverCapability({backend:value.backend,maxPlayers:value.maxPlayers,nativeJson:value.nativeJson===true,multiwayStreets:value.nativeMultiway&&value.nativeMultiway.maxPlayers>=MULTIWAY_MAX_PLAYERS&&Array.isArray(value.nativeMultiway.streets)?value.nativeMultiway.streets.filter((item:unknown)=>typeof item==="string"):[]});}).catch(()=>{});return()=>controller.abort();},[]);
-  const inferredRanges=Object.fromEntries(activeSeats.filter(seat=>seat!==heroSeat).map(seat=>[seat,inferRangeFromPreflop({actions:preflopActions,seat,position:positions[seat],stack:stacks[seat],tableSize})]));
-  const heroInferredRange=inferRangeFromPreflop({actions:preflopActions,seat:heroSeat,position:positions[heroSeat],stack:stacks[heroSeat],tableSize});
+  const inferredRanges=Object.fromEntries(activeSeats.filter(seat=>seat!==heroSeat).map(seat=>[seat,inferRangeFromPreflop({actions:preflopActions,seat,position:positions[seat],stack:playStacks[seat],tableSize})]));
+  const heroInferredRange=inferRangeFromPreflop({actions:preflopActions,seat:heroSeat,position:positions[heroSeat],stack:playStacks[heroSeat],tableSize});
   const rangeFor=(seat:number)=>rangeBySeat[seat]??conditionRangeOnPostflop({rangeText:inferredRanges[seat]?.text??baselineRange,boardCodes:board.slice(0,boardCount).filter(card=>card.length===2),actions:actions.filter(action=>action.seat===seat).map(action=>action.type)});
   const streetActions=useMemo(()=>actions.filter(action=>action.street===street),[actions,street]);
   const context=buildPostflopContext({actions,street,seats:activeSeats,initialRemaining,initialPot:preflop.pot});
@@ -146,7 +150,7 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,
   const heroWasAggressor=preflopActions.findLast(action=>["open","3bet","4bet","5bet"].includes(action.type))?.seat===heroSeat;
   const exploitSpot=exploit&&street==="flop"&&actor===heroSeat&&heroWasAggressor&&context.currentBet===0&&knownBoard.length===3&&opponentSeats.length>0&&holeCards.every(card=>card.length===2);
   const exploitInputs=exploitSpot?{seats:opponentSeats,board:knownBoard,statsBySeat:exploit.statsBySeat,tableSize:exploit.tableSize}:null;
-  const exploitInputsKey=JSON.stringify([exploitInputs?.seats,exploitInputs?.board,opponentSeats.map(seat=>rangeBySeat[seat]?.length??0),actions.length,preflopActions.length,stacks]);
+  const exploitInputsKey=JSON.stringify([exploitInputs?.seats,exploitInputs?.board,opponentSeats.map(seat=>rangeBySeat[seat]?.length??0),actions.length,preflopActions.length,playStacks]);
   // Scoring every combo on the board is too slow to repeat on every render (e.g. while typing).
   const exploitRanges=useMemo(()=>exploitInputs?exploitInputs.seats.map(seat=>{
     if(rangeBySeat[seat])return {seat,rangeText:rangeBySeat[seat],usage:[]};
@@ -211,7 +215,7 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,
     // `order` skips seats all-in preflop; the solver needs every seat still in the hand, in action order.
     const seats=postflopOrder(positions,preflop.foldedSeats).filter(seat=>streetStartSeats.includes(seat));
     const preset=getSolverPreset("multiway",street);
-    const committed=new Map(positions.map((_,seat)=>[seat,Math.max(0,stacks[seat]-(context.remainingAtStart[seat]??0))]));
+    const committed=new Map(positions.map((_,seat)=>[seat,Math.max(0,playStacks[seat]-(context.remainingAtStart[seat]??0))]));
     return buildMultiwaySolveRequest({
       board:knownBoard,heroHole:holeCards,heroIndex:seats.indexOf(heroSeat),
       players:seats.map(seat=>({range:streetStartRange(seat),stack:context.remainingAtStart[seat]??0})),
@@ -223,8 +227,8 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,
   // The flop library answers the same request the native solver would get, so it only matches identical spots.
   let libraryRequest:ReturnType<typeof dcfrRequest>|null=null;
   if(street==="flop"&&streetStartSeats.length===2&&actor===heroSeat&&knownBoard.length===3&&holeCards.every(card=>card.length===2)){
-    // The library was solved without rake, so a raked table always solves live.
-    try{libraryRequest=hasRake(rake)?null:dcfrRequest("native");}catch{libraryRequest=null;}
+    // The library was solved without rake or antes, so such a table always solves live.
+    try{libraryRequest=hasRake(rake)||hasAnte(ante)?null:dcfrRequest("native");}catch{libraryRequest=null;}
   }
   /** Native first when advertised; falls back to the browser when the server cannot run it. */
   async function solveDcfr(signal:AbortSignal){
@@ -317,6 +321,6 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,
     {solverResult&&solvedRakeKey!==rakeKey&&<p className="local-solver-help rake-note">{solvedRakeKey==="unknown"?"가져온 결과의 레이크 기준은 알 수 없습니다.":useDcfr?"위 Solver 결과는 현재 레이크 설정과 다른 기준으로 계산한 값입니다. 다시 실행하세요.":"위 Solver 결과는 레이크 없음 기준입니다."}</p>}
     {streetStartSeats.length>2&&!useMultiway&&solverCapability.backend!=="counterfactual"&&<p className="local-solver-help">멀티웨이는 턴/리버 3인(네이티브 Solver)만 로컬 Solver가 풉니다. 위 EV는 MODEL 근사입니다.</p>}
     <details className="solver-import"><summary>Solver 노드 내보내기 / 결과 가져오기</summary>{solverNode&&<textarea readOnly value={JSON.stringify(solverNode,null,2)}/>}<textarea value={solverText} onChange={event=>setSolverText(event.target.value)} placeholder={'정규화 결과 또는 TexasSolver native strategy node'}/><button onClick={importSolver}>전략 적용</button><small>TexasSolver native 콤보 전략과 RangeLab/OpenSpiel 정규화 JSON을 지원합니다.</small></details>
-    {recorder&&<HandRecorderPanel {...recorder} rake={rake} positions={positions} stacks={stacks} heroSeat={heroSeat} heroCards={holeCards} preflopActions={preflopActions} postflopActions={actions} board={board}/>}
+    {recorder&&<HandRecorderPanel {...recorder} rake={rake} ante={ante} positions={positions} stacks={stacks} heroSeat={heroSeat} heroCards={holeCards} preflopActions={preflopActions} postflopActions={actions} board={board}/>}
   </section>;
 }

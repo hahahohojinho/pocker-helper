@@ -1,3 +1,5 @@
+import { MAX_ANTE_BB, NO_ANTE, type AnteSetting } from "./antes";
+
 /** Cash-game rake: percent of each contested pot that sees a flop, capped in BB per pot. */
 export interface RakeSetting { percent:number;capBb:number; }
 
@@ -32,4 +34,28 @@ export function loadRakeSetting(storage:Pick<Storage,"getItem">|null):RakeSettin
 
 export function saveRakeSetting(storage:Pick<Storage,"setItem">|null,setting:RakeSetting){
   try{storage?.setItem(RAKE_STORAGE_KEY,JSON.stringify(setting));}catch{/* Storage can be unavailable; the setting then lasts for this page only. */}
+}
+
+const ANTE_STORAGE_KEY="rangelab.ante.v1";
+
+/** An ante setting from untrusted input; anything invalid means no ante. Amounts are kept in whole cents. */
+export function parseAnteSetting(value:unknown):AnteSetting{
+  if(!value||typeof value!=="object")return NO_ANTE;
+  const {kind,amount}=value as Record<string,unknown>;
+  if((kind!=="seat"&&kind!=="bb")||!inRange(amount,MAX_ANTE_BB))return NO_ANTE;
+  const amountCents=Math.round(amount*100);
+  return amountCents>=1?{kind,amount:amountCents/100}:NO_ANTE;
+}
+
+export function loadAnteSetting(storage:Pick<Storage,"getItem">|null):AnteSetting{
+  try{
+    const saved=storage?.getItem(ANTE_STORAGE_KEY);
+    return saved?parseAnteSetting(JSON.parse(saved)):NO_ANTE;
+  }catch{
+    return NO_ANTE;
+  }
+}
+
+export function saveAnteSetting(storage:Pick<Storage,"setItem">|null,setting:AnteSetting){
+  try{storage?.setItem(ANTE_STORAGE_KEY,JSON.stringify(setting));}catch{/* Storage can be unavailable; the setting then lasts for this page only. */}
 }

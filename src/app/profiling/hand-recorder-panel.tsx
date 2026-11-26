@@ -10,6 +10,7 @@ import { normalizeStartingHand } from "@/lib/strategy-data";
 import { replayHandRecord } from "@/lib/profiling/hand-replay";
 import { settleHand } from "@/lib/profiling/settle";
 import { NO_RAKE, type RakeSetting } from "@/lib/table-config";
+import { NO_ANTE, type AnteSetting } from "@/lib/antes";
 import { saveHandRecord } from "./use-profile";
 
 const pendingLabels: Record<string, string> = {
@@ -23,12 +24,14 @@ export const REBUY_STACK = 100;
 const splitCards = (text: string) => (text.match(/[2-9TJQKA][cdhs]/gi) ?? []).slice(0, 2);
 
 /** Shows whether the hand is over, collects shown cards and winners, and saves the hand to the profile database. */
-export default function HandRecorderPanel({ tableSize, positions, stacks, heroSeat, heroHand, heroCards, seatPlayers, preflopActions, postflopActions, board, profileEnabled, onSaved, onNextHand, rake = NO_RAKE }: {
+export default function HandRecorderPanel({ tableSize, positions, stacks, heroSeat, heroHand, heroCards, seatPlayers, preflopActions, postflopActions, board, profileEnabled, onSaved, onNextHand, rake = NO_RAKE, ante = NO_ANTE }: {
   tableSize: ProfileTableSize; positions: readonly Position[]; stacks: readonly number[]; heroSeat: number; heroHand: string; heroCards: readonly string[];
   seatPlayers: readonly (string | null)[]; preflopActions: PlayerAction[]; postflopActions: PostflopAction[]; board: readonly string[];
   profileEnabled: boolean; onSaved: () => void;
   /** Table rake, deducted from pots that saw a flop. */
   rake?: RakeSetting;
+  /** Antes posted this hand; `stacks` are the start stacks before them. */
+  ante?: AnteSetting;
   /** Starts the next hand, with this hand's settled stacks when the user keeps them. */
   onNextHand: (settledStacks?: number[]) => void;
 }) {
@@ -46,12 +49,12 @@ export default function HandRecorderPanel({ tableSize, positions, stacks, heroSe
   const evaluation = useMemo(() => {
     const holeCards: Record<number, string[]> = { [heroSeat]: [...heroCards] };
     for (const [seat, text] of Object.entries(shown)) holeCards[Number(seat)] = splitCards(text);
-    const draft = (ids: { id: string; playedAt: string }, chosen: number[]) => buildHandRecord({ ...ids, tableSize, heroSeat, heroHand, stacks, seatPlayers, preflop: preflopActions, postflop: postflopActions, board, holeCards, winners: chosen });
+    const draft = (ids: { id: string; playedAt: string }, chosen: number[]) => buildHandRecord({ ...ids, tableSize, heroSeat, heroHand, stacks, seatPlayers, preflop: preflopActions, postflop: postflopActions, board, holeCards, winners: chosen, ante });
     // Who is still in decides which winners can be chosen, so this replay skips the winner check.
     const probe = replayHandRecord(draft({ id: "00000000-0000-4000-8000-000000000000", playedAt: new Date(0).toISOString() }, []), { checkWinners: false });
     if (!probe.ok) return { error: probe.message, end: null, draft, preflopState: null };
     return { error: "", end: probe.end, draft, preflopState: probe.preflopState };
-  }, [shown, heroSeat, heroCards, tableSize, heroHand, stacks, seatPlayers, preflopActions, postflopActions, board]);
+  }, [shown, heroSeat, heroCards, tableSize, heroHand, stacks, seatPlayers, preflopActions, postflopActions, board, ante]);
   const end = evaluation.end;
   const incompleteShown = Object.values(shown).some(text => text.trim() !== "" && splitCards(text).length !== 2);
   const heroMismatch = heroCards.length === 2 && comboToClass(heroCards[0], heroCards[1]) !== normalizeStartingHand(heroHand);

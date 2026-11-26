@@ -1,3 +1,4 @@
+import { MAX_ANTE_BB } from "../antes";
 import type { PlayerAction, PlayerActionType } from "../game-state";
 import type { PostflopAction, PostflopActionType } from "../postflop-machine";
 import type { Position } from "../preflop";
@@ -37,6 +38,8 @@ export interface HandRecordV1 {
   board: string[];
   /** Seats that won at least part of a pot. */
   winners: number[];
+  /** Tournament ante; absent (never `kind: "none"`) when the hand had none, so stored hashes stay stable. */
+  ante?: { kind: "seat" | "bb"; amount: number };
 }
 
 const preflopTypes: readonly PlayerActionType[] = ["fold", "check", "limp", "open", "call", "3bet", "4bet", "5bet"];
@@ -99,6 +102,13 @@ function parsePostflopAction(value: unknown, index: number, seats: RecordSeat[])
   return { id: base.id, street, seat: base.seat, position: base.position, type: base.raw.type as PostflopActionType, amount: base.amount };
 }
 
+function parseRecordAnte(value: unknown): HandRecordV1["ante"] | undefined {
+  if (value === undefined) return undefined;
+  if (!isRecord(value) || (value.kind !== "seat" && value.kind !== "bb") || typeof value.amount !== "number" || !Number.isFinite(value.amount)
+    || value.amount < 0.01 || value.amount > MAX_ANTE_BB || Math.round(value.amount * 100) / 100 !== value.amount) throw fail("ante");
+  return { kind: value.kind, amount: value.amount };
+}
+
 /**
  * Validates the shape of a client-supplied hand record. Whether the actions are legal and the hand is finished is
  * checked separately by replayHandRecord.
@@ -128,6 +138,7 @@ export function parseHandRecord(value: unknown): HandRecordV1 {
   if (hero.holeCards && comboToClass(...hero.holeCards) !== heroHand) throw fail("heroHand", "does not match the hero's cards");
   if (!Array.isArray(value.winners) || value.winners.length === 0 || value.winners.some(seat => !Number.isInteger(seat) || seat < 0 || seat >= tableSize)) throw fail("winners");
   const winners = [...new Set(value.winners as number[])].sort((left, right) => left - right);
+  const ante = parseRecordAnte(value.ante);
   // Stored in one canonical form so time ordering in the database is lexical ordering.
-  return { version: 1, id: value.id, playedAt: new Date(value.playedAt).toISOString(), tableSize, heroHand, seats, preflop, postflop, board, winners };
+  return { version: 1, id: value.id, playedAt: new Date(value.playedAt).toISOString(), tableSize, heroHand, seats, preflop, postflop, board, winners, ...(ante ? { ante } : {}) };
 }

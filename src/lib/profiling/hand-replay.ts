@@ -4,6 +4,7 @@ import { deriveBettingState, nextPosition, validatePreflopAction, type BettingSt
 import { postflopOrder } from "../postflop-machine";
 import { buildPostflopContext, nextPostflopActor, validatePostflopActionV2, type PostflopContext } from "../postflop-hand-state";
 import type { HandRecordV1 } from "./hand-record";
+import { NO_ANTE, postAntes, type PostedAntes } from "../antes";
 
 const streets = ["flop", "turn", "river"] as const;
 type PostflopStreet = typeof streets[number];
@@ -22,12 +23,18 @@ export type ReplayResult = { ok: true; end: HandEnd; preflopState: BettingState 
 
 const invalid = (message: string): ReplayResult => ({ ok: false, message });
 
+/** Antes the record's seats posted: the engine plays the stacks left after them, antes are dead money. */
+export function recordAntes(record: HandRecordV1): PostedAntes {
+  return postAntes(record.seats.map(seat => seat.startStack), record.seats.map(seat => seat.position), record.ante ?? NO_ANTE);
+}
+
 /** The postflop view the table helper builds after preflop, reproduced from the record. */
 function postflopSetup(record: HandRecordV1, preflopState: BettingState) {
   const positions = record.seats.map(seat => seat.position);
   const activeSeats = positions.map((_, seat) => seat).filter(seat => !preflopState.foldedSeats.has(seat));
   const order = postflopOrder(positions, new Set([...preflopState.foldedSeats, ...preflopState.allInSeats]));
-  const initialRemaining = record.seats.map(seat => Math.max(0, seat.startStack - (preflopState.contributions.get(seat.seat) ?? 0)));
+  const { playStacks } = recordAntes(record);
+  const initialRemaining = record.seats.map(seat => Math.max(0, playStacks[seat.seat] - (preflopState.contributions.get(seat.seat) ?? 0)));
   const contextAt = (actions: HandRecordV1["postflop"], street: PostflopStreet) =>
     buildPostflopContext({ actions, street, seats: activeSeats, initialRemaining, initialPot: preflopState.pot });
   return { activeSeats, order, contextAt };
@@ -35,7 +42,7 @@ function postflopSetup(record: HandRecordV1, preflopState: BettingState) {
 
 function replayPreflop(record: HandRecordV1): string | null {
   const positions = record.seats.map(seat => seat.position);
-  const stacks = record.seats.map(seat => seat.startStack);
+  const stacks = recordAntes(record).playStacks;
   for (const [index, action] of record.preflop.entries()) {
     const prior = record.preflop.slice(0, index);
     if (nextPosition(prior, positions, stacks) !== action.position) return `preflop[${index}] is out of turn`;
@@ -115,11 +122,13 @@ function checkWinners(record: HandRecordV1, end: HandEnd, preflopState: BettingS
  * needs to know who is still in before the winners are chosen.
  */
 export function replayHandRecord(record: HandRecordV1, options: { checkWinners: boolean } = { checkWinners: true }): ReplayResult {
+  const antes = recordAntes(record);
+  if (antes.shortSeats.length) return invalid("a seat cannot cover its ante and blind");
   const preflopError = replayPreflop(record);
   if (preflopError) return invalid(preflopError);
   const positions = record.seats.map(seat => seat.position);
-  const stacks = record.seats.map(seat => seat.startStack);
-  const preflopState = deriveBettingState(record.preflop, positions, stacks);
+  const stacks = antes.playStacks;
+  const preflopState = deriveBettingState(record.preflop, positions, stacks, antes.deadMoney);
   const preflopLive = positions.map((_, seat) => seat).filter(seat => !preflopState.foldedSeats.has(seat));
   const preflopOpen = nextPosition(record.preflop, positions, stacks) !== null;
   if ((preflopOpen || preflopLive.length <= 1) && record.postflop.length) return invalid("postflop actions follow a hand that did not reach the flop");

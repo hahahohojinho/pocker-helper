@@ -26,7 +26,8 @@ export function positionOrder(positions: Position[]) {
   return [...positions].sort((a, b) => preflopOrder.indexOf(a) - preflopOrder.indexOf(b));
 }
 
-export function deriveBettingState(actions: PlayerAction[], positions: Position[], effectiveStack:StackProfile = Number.POSITIVE_INFINITY): BettingState {
+/** `deadMoney` (antes) joins the pot without being anyone's bet, so call and raise amounts ignore it. */
+export function deriveBettingState(actions: PlayerAction[], positions: Position[], effectiveStack:StackProfile = Number.POSITIVE_INFINITY, deadMoney = 0): BettingState {
   const state: BettingState = {
     raiseCount: 0,
     currentBet: 1,
@@ -58,12 +59,12 @@ export function deriveBettingState(actions: PlayerAction[], positions: Position[
       state.raiseCount += 1;
     }
   }
-  state.pot = [...state.contributions.values()].reduce((sum, value) => sum + value, 0);
+  state.pot = [...state.contributions.values()].reduce((sum, value) => sum + value, 0) + deadMoney;
   return state;
 }
 
-export function bettingAmounts(actions: PlayerAction[], positions: Position[], seat: number, effectiveStack:StackProfile) {
-  const state = deriveBettingState(actions, positions, effectiveStack);
+export function bettingAmounts(actions: PlayerAction[], positions: Position[], seat: number, effectiveStack:StackProfile, deadMoney = 0) {
+  const state = deriveBettingState(actions, positions, effectiveStack, deadMoney);
   const seatStack=stackFor(effectiveStack,seat);
   const committed = state.contributions.get(seat) ?? 0;
   const toCall = Math.max(0, state.currentBet - committed);

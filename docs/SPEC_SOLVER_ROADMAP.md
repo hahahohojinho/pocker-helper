@@ -205,6 +205,7 @@ export function deadMoneyBb(config:TableConfig,activePlayers:number):number; // 
 - 3-1 인터페이스를 구현한다. UI에 게임 유형, 블라인드, 앤티, BB 앤티 입력을 추가한다. 스택 입력은 칩과 BB 중 선택하고, 내부에는 BB로 저장한다.
 
 #### P2-2. 엔진에 블라인드와 앤티 반영
+- 진행 상황 (2026-11-26): 앤티 완료 (좌석별, BB 앤티). 엔진에는 앤티를 뺀 스택을 넘기고 앤티는 데드머니로 팟에 더함. SB 크기 설정과 앤티/블라인드보다 짧은 스택의 올인은 미구현 (해당 핸드는 거부).
 - 변경: `preflop-machine.ts` `deriveBettingState`의 SB 0.5 고정값을 설정값으로 바꾸고, 앤티는 데드머니로 `pot` 시작값에 더한다. 액션 기여금(`contributions`)에는 넣지 않는다.
 - 기존 호출부: `deriveBettingState`, `availableActions`, `validatePreflopAction`, `isBettingRoundComplete`, `nextPosition`. 각 함수에 선택 파라미터 `blinds?:BlindLevel`을 추가하고, 기본값은 현재 동작(0.5/1, 앤티 0)과 같게 한다.
 - 완료 기준: 기존 `poker-engine.test.ts`, `preflop-context.test.ts` 전체 통과와 앤티 케이스 추가.

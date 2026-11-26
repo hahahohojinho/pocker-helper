@@ -1,3 +1,4 @@
+import { hasAnte, type AnteSetting } from "../antes";
 import type { PlayerAction } from "../game-state";
 import type { PostflopAction } from "../postflop-machine";
 import { normalizeStartingHand } from "../strategy-data";
@@ -19,6 +20,8 @@ export function buildHandRecord(input: {
   id: string; playedAt: string; tableSize: ProfileTableSize; heroSeat: number; heroHand: string; stacks: readonly number[];
   seatPlayers: readonly (string | null)[]; preflop: PlayerAction[]; postflop: PostflopAction[]; board: readonly string[];
   holeCards: Readonly<Record<number, readonly string[] | undefined>>; winners: readonly number[];
+  /** Written only when there is one, so records without antes keep their stored form. */
+  ante?: AnteSetting;
 }): HandRecordV1 {
   const heroHand = normalizeStartingHand(input.heroHand) ?? input.heroHand;
   const seats = TABLE_SLOT_POSITIONS[input.tableSize].map((position, seat) => {
@@ -31,6 +34,7 @@ export function buildHandRecord(input: {
   return {
     version: HAND_RECORD_VERSION, id: input.id, playedAt: input.playedAt, tableSize: input.tableSize, heroHand, seats,
     preflop: input.preflop, postflop: input.postflop, board: input.board.filter(Boolean), winners: [...input.winners],
+    ...(input.ante && hasAnte(input.ante) && input.ante.kind !== "none" ? { ante: { kind: input.ante.kind, amount: input.ante.amount } } : {}),
   };
 }
 
