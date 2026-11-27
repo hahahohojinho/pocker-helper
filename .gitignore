@@ -61,3 +61,4 @@ next-env.d.ts
 # Flop library: generated locally by scripts/build-flop-library.mjs (hundreds of MB)
 /public/data/flop-library/
 /artifacts/flop-library/
+/artifacts/bench/

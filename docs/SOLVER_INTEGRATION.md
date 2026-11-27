@@ -102,6 +102,19 @@ Until 2026-11-26 dcfr-core gave bet sizes only to the solved street; every later
 | Turn 50/100% + river 50% | 4.5 s | 37-41 | 1.6-3.1 |
 | Turn 50/100% + river 33/75/150% | 9 s | 17-19 | 14-18 |
 
+Facing a bet or raise (2026-11-27/28, 12 threads, a game running, 5 pot types x 6 boards): an off-tree bet joins the size list and a raise adds a level, so these nodes get `NATIVE_FACING_BUDGET_MS` 8.5 s; first-to-act nodes keep 4.5 s.
+
+| Node | 4.5 s | 8.5 s |
+| --- | --- | --- |
+| Turn, first to act | 0.04-0.25% | (unchanged) |
+| Turn facing off-tree 75% / 125% | 0.08-0.95% | 0.02-0.32% |
+| Turn facing a check-raise (river checked down) | 0.19-0.40% | 0.03-0.05% |
+| River, first to act / facing 150% | 0.01-0.18% | 0.006-0.064% (1000 iterations in 4.9-8.0 s) |
+| River facing a raise, SRP | 0.58-0.71% | 0.20-0.34% |
+| River facing a raise, 3BP | 0.08-0.17% | 0.03-0.06% |
+
+Tree reduction was rejected (2026-11-28). A candidate replaced an observed size with the nearest base size instead of adding it, and was checked against a 60 s solve of the current tree on 13 spots. It converged further in its own smaller game, but its per-combo mix sat 6-14%p from the reference (the current tree: 1.5-7.6%p), and top-action agreement dropped. Exploitability is measured inside the solved tree, so it cannot show this abstraction bias. Scripts: `artifacts/bench/stage2.mjs`.
+
 - Known-answer tests: `tools/dcfr-core/tests/known_games.rs` checks a river polarization game against the closed form (bluff share b/(1+2b), call share 1/(1+b), within 0.5 points at b = 0.5, 1, 1.5) and that exploitability falls with iterations. `tests/later_streets.rs` covers the new field.
 
 ## Native multiway solver (3 players: river, and turn with the river checked down)
@@ -126,6 +139,20 @@ Until 2026-11-26 dcfr-core gave bet sizes only to the solved street; every later
 - The panel looks up the exact native solve request it would send (`matchFlopLibrary`): ranges, pot, stacks, bet sizes, and max raises must be identical and the line must be one of the stored nodes. Boards and hero cards are mapped to the canonical suit order; nearest-board approximation is not used because a different card changes combo-level answers arbitrarily. Anything else is a miss with a reason, and the live solver stays available.
 - Strategies are stored in thousandths per combo, EVs in chips (1/100 BB). Each file carries the solve's exploitability, shown as the convergence badge, and a `specHash` of the ranges, pot, stacks, tree, and nodes; a file whose hash differs from the index scenario is never used (miss "stale") and the generator re-solves it. A re-solve only replaces a file when it converged further.
 - Unlike the live solve, an action category the hand never takes shows its best concrete size's EV instead of 0.
+- Self play (`src/app/self-play/advice-runner.ts`) asks the library first for heads-up flops through the same `queryFlopLibrary` as the panel card; library answers include per-size `details` for grading.
+- Requests with later-street sizes, `allinPotRatio`, or rake never match: the library was solved without them (flop-only tree, default all-in rule).
+- The index size limit is derived from the format bounds (2026-11-27: the fixed 300,000 limit had disabled the finished 309,883-byte index).
+- Stack tolerance (P1-3, 2026-11-27, 12 threads, 30 s budget, BTN vs BB SRP ranges, root and IP-after-check aggressive share, per-combo mean |diff| vs the 97.5bb library file):
+
+| Board | 97.5bb control | 83bb | 112bb |
+| --- | --- | --- | --- |
+| Kc7d2h | 1.8 / 1.0%p | 0.6 / 0.3%p | 1.2 / 0.7%p |
+| AcKd5h | 6.5 / 5.1%p | 7.1 / 5.5%p | 7.7 / 5.9%p |
+| 9c8c7d | 0.3 / 0.2%p | 0.6 / 0.5%p | 0.3 / 0.2%p |
+| QcQd4h | 0.3 / 0.2%p | 0.0 / 0.0%p | 0.0 / 0.0%p |
+| JcTd2c | 0.3 / 0.3%p | 0.3 / 0.3%p | 0.3 / 0.3%p |
+
+  The stack effect is within solver noise because the tree checks down turn and river; re-measure after the P0-4 rebuild.
 
 ## Counterfactual EV backend
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createSolverNode } from "./solver-adapter";
-import { exploitabilityLevel, getSolverPreset, laterStreetsCheckedDown, parseTexasSolverLog, resolveSolverThreads, resolveSolverTimeoutMs, type SolverBackend } from "./solver-presets";
+import { exploitabilityLevel, facesAggression, getSolverPreset, laterStreetsCheckedDown, parseTexasSolverLog, resolveSolverThreads, resolveSolverTimeoutMs, type SolverBackend } from "./solver-presets";
 import { clampSolverBudget, isTrustedSolverRequest, MAX_SOLVER_BODY_BYTES, nativeJsonSolverEnabled, parseSolverBody, readSolverBody, tryAcquireSolverSlot } from "./solver-guard";
 import { buildTexasSolverCommands, validateTexasSolverJob } from "./texas-solver-config";
 
@@ -30,6 +30,20 @@ describe("solver presets",()=>{
     expect(getSolverPreset("native","river").allInPotRatio).toBe(0);
     expect(getSolverPreset("native","turn").allInPotRatio).toBeUndefined();
     expect(getSolverPreset("wasm","river").allInPotRatio).toBeUndefined();
+  });
+  it("gives native turns and rivers facing a bet or raise a longer budget, inside the 10 s limit",()=>{
+    for(const street of ["turn","river"] as const){
+      expect(getSolverPreset("native",street).timeBudgetMs).toBe(4500);
+      expect(getSolverPreset("native",street,{facingAggression:true}).timeBudgetMs).toBe(8500);
+      expect(getSolverPreset("wasm",street,{facingAggression:true}).timeBudgetMs).toBe(getSolverPreset("wasm",street).timeBudgetMs);
+    }
+    // The flop library spec hash depends on the flop preset; facing a bet must not change it.
+    expect(getSolverPreset("native","flop",{facingAggression:true})).toEqual(getSolverPreset("native","flop"));
+    expect(facesAggression([])).toBe(false);
+    expect(facesAggression([{type:"check"}])).toBe(false);
+    expect(facesAggression([{type:"check"},{type:"bet"}])).toBe(true);
+    expect(facesAggression([{type:"bet"},{type:"raise"}])).toBe(true);
+    expect(facesAggression([{type:"bet"},{type:"call"}])).toBe(false);
   });
   it("spends more iterations on later streets with smaller trees",()=>{
     expect(getSolverPreset("texassolver","river").iterations).toBeGreaterThan(getSolverPreset("texassolver","flop").iterations);

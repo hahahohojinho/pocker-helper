@@ -20,7 +20,7 @@ import { buildWasmSolveRequest, MAX_TURN_AGGRESSIONS_WITH_RIVER } from "@/lib/wa
 import type { TableSize } from "@/lib/preflop-packs";
 import { loadIterationCost, recordIterationCost } from "@/lib/wasm-solver/cost-model";
 import { timed } from "@/lib/timing";
-import { exploitabilityLevel, getSolverPreset, laterStreetsCheckedDown } from "@/lib/solver-presets";
+import { exploitabilityLevel, facesAggression, getSolverPreset, laterStreetsCheckedDown } from "@/lib/solver-presets";
 import { buildSolverTree } from "@/lib/solver-tree";
 import HandRecorderPanel from "./profiling/hand-recorder-panel";
 import { hasRake, NO_RAKE, type RakeSetting } from "@/lib/table-config";
@@ -199,7 +199,7 @@ export default function PostflopPanel({positions,preflopActions,stacks,heroSeat,
   }
   function dcfrRequest(backend:"native"|"wasm"){
     const oopSeat=order.find(seat=>streetStartSeats.includes(seat))!;const ipSeat=streetStartSeats.find(seat=>seat!==oopSeat)!;
-    const preset=getSolverPreset(backend,street);
+    const preset=getSolverPreset(backend,street,{facingAggression:facesAggression(streetActions)});
     return buildWasmSolveRequest({
       board:knownBoard,heroHole:holeCards,oopRange:streetStartRange(oopSeat),ipRange:streetStartRange(ipSeat),
       pot:context.potBefore,stacks:{oop:context.remainingAtStart[oopSeat]??0,ip:context.remainingAtStart[ipSeat]??0},

@@ -1,6 +1,6 @@
 import { conditionRangeOnPostflop, ensureComboInRange, inferRangeFromPreflop } from "../range-model";
 import { parseSolverResult, type SolverResult } from "../solver-adapter";
-import { getSolverPreset, laterStreetsCheckedDown } from "../solver-presets";
+import { facesAggression, getSolverPreset, laterStreetsCheckedDown } from "../solver-presets";
 import type { PostflopContext } from "../postflop-hand-state";
 import type { PostflopActionType } from "../postflop-machine";
 import { buildWasmSolveRequest, MAX_TURN_AGGRESSIONS_WITH_RIVER, type WasmSolveRequest } from "../wasm-solver/request";
@@ -40,7 +40,7 @@ export function headsUpRequest(hand: SelfPlayHand, turn: PostflopTurn, actorHole
   const ipSeat = seats.find(seat => seat !== oopSeat);
   if (oopSeat === undefined || ipSeat === undefined) return null;
   const actor = { seat: turn.seat, hole: actorHole };
-  const preset = getSolverPreset(backend, turn.street);
+  const preset = getSolverPreset(backend, turn.street, { facingAggression: facesAggression(turn.context.actions) });
   return buildWasmSolveRequest({
     board: hand.board.slice(0, BOARD_COUNT[turn.street]), heroHole: [...actorHole],
     oopRange: streetStartRange(hand, turn.street, oopSeat, actor), ipRange: streetStartRange(hand, turn.street, ipSeat, actor),

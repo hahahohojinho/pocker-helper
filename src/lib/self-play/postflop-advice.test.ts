@@ -49,6 +49,15 @@ describe("headsUpRequest", () => {
     expect(adviceKey(request)).toBe(adviceKey(headsUpRequest(hand, turn, hand.holeCards[turn.seat]!, "wasm", 999)!));
     expect(checkedDown("native", turn)).toBe(true);
   });
+  it("gives a turn decision facing a bet the longer native budget, and a first-to-act turn the base one", () => {
+    const toTurn = play(headsUpFlop(), [["check", 0], ["check", 0]]);
+    const first = postflopTurn(toTurn);
+    expect(first.street).toBe("turn");
+    expect(headsUpRequest(toTurn, first, toTurn.holeCards[first.seat]!, "native")!.timeBudgetMs).toBe(4500);
+    const facing = play(toTurn, [["check", 0], ["bet", 4]]);
+    const facingTurn = postflopTurn(facing);
+    expect(headsUpRequest(facing, facingTurn, facing.holeCards[facingTurn.seat]!, "native")!.timeBudgetMs).toBe(8500);
+  });
 });
 
 describe("grading", () => {

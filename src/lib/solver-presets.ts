@@ -40,6 +40,12 @@ const DCFR_TIME_BUDGET_MS=4500;
 const NATIVE_FLOP_BUDGET_MS=9000;
 /** 3-way turns (river check-down model) need ~0.23 s per iteration; 8 s reaches the 1% "ok" level on SRP ranges. */
 const MULTIWAY_TURN_BUDGET_MS=8000;
+/**
+ * 2026-11-27, 12 threads, 132 spots (5 pot types, 6 boards), 4.5 s: first-to-act turns 0.04-0.25%, rivers 0.01-0.17%;
+ * turns facing an off-tree 75%/125% bet 0.43-0.95% (49-74 iterations); SRP rivers facing a raise 0.58-0.71%
+ * (153-163). 8.5 s keeps the answer inside the 10 s limit (server cap SOLVER_MAX_BUDGET_MS).
+ */
+const NATIVE_FACING_BUDGET_MS=8500;
 const NATIVE_BUDGETS={flop:{iterations:300,accuracy:0.5,timeBudgetMs:NATIVE_FLOP_BUDGET_MS},turn:{iterations:500,accuracy:0.3,timeBudgetMs:DCFR_TIME_BUDGET_MS},river:{iterations:1000,accuracy:0.3,timeBudgetMs:DCFR_TIME_BUDGET_MS}};
 const budgets:Record<SolverBackend,Record<SolverStreet,{iterations:number;accuracy:number;timeBudgetMs?:number}>>={
   texassolver:{flop:{iterations:200,accuracy:1},turn:{iterations:300,accuracy:0.5},river:{iterations:500,accuracy:0.5}},
@@ -83,8 +89,22 @@ export function laterStreetsCheckedDown(backend:SolverBackend,street:SolverStree
   return street!=="river"&&!getSolverPreset(backend,street).laterStreets?.river;
 }
 
-export function getSolverPreset(backend:SolverBackend,street:SolverStreet):SolverPreset{
-  const budget=budgets[backend][street];
+/** True when the decision faces a bet or raise on this street (the last action this street was aggressive). */
+export function facesAggression(streetActions:readonly {type:string}[]){
+  const last=streetActions.at(-1)?.type;
+  return last==="bet"||last==="raise";
+}
+
+/**
+ * Where the decision sits on the street. Facing a bet or raise, native turns and rivers get NATIVE_FACING_BUDGET_MS:
+ * an off-tree bet joins the street's size list and a raise adds a raise level, so the same 4.5 s buys about half
+ * the iterations of a first-to-act node.
+ */
+export interface SolverNode { facingAggression?:boolean; }
+
+export function getSolverPreset(backend:SolverBackend,street:SolverStreet,node:SolverNode={}):SolverPreset{
+  const base=budgets[backend][street];
+  const budget=backend==="native"&&street!=="flop"&&node.facingAggression?{...base,timeBudgetMs:NATIVE_FACING_BUDGET_MS}:base;
   const sizes=streetSizes(backend,street);
   const laterStreets=backend==="native"?NATIVE_LATER_STREETS[street]:undefined;
   return {

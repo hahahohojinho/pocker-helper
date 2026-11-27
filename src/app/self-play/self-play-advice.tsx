@@ -42,7 +42,7 @@ export function PostflopAdviceCard(props: {
   entry: AdviceEntry | undefined; solving: boolean; queued: boolean; notes: string[]; revealed: boolean; onReveal: () => void; onRetry: () => void;
 }) {
   const { entry, solving, queued, notes, revealed, onReveal, onRetry } = props;
-  if (!entry) return <div className="sp-advice"><small>포스트플랍 조언</small><p>{solving ? "계산 중… (헤즈업: 리버 약 2초, 턴 약 4.5초, 플랍 약 9초 / 3인 턴 약 8초 / 모델 수 초)" : queued ? "앞선 스팟 계산이 끝나면 시작합니다." : "준비 중"}</p><p>기다리지 않고 액션해도 결과가 나오면 채점됩니다.</p></div>;
+  if (!entry) return <div className="sp-advice"><small>포스트플랍 조언</small><p>{solving ? "계산 중… (헤즈업: 턴/리버 약 4.5초, 베팅을 받으면 약 9초, 플랍 약 9초 / 3인 턴 약 8초 / 모델 수 초)" : queued ? "앞선 스팟 계산이 끝나면 시작합니다." : "준비 중"}</p><p>기다리지 않고 액션해도 결과가 나오면 채점됩니다.</p></div>;
   if (entry.status === "error") return <div className="sp-advice"><small>포스트플랍 조언</small><p className="validation-message">{entry.message}</p><button type="button" onClick={onRetry}>다시 계산</button></div>;
   if (!revealed) return <div className="sp-advice"><small>포스트플랍 조언 · 계산 완료</small><button type="button" onClick={onReveal}>조언 보기</button></div>;
   const { kind, result, details, note } = entry.advice;
