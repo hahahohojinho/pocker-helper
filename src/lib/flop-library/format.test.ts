@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { MAX_SOLUTION_CHARS, parseFlopIndex, parseFlopSolution } from "./format";
+import { MAX_INDEX_CHARS, MAX_SOLUTION_CHARS, parseFlopIndex, parseFlopSolution } from "./format";
+import { enumerateCanonicalFlops } from "./canonical";
 import { FIXTURE_BOARD, fixtureIndex, fixtureScenario, fixtureSolution } from "./fixture";
 
 const parse = (overrides: Record<string, unknown> = {}) => parseFlopSolution(fixtureSolution(overrides), fixtureScenario.id, FIXTURE_BOARD);
@@ -17,6 +18,20 @@ describe("parseFlopIndex", () => {
     expect(() => parseFlopIndex(index({ flops: ["Ks7d"] }))).toThrow();
     expect(() => parseFlopIndex(index({ pot: 0 }))).toThrow();
     expect(() => parseFlopIndex(index({ specHash: "x" }))).toThrow();
+    expect(() => parseFlopIndex(index({ oopRange: "A".repeat(16_001) }))).toThrow(/oopRange/);
+    expect(() => parseFlopIndex(index({ label: "x".repeat(201) }))).toThrow(/label/);
+  });
+  it("keeps only the known scenario fields", () => {
+    const text = JSON.stringify({ ...JSON.parse(fixtureIndex()), scenarios: [{ ...fixtureScenario, extra: "x".repeat(1000) }] });
+    expect(parseFlopIndex(text).scenarios[0]).toEqual(fixtureScenario);
+  });
+  it("accepts the largest index the format allows", () => {
+    const flops = enumerateCanonicalFlops().map(flop => flop.board);
+    const range = "AsKs:0.123,".repeat(1454);
+    const scenarios = Array.from({ length: 64 }, (_, index) => ({ ...fixtureScenario, id: `scenario-${index}`, label: "x".repeat(200), oopRange: range, ipRange: range, flops }));
+    const text = JSON.stringify({ ...JSON.parse(fixtureIndex()), scenarios });
+    expect(text.length).toBeLessThanOrEqual(MAX_INDEX_CHARS);
+    expect(parseFlopIndex(text).scenarios).toHaveLength(64);
   });
 });
 

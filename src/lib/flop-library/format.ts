@@ -1,12 +1,20 @@
 /** Precomputed heads-up flop solutions: an index of scenarios and one file per canonical flop. */
 export const INDEX_CONTRACT = "rangelab.flop_library_index.v1";
 export const SOLUTION_CONTRACT = "rangelab.flop_solution.v1";
-export const MAX_INDEX_CHARS = 300_000;
+const MAX_SCENARIOS = 64;
+const MAX_FLOPS = 1755;
+/** A weighted range lists at most 1326 combos ("AsKs:0.123," is 11 characters); class ranges are far shorter. */
+const MAX_RANGE_CHARS = 16_000;
+const MAX_LABEL_CHARS = 200;
+/**
+ * Derived from the bounds parseScenario enforces: every scenario listing every flop (`"Kc7d2h",`, 9 characters)
+ * with two maximal ranges, plus 2,000 characters for the other fields. A fixed 300,000 limit silently disabled the
+ * finished 17-scenario library (index 309,883 bytes, found 2026-11-27).
+ */
+export const MAX_INDEX_CHARS = MAX_SCENARIOS * (MAX_FLOPS * 9 + 2 * MAX_RANGE_CHARS + 2_000);
 export const MAX_SOLUTION_CHARS = 400_000;
 /** Strategy shares are stored in thousandths and sum to exactly this per combo. */
 export const FREQUENCY_SCALE = 1000;
-const MAX_SCENARIOS = 64;
-const MAX_FLOPS = 1755;
 const MAX_ACTIONS = 8;
 const MAX_CHIPS = 10_000_000;
 /** Flop decisions kept per board: the OOP root, IP after a check, and facing a bet of a stored size ("b1/2"). */
@@ -67,6 +75,8 @@ function parseScenario(raw: unknown, index: number): FlopScenario {
   if (!isRecord(raw)) throw fail("scenario");
   if (typeof raw.id !== "string" || !ID.test(raw.id)) throw fail("id");
   for (const field of ["label", "oop", "ip", "oopRange", "ipRange", "generatedAt"]) if (typeof raw[field] !== "string") throw fail(field);
+  for (const field of ["oopRange", "ipRange"]) if ((raw[field] as string).length > MAX_RANGE_CHARS) throw fail(field);
+  for (const field of ["label", "oop", "ip", "generatedAt"]) if ((raw[field] as string).length > MAX_LABEL_CHARS) throw fail(field);
   if (typeof raw.specHash !== "string" || !SPEC_HASH.test(raw.specHash)) throw fail("specHash");
   if (!isChips(raw.pot) || !Array.isArray(raw.stacks) || raw.stacks.length !== 2 || !raw.stacks.every(isChips)) throw fail("pot or stacks");
   const sizes = raw.betSizes;
@@ -74,7 +84,13 @@ function parseScenario(raw: unknown, index: number): FlopScenario {
   if (!Number.isInteger(raw.maxRaises) || (raw.maxRaises as number) < 1 || (raw.maxRaises as number) > 4) throw fail("maxRaises");
   const flops = raw.flops;
   if (!Array.isArray(flops) || flops.length > MAX_FLOPS || !flops.every(board => typeof board === "string" && BOARD.test(board)) || new Set(flops).size !== flops.length) throw fail("flops");
-  return { ...(raw as unknown as FlopScenario), stacks: [...raw.stacks] as [number, number], betSizes: (sizes as Fraction[][]).map(depth => depth.map(([n, d]) => [n, d] as Fraction)), flops: [...flops] };
+  // Only the known fields are kept, so unknown keys in a generated file never reach the app.
+  const text = (field: string) => raw[field] as string;
+  return {
+    id: raw.id, label: text("label"), oop: text("oop"), ip: text("ip"), pot: raw.pot, stacks: [...raw.stacks] as [number, number],
+    betSizes: (sizes as Fraction[][]).map(depth => depth.map(([n, d]) => [n, d] as Fraction)), maxRaises: raw.maxRaises as number,
+    oopRange: text("oopRange"), ipRange: text("ipRange"), flops: [...flops], generatedAt: text("generatedAt"), specHash: raw.specHash,
+  };
 }
 
 export function parseFlopIndex(text: string): FlopIndex {
@@ -102,7 +118,7 @@ function parseNode(raw: unknown, key: string, combos: Record<Role, string[]>): F
   const fail = (field: string) => new Error(`Flop solution node "${key}": invalid ${field}.`);
   if (!isRecord(raw) || (raw.player !== "oop" && raw.player !== "ip")) throw fail("player");
   const actions = raw.actions;
-  if (!Array.isArray(actions) || !actions.length || actions.length > MAX_ACTIONS || !actions.every(action => isRecord(action) && CATEGORIES.has(action.category as ActionCategory) && typeof action.label === "string")) throw fail("actions");
+  if (!Array.isArray(actions) || !actions.length || actions.length > MAX_ACTIONS || !actions.every(action => isRecord(action) && CATEGORIES.has(action.category as ActionCategory) && typeof action.label === "string" && action.label.length <= MAX_LABEL_CHARS)) throw fail("actions");
   const player: Role = raw.player;
   const count = combos[player].length * actions.length;
   const { freq, ev, unreached } = raw;
@@ -110,7 +126,7 @@ function parseNode(raw: unknown, key: string, combos: Record<Role, string[]>): F
   for (let start = 0; start < count; start += actions.length)
     if ((freq as number[]).slice(start, start + actions.length).reduce((sum, value) => sum + value, 0) !== FREQUENCY_SCALE) throw fail("freq total");
   if (!Array.isArray(ev) || ev.length !== count || !ev.every(value => Number.isInteger(value) && Math.abs(value) <= 4 * MAX_CHIPS)) throw fail("ev");
-  if (!Array.isArray(unreached) || !unreached.every(index => Number.isInteger(index) && index >= 0 && index < combos[player].length)) throw fail("unreached");
+  if (!Array.isArray(unreached) || unreached.length > combos[player].length || !unreached.every(index => Number.isInteger(index) && index >= 0 && index < combos[player].length)) throw fail("unreached");
   return { player, actions: actions.map(action => ({ category: action.category, label: action.label })), freq: [...freq], ev: [...ev], unreached: [...unreached] } as FlopNode;
 }
 

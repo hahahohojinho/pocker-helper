@@ -45,6 +45,8 @@ export function matchFlopLibrary(index: FlopIndex, request: WasmSolveRequest): F
   if (request.board.length !== 6) return { miss: "not-flop" };
   const nodeKey = historyKey(request.history);
   if (nodeKey === null) return { miss: "line" };
+  // The library solved the flop-only tree with the default all-in rule and no rake; any other game is not stored.
+  if (request.betSizesByStreet || request.allinPotRatio !== undefined || request.rake) return { miss: "scenario" };
   const requestedStack = Math.min(...request.stacks);
   const stackGap = (item: FlopScenario) => Math.abs(requestedStack - Math.min(...item.stacks));
   const stackUsable = (item: FlopScenario) => {
@@ -67,37 +69,44 @@ export function matchFlopLibrary(index: FlopIndex, request: WasmSolveRequest): F
 }
 
 interface Grouped { category: ActionCategory; frequency: number; weightedEv: number; bestEv: number; }
+/** One stored action for Hero's combo, in the live solver's `details` shape (frequency 0-1, EV in BB). */
+export interface LibraryDetail { action: ActionCategory; label: string; frequency: number; ev: number; }
 
-function groupHeroActions(solution: FlopSolution, match: FlopLibraryMatch): { miss: FlopLibraryMiss } | { groups: Grouped[]; unreached: boolean } {
+function heroDetails(solution: FlopSolution, match: FlopLibraryMatch): { miss: FlopLibraryMiss } | { details: LibraryDetail[]; unreached: boolean } {
   const node = solution.nodes[match.nodeKey];
   if (!node) return { miss: "node" };
   const combos = solution.combos[node.player];
   const reversed = `${match.hero.slice(2)}${match.hero.slice(0, 2)}`;
   const comboIndex = combos.findIndex(combo => combo === match.hero || combo === reversed);
   if (comboIndex < 0) return { miss: "hero" };
-  const groups = new Map<ActionCategory, Grouped>();
-  node.actions.forEach((action, actionIndex) => {
+  const details = node.actions.map((action, actionIndex) => {
     const offset = comboIndex * node.actions.length + actionIndex;
-    const frequency = node.freq[offset] / FREQUENCY_SCALE, ev = node.ev[offset] / CHIPS_PER_BB;
-    const previous = groups.get(action.category) ?? { category: action.category, frequency: 0, weightedEv: 0, bestEv: Number.NEGATIVE_INFINITY };
-    groups.set(action.category, { ...previous, frequency: previous.frequency + frequency, weightedEv: previous.weightedEv + frequency * ev, bestEv: Math.max(previous.bestEv, ev) });
+    return { action: action.category, label: action.label, frequency: node.freq[offset] / FREQUENCY_SCALE, ev: node.ev[offset] / CHIPS_PER_BB };
   });
-  return { groups: [...groups.values()], unreached: node.unreached.includes(comboIndex) };
+  return { details, unreached: node.unreached.includes(comboIndex) };
+}
+
+function groupDetails(details: readonly LibraryDetail[]): Grouped[] {
+  const groups = details.reduce((map, { action, frequency, ev }) => {
+    const previous = map.get(action) ?? { category: action, frequency: 0, weightedEv: 0, bestEv: Number.NEGATIVE_INFINITY };
+    return new Map([...map, [action, { ...previous, frequency: previous.frequency + frequency, weightedEv: previous.weightedEv + frequency * ev, bestEv: Math.max(previous.bestEv, ev) }]]);
+  }, new Map<ActionCategory, Grouped>());
+  return [...groups.values()];
 }
 
 /** Normalized solver JSON (as from a live solve) for Hero's combo, or the reason it cannot be answered. */
 export function answerFromSolution(solution: FlopSolution, match: FlopLibraryMatch): string | { miss: FlopLibraryMiss } {
   // A file solved for an older manifest (other ranges or tree) must never answer for the current spec.
   if (solution.build.specHash !== match.scenario.specHash) return { miss: "stale" };
-  const grouped = groupHeroActions(solution, match);
-  if ("miss" in grouped) return grouped;
+  const hero = heroDetails(solution, match);
+  if ("miss" in hero) return hero;
   // A category the hand never takes has no frequency-weighted EV; its best concrete size is shown instead.
-  const strategy = grouped.groups.map(group => ({ action: group.category, frequency: group.frequency, ev: group.frequency > 0 ? group.weightedEv / group.frequency : group.bestEv }));
+  const strategy = groupDetails(hero.details).map(group => ({ action: group.category, frequency: group.frequency, ev: group.frequency > 0 ? group.weightedEv / group.frequency : group.bestEv }));
   const best = strategy.reduce((top, item) => item.frequency > top.frequency ? item : top);
   return JSON.stringify({
-    source: "flop-library", strategy, best_action: best.action,
+    source: "flop-library", strategy, details: hero.details, best_action: best.action,
     exploitability: solution.build.exploitability, iterations: solution.build.iterations,
     scenario: match.scenario.label, generatedAt: match.scenario.generatedAt,
-    ...(grouped.unreached ? { note: "균형 전략에서 Hero 핸드는 이 라인에 도달하지 않습니다. 빈도 대신 EV가 가장 높은 액션을 표시합니다." } : {}),
+    ...(hero.unreached ? { note: "균형 전략에서 Hero 핸드는 이 라인에 도달하지 않습니다. 빈도 대신 EV가 가장 높은 액션을 표시합니다." } : {}),
   });
 }

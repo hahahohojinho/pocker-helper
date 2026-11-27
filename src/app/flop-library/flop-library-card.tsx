@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { loadFlopIndex, loadFlopSolution } from "@/lib/flop-library/loader";
-import { answerFromSolution, matchFlopLibrary, MISS_LABELS, type FlopLibraryMiss } from "@/lib/flop-library/lookup";
+import { MISS_LABELS, type FlopLibraryMiss } from "@/lib/flop-library/lookup";
+import { queryFlopLibrary, stackApproxNote } from "@/lib/flop-library/query";
 import { parseSolverResult, type SolverResult } from "@/lib/solver-adapter";
 import type { WasmSolveRequest } from "@/lib/wasm-solver/request";
 
@@ -10,16 +10,10 @@ type Lookup = { key: string; result: SolverResult; scenario: string } | { key: s
 
 /** Looks the request up in the locally generated flop library; "unavailable" when no library exists. */
 async function lookUp(key: string, request: WasmSolveRequest): Promise<Lookup> {
-  const index = await loadFlopIndex();
-  if (!index) return { key, unavailable: true };
-  const match = matchFlopLibrary(index, request);
-  if ("miss" in match) return { key, miss: match.miss };
-  const solution = await loadFlopSolution(match.scenario.id, match.board);
-  if (!solution) return { key, miss: "board" };
-  const answer = answerFromSolution(solution, match);
-  if (typeof answer !== "string") return { key, miss: answer.miss };
-  const approx = match.stackApprox ? ` · APPROX STACK: ${match.stackApprox.libraryStack}BB 계산으로 ${match.stackApprox.requestedStack}BB 대체` : "";
-  return { key, result: parseSolverResult(answer), scenario: `${match.scenario.label} · ${match.scenario.generatedAt}${approx}` };
+  const answer = await queryFlopLibrary(request);
+  if (!("raw" in answer)) return { key, ...answer };
+  const approx = answer.stackApprox ? ` · ${stackApproxNote(answer.stackApprox)}` : "";
+  return { key, result: parseSolverResult(answer.raw), scenario: `${answer.scenarioLabel} · ${answer.generatedAt}${approx}` };
 }
 
 /**
@@ -53,6 +47,7 @@ export default function FlopLibraryCard({ request, requestKey, onApply }: {
       <span>{item.action}</span><i><b style={{ width: `${item.frequency}%` }} /></i>
       <strong>{item.frequency.toFixed(1)}%{item.ev !== undefined && ` · ${item.ev >= 0 ? "+" : ""}${item.ev.toFixed(2)}BB`}</strong>
     </div>)}
-    <small className="ev-note">{current.scenario} · <button type="button" onClick={() => onApply(result)}>EV 패널에 적용</button></small>
+    {/* The library was solved with the flop-only tree (P0-4 rebuild pending), like the live flop solve. */}
+    <small className="ev-note">{current.scenario} · 이후 스트리트 체크다운 근사 · <button type="button" onClick={() => onApply(result)}>EV 패널에 적용</button></small>
   </section>;
 }

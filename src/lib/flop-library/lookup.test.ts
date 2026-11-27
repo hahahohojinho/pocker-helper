@@ -42,6 +42,7 @@ describe("matchFlopLibrary", () => {
       [{ oopRange: "AA,KK,72o,AsQh:0.01" }, "scenario"], [{ pot: 551 }, "scenario"], [{ stacks: [8000, 9750] }, "scenario"],
       [{ betSizes: [[[3, 5]], [[3, 5]]] }, "scenario"], [{ maxRaises: 3 }, "scenario"], [{ board: "Kc7d3h" }, "board"],
       [{ board: "Kc7d2h5s" }, "not-flop"], [{ history: [{ action: "check" }, { action: "check" }] }, "line"],
+      [{ betSizesByStreet: { river: [[[1, 2]]] } }, "scenario"], [{ allinPotRatio: 0 }, "scenario"], [{ rake: { percent: 5, capChips: 300 } }, "scenario"],
     ];
     for (const [patch, reason] of misses) expect(matchFlopLibrary(index, request(patch))).toEqual({ miss: reason });
   });

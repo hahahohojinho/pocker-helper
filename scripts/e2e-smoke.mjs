@@ -51,10 +51,12 @@ try{
     page.getByText("SOLVER STRATEGY",{exact:true}).waitFor({timeout:240000}),
     page.locator(".validation-message").waitFor({state:"visible",timeout:240000}).then(async()=>{throw new Error(`Local solver failed: ${await page.locator(".validation-message").innerText()}`);}),
   ]);
+  // The flop library card is a second .ev-panel when a library is installed.
+  const solverPanel=page.locator(".ev-panel").filter({hasText:"SOLVER STRATEGY"});
   if(!(await page.locator(".equity-result").innerText()).includes("EQUITY"))throw new Error("Local solver did not calculate the range-weighted equity used for model EV.");
-  if(expectsSolverEv&&!(await page.locator(".ev-panel").innerText()).includes("SOLVER EV"))throw new Error("DCFR backend result was not labeled as solver EV.");
-  if(usesDcfr&&!/\d+\.\d+s · \d+ iter/.test(await page.locator(".ev-panel").innerText()))throw new Error("DCFR result did not show solve time and iterations.");
-  if(usesDcfr&&!/EXPLOIT [\d.]+% POT/.test(await page.locator(".ev-panel").innerText()))throw new Error("In-browser solver result did not show convergence.");
+  if(expectsSolverEv&&!(await solverPanel.innerText()).includes("SOLVER EV"))throw new Error("DCFR backend result was not labeled as solver EV.");
+  if(usesDcfr&&!/\d+\.\d+s · \d+ iter/.test(await solverPanel.innerText()))throw new Error("DCFR result did not show solve time and iterations.");
+  if(usesDcfr&&!/EXPLOIT [\d.]+% POT/.test(await solverPanel.innerText()))throw new Error("In-browser solver result did not show convergence.");
   await page.locator(".postflop-actions button").filter({hasText:"Check"}).click();
   await page.locator(".postflop-actions button").filter({hasText:"Check"}).click();
   await page.locator(".advance-street").click();

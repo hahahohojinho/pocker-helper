@@ -1,4 +1,5 @@
 import { timed } from "@/lib/timing";
+import { queryFlopLibrary, stackApproxNote } from "@/lib/flop-library/query";
 import { runWasmSolve } from "@/lib/wasm-solver/client";
 import { isTransientNativeFailure, runNativeMultiwaySolve, runNativeSolve } from "@/lib/wasm-solver/native-client";
 import { loadIterationCost, recordIterationCost } from "@/lib/wasm-solver/cost-model";
@@ -20,6 +21,26 @@ export interface SolvedAdvice { advice: PostflopAdvice; method: string; notes: s
 export interface SolveSpot { key: string; street: PostflopStreet; run: (env: SolveEnv) => Promise<SolvedAdvice>; }
 
 const nativeFallbackNote = "네이티브 솔버가 응답하지 않아 대체 방법으로 계산했습니다.";
+
+/**
+ * Heads-up flops the precomputed library holds (same request the native solver would get) answer instantly and
+ * better converged than a 9 s live solve; any miss or load failure falls through to the live solver.
+ */
+async function fromLibrary(hand: SelfPlayHand, turn: PostflopTurn, hole: readonly [string, string]): Promise<SolvedAdvice | null> {
+  if (turn.street !== "flop") return null;
+  try {
+    // Building the request can throw (e.g. a size below the tree's minimum); the live path reports that error itself.
+    const request = headsUpRequest(hand, turn, hole, "native");
+    if (!request) return null;
+    const answer = await queryFlopLibrary(request);
+    if (!("raw" in answer)) return null;
+    const notes = [`사전 계산: ${answer.scenarioLabel} · ${answer.generatedAt}`, ...(answer.stackApprox ? [stackApproxNote(answer.stackApprox)] : []), CHECKDOWN_NOTE];
+    return { advice: parsePostflopAdvice(answer.raw), method: "FLOP LIBRARY", notes, nativeFailed: false };
+  } catch (error) {
+    console.warn("Flop library lookup failed; solving live", error);
+    return null;
+  }
+}
 
 async function headsUp(hand: SelfPlayHand, turn: PostflopTurn, hole: readonly [string, string], env: SolveEnv): Promise<SolvedAdvice> {
   let nativeFailed = false;
@@ -80,6 +101,10 @@ async function threeWay(hand: SelfPlayHand, turn: PostflopTurn, hole: readonly [
 export function spotFor(hand: SelfPlayHand, turn: PostflopTurn, hole: readonly [string, string], key: string): SolveSpot {
   const players = streetStartSeats(hand, turn.street).length;
   const run = async (env: SolveEnv): Promise<SolvedAdvice> => {
+    env.signal.throwIfAborted();
+    const stored = players === 2 ? await fromLibrary(hand, turn, hole) : null;
+    env.signal.throwIfAborted();
+    if (stored) return stored;
     // Heads-up without any DCFR backend (no native, no WebAssembly) falls back to the model too.
     if (players === 2 && (env.native || env.wasmSupported)) return headsUp(hand, turn, hole, env);
     const threeWaySpot = players === 3 && env.multiwayStreets.includes(turn.street);
